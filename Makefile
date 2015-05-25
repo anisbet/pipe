@@ -1,9 +1,9 @@
-####################################################
+########################################################################
 # Makefile for project pipe 
 # Created: Mon May 25 15:12:15 MDT 2015
 #
-#<one line to give the program's name and a brief idea of what it does.>
-#    Copyright (C) 2013  Andrew Nisbet
+# Pipe performs handy functions on pipe delimited files.
+#    Copyright (C) 2015  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 # Written by Andrew Nisbet at Edmonton Public Library
 # Rev: 
 #      0.0 - Dev. 
-####################################################
+########################################################################
 # Change comment below for appropriate server.
 PRODUCTION_SERVER=eplapp.library.ualberta.ca
 TEST_SERVER=edpl-t.library.ualberta.ca
