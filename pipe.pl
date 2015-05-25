@@ -42,6 +42,7 @@ my $VERSION    = qq{0.0};
 my @COUNT_COLUMNS = (); my $count_ref = {};
 my @SUM_COLUMNS = (); my $sum_ref = {};
 my @TRIM_COLUMNS = ();
+my @ORDER_COLUMNS = ();
 
 #
 # Message about this program and how to use it.
@@ -54,7 +55,10 @@ sub usage()
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
-functions work similarly.
+functions work similarly. Stacked functions are operated on in alphabetical 
+order by flag letter, that is, if you elect to order columns and trim colums 
+the columns are first ordered, then the columns are trimmed, because -o comes
+before -t.
 
 Example: cat file.lst | $0 -c"c0"
 
@@ -65,6 +69,7 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
  -d             : Debug switch.
+ -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
 
@@ -202,7 +207,7 @@ sub sum( $ )
 	}
 }
 
-# Sums the non-empty values of specified columns. 
+# Removes the white space from of specified columns. 
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub trim_line( $ )
@@ -219,16 +224,35 @@ sub trim_line( $ )
 	return join '|', @line;
 }
 
+# Places specified columns in a different order. 
+# param:  line to pull out columns from.
+# return: string line with requested columns removed.
+sub order_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	foreach my $colIndex ( @ORDER_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined $line[$colIndex] )
+		{
+			push @newLine, $line[$colIndex];
+		}
+	}
+	return join '|', @newLine;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:dt:x';
+    my $opt_string = 'a:c:do:t:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
 }
 
@@ -241,7 +265,8 @@ while (<>)
 	count( $_ ) if ( $opt{'c'} );
 	sum( $_ ) if ( $opt{'a'} );
 	my $line = $_;
-	$line = trim_line( $line ) if ( $opt{'t'} );
+	$line = order_line( $line )."\n" if ( $opt{'o'} );
+	$line = trim_line( $line )       if ( $opt{'t'} );
 	print "$line";
 }
 
