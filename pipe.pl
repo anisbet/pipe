@@ -41,6 +41,7 @@ my $VERSION    = qq{0.0};
 # columns working at the same time. We store different columns totals on a hash ref.
 my @COUNT_COLUMNS = (); my $count_ref = {};
 my @SUM_COLUMNS = (); my $sum_ref = {};
+my @TRIM_COLUMNS = ();
 
 #
 # Message about this program and how to use it.
@@ -49,7 +50,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-dx] [-c<c0,c1,...,cn>] [-s<c0,c1,...,cn>]
+	usage: $0 [-dx] [-cst<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -60,10 +61,11 @@ Example: cat file.lst | $0 -c"c0"
 $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
- -d             : Debug switch.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
+ -d             : Debug switch.
+ -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
 
 example: $0 -x
@@ -200,16 +202,34 @@ sub sum( $ )
 	}
 }
 
+# Sums the non-empty values of specified columns. 
+# param:  line to pull out columns from.
+# return: string line with requested columns removed.
+sub trim_line( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @TRIM_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined $line[$colIndex] )
+		{
+			$line[$colIndex] = trim( $line[$colIndex] );
+		}
+	}
+	return join '|', @line;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:dx';
+    my $opt_string = 'a:c:dt:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
-	@SUM_COLUMNS = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
 }
 
 init();
@@ -220,6 +240,9 @@ while (<>)
 	# Each operation specified by a different flag.
 	count( $_ ) if ( $opt{'c'} );
 	sum( $_ ) if ( $opt{'a'} );
+	my $line = $_;
+	$line = trim_line( $line ) if ( $opt{'t'} );
+	print "$line";
 }
 
 # Summary section.
