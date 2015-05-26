@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.4 - Implemented dedup with normalization option. 
 #          0.3.1 - Implemented reverse sort. 
 #          0.3 - Implemented sort. 
 #          0.2 - Implemented trim, order, sum, and count. 
@@ -39,7 +40,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.3.1};
+my $VERSION    = qq{0.4};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -61,7 +62,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-ir]<c0,c1,...,cn>]
+	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-irN]<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -78,11 +79,18 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
+ -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
+                  which is then over written with lines that produce
+                  the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -i             : Ignore case on operations dedup and sort.
+ -i             : Ignore case on operations (-d and -s) dedup and sort.
+ -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+                  Makes the keys upper case and remove white space before comparison.
+                  Output is not normalized. For that see (-n).
+                  See also (-i) for case insensitive comparisons.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
- -r             : Reverse sort (-s).
+ -r             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
@@ -294,7 +302,8 @@ sub sort_list( $ )
 	{
 		my $line = shift @ALL_LINES;
 		chomp $line;
-		my $key  = getKey( $line, $wantedColumns );
+		my $key = getKey( $line, $wantedColumns );
+		$key = normalize( $key ) if ( $opt{'N'} );
 		# The key will now always be the first value in the pipe delimited line.
 		push @tempArray, $key . '|' . $line;
 	}
@@ -340,7 +349,38 @@ sub process_line( $ )
 	return $line;
 }
 
-# Sorts 
+# Dedups the ALL_LINES array using (O)1 space.
+# param:  list of columns to sort on.
+# return: <none> - removes duplicate values from the ALL_LINES list.
+sub dedup_list( $ )
+{
+	my $wantedColumns = shift;
+	while( @ALL_LINES )
+	{
+		my $line = shift @ALL_LINES;
+		chomp $line;
+		my $key = getKey( $line, $wantedColumns );
+		$key = normalize( $key ) if ( $opt{'N'} );
+		$ddup_ref->{ $key } = $line;
+		print STDERR "\$key=$key, \$value=$line\n" if ( $opt{'D'} );
+	}
+	my @tmp = ();
+	if ( $opt{'r'} )
+	{
+		@tmp = sort { $b cmp $a } keys %{$ddup_ref};
+	}
+	else
+	{
+		@tmp = sort { $a cmp $b } keys %{$ddup_ref};
+	}
+	while ( @tmp ) 
+	{
+		my $key = shift @tmp;
+		push @ALL_LINES, $ddup_ref->{$key};
+		delete $ddup_ref->{$key};
+	}
+}
+
 # After you have finished reading and processing all lines in the input file
 # this function will manage the output.
 # param:  <none>
@@ -349,7 +389,7 @@ sub finalize_full_read_functions()
 {
 	if ( $opt{'d'} )
 	{
-		# Take the values stored on the hash_ref and push the values to the global array.
+		dedup_list( \@DDUP_COLUMNS );
 	}
 	# Sort the items from STDIN.
 	if ( $opt{'s'} )
@@ -365,7 +405,7 @@ sub finalize_full_read_functions()
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:d:Din:o:rs:t:x';
+    my $opt_string = 'a:c:d:DiNn:o:rs:t:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -403,7 +443,6 @@ while (<>)
 if ( $FULL_READ )
 {
 	finalize_full_read_functions();
-	print STDERR "sizeof ALL_LINES=@ALL_LINES\n" if ( $opt{'D'} );
 	while ( @ALL_LINES )
 	{
 		my $line = shift @ALL_LINES;
