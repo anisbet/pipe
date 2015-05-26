@@ -36,15 +36,20 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.1};
+my $VERSION    = qq{0.3};
+# Flag means that the entire file must be read for an operation like sort to work.
+my $FULL_READ  = 0;
+my @ALL_LINES  = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 my @COUNT_COLUMNS  = (); my $count_ref = {};
-my @SUM_COLUMNS    = (); my $sum_ref = {};
+my @SUM_COLUMNS    = (); my $sum_ref   = {};
+my @DDUP_COLUMNS   = (); my $ddup_ref  = {};
 my @TRIM_COLUMNS   = ();
 my @ORDER_COLUMNS  = ();
 my @NORMAL_COLUMNS = ();
+my @SORT_COLUMNS   = ();
 
 #
 # Message about this program and how to use it.
@@ -53,7 +58,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-dx] [-cnost<c0,c1,...,cn>]
+	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-i]<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -70,9 +75,11 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -d             : Debug switch.
+ -D             : Debug switch.
+ -i             : Ignore case on operations dedup and sort.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
 
@@ -107,7 +114,7 @@ sub readRequestedColumns( $ )
 		print STDERR "*** Error no valid columns selected. ***\n";
 		usage();
 	}
-	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'d'} );
+	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'D'} );
 	return @list;
 }
 
@@ -137,30 +144,6 @@ sub trim( $ )
 	$string = normalize( $string ) if ( $opt{'n'} );
 	return $string;
 }
-
-# Pulls the desired column values from an input line, based on the 
-# requested columns listed in the argument array of columns, ie.
-# input: 'a|b|c|' and columns c0, c2, returns a|c
-# input: 'a|b|c|' and columns c0, c5, returns a|
-# param:  line to pull out columns from.
-# param:  columns wanted array, array of columns that are required.
-# return: string line with requested columns removed.
-# sub getColumns
-# {
-	# my $line = shift;
-	# my @wantedColumns = @_;
-	# my @columns = split( '\|', $line );
-	# return $line if ( scalar( @columns ) < 2 );
-	# my @newLine = ();
-	# foreach my $i ( @wantedColumns )
-	# {
-		# push( @newLine, $columns[ $i ] ) if ( defined $columns[ $i ] and exists $columns[ $i ] );
-	# }
-	# $line = join( '|', @newLine );
-	# $line .= "|" if ( $opt{'t'} );
-	# print STDERR ">$line<, " if ( $opt{'d'} );
-	# return $line;
-# }
 
 # Prints the contents of the argument hash reference.
 # param:  title of output.
@@ -263,19 +246,138 @@ sub order_line( $ )
 	return join '|', @newLine;
 }
 
+#
+# Returns the key composed of the selected fields.
+# param:  string line of values from the input.
+# param:  List of desired fields, or columns.
+# return: string composed of each string selected as column pasted together without trailing spaces.
+sub getKey( $$ )
+{
+	my $line          = shift;
+	my $wantedColumns = shift;
+	my $key           = "";
+	my @columns = split( '\|', $line );
+	# If the line only has one column that is couldn't be split then return the entire line as 
+	# key. Duplicate lines will be removed only if they match entirely.
+	if ( scalar( @columns ) < 2 )
+	{
+		print STDERR "\$key>$key<\n" if ( $opt{'D'} );
+		return $line;
+	}
+	my @newLine = ();
+	# Pull out the values from the line that will make up the key for storage in a hash table.
+	for ( my $i = 0; $i < scalar(@{$wantedColumns}); $i++ )
+	{
+		my $j = ${$wantedColumns}[$i];
+		if ( defined $columns[ $j ] and exists $columns[ $j ] )
+		{
+			my $cols = $columns[ $j ];
+			$cols = lc( $columns[ $j ] ) if ( $opt{ 'i' } );
+			push( @newLine, $cols );
+		}
+	}
+	# it doesn't matter what we use as a delimiter as long as we are consistent.
+	$key = join( ' ', @newLine );
+	## if the key is empty we will fill it with line, and lines that match completely will be removed.
+	# $key = $line if ( $key eq "" );
+	print STDERR "\$key=$key\n" if ( $opt{'D'} );
+	return $key;
+}
+
+# Sorts the ALL_LINES array using (O)1 space.
+# param:  list of columns to sort on.
+# return: <none> - reorders the ALL_LINES list.
+sub sort_list( $ )
+{
+	my @tempArray = ();
+	my $wantedColumns = shift;
+	while( @ALL_LINES )
+	{
+		my $line = shift @ALL_LINES;
+		chomp $line;
+		my $key  = getKey( $line, $wantedColumns );
+		# The key will now always be the first value in the pipe delimited line.
+		push @tempArray, $key . '|' . $line;
+	}
+	# Sort lexically.
+	my @nextArray = sort @tempArray;
+	
+	# now remove the key from the start of the entry for each line in the array.
+	while (@nextArray)
+	{
+		my $value = shift @nextArray;
+		# chop off the first value and push back to @ALL_LINES
+		my @line = split '\|', $value;
+		# Toss away the key.
+		shift @line;
+		my $ln = join '|', @line;
+		print STDERR "\$ln=$ln\n" if ( $opt{'D'} );
+		push @ALL_LINES, $ln;
+	}
+	print STDERR "sizeof ALL_LINES=".scalar @ALL_LINES . "\n" if ( $opt{'D'} );
+}
+
+# This function abstracts all line operations for line by line operations.
+# param:  line from file.
+# return: Modified line.
+sub process_line( $ )
+{
+	my $line = shift;
+	# This function allows the line by line operations to work with operations
+	# that require the entire file to be read before working (like sort and dedup).
+	# Each operation specified by a different flag.
+	count( $line ) if ( $opt{'c'} );
+	sum( $line ) if ( $opt{'a'} );
+	# This takes a new line because it gets trimmed during processing.
+	$line = normalize_line( $line )  if ( $opt{'n'} );
+	$line = order_line( $line )."\n" if ( $opt{'o'} );
+	$line = trim_line( $line )       if ( $opt{'t'} );
+	return $line;
+}
+
+# Sorts 
+# After you have finished reading and processing all lines in the input file
+# this function will manage the output.
+# param:  <none>
+# return: <none>
+sub finalize_full_read_functions()
+{
+	if ( $opt{'d'} )
+	{
+		# Take the values stored on the hash_ref and push the values to the global array.
+	}
+	# Sort the items from STDIN.
+	if ( $opt{'s'} )
+	{
+		# We have a list of lines. We will split them creating a key that we append to the start with a delimiter of ''
+		# When it comes time to sort use the default sort in perl and then remove the prefix.
+		sort_list( \@SORT_COLUMNS );
+	}
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:dn:o:t:x';
+    my $opt_string = 'a:c:d:Din:o:s:t:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
-	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
 	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
+	if ( $opt{'d'} )
+	{
+		@DDUP_COLUMNS  = readRequestedColumns( $opt{'d'} );
+		$FULL_READ = 1;
+	}
+	if ( $opt{'s'} )
+	{
+		@SORT_COLUMNS  = readRequestedColumns( $opt{'s'} );
+		$FULL_READ = 1;
+	}
 }
 
 init();
@@ -283,15 +385,25 @@ init();
 # Only takes input on STDIN. All output is to STDOUT with the exception of errors.
 while (<>)
 {
-	# Each operation specified by a different flag.
-	count( $_ ) if ( $opt{'c'} );
-	sum( $_ ) if ( $opt{'a'} );
-	my $line = $_;
-	# This takes a new line because it gets trimmed during processing.
-	$line = normalize_line( $line )  if ( $opt{'n'} );
-	$line = order_line( $line )."\n" if ( $opt{'o'} );
-	$line = trim_line( $line )       if ( $opt{'t'} );
+	if ( $FULL_READ )
+	{
+		push @ALL_LINES, $_;
+		next;
+	}
+	my $line = process_line( $_ );
 	print "$line";
+}
+
+# Print out all results now we have fully read the entire input file and processed it.
+if ( $FULL_READ )
+{
+	finalize_full_read_functions();
+	print STDERR "sizeof ALL_LINES=@ALL_LINES\n" if ( $opt{'D'} );
+	while ( @ALL_LINES )
+	{
+		my $line = shift @ALL_LINES;
+		print process_line( $line ) . "\n";
+	}
 }
 
 # Summary section.
