@@ -405,9 +405,9 @@ sub finalize_full_read_functions()
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:d:DiNn:o:rs:t:x';
-    getopts( "$opt_string", \%opt ) or usage();
-    usage() if ( $opt{'x'} );
+	my $opt_string = 'a:c:d:DiNn:o:rs:t:x';
+	getopts( "$opt_string", \%opt ) or usage();
+	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
 	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
