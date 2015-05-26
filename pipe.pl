@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.1 - Implemented trim, order, sum, and count. 
 #          0.0 - Dev. 
 #
 #######################################################################
@@ -35,14 +36,15 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.0};
+my $VERSION    = qq{0.1};
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
-my @COUNT_COLUMNS = (); my $count_ref = {};
-my @SUM_COLUMNS = (); my $sum_ref = {};
-my @TRIM_COLUMNS = ();
-my @ORDER_COLUMNS = ();
+my @COUNT_COLUMNS  = (); my $count_ref = {};
+my @SUM_COLUMNS    = (); my $sum_ref = {};
+my @TRIM_COLUMNS   = ();
+my @ORDER_COLUMNS  = ();
+my @NORMAL_COLUMNS = ();
 
 #
 # Message about this program and how to use it.
@@ -51,7 +53,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-dx] [-cst<c0,c1,...,cn>]
+	usage: $0 [-dx] [-cnost<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -69,6 +71,7 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
  -d             : Debug switch.
+ -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
@@ -224,6 +227,24 @@ sub trim_line( $ )
 	return join '|', @line;
 }
 
+# Normalizes of specified columns, removing white space
+# and changing lower case letters to upper case. 
+# param:  line to pull out columns from.
+# return: string line with requested columns removed.
+sub normalize_line( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @NORMAL_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined $line[$colIndex] )
+		{
+			$line[$colIndex] = normalize( $line[$colIndex] );
+		}
+	}
+	return join '|', @line;
+}
+
 # Places specified columns in a different order. 
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
@@ -247,11 +268,12 @@ sub order_line( $ )
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:do:t:x';
+    my $opt_string = 'a:c:dn:o:t:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
 }
@@ -265,6 +287,8 @@ while (<>)
 	count( $_ ) if ( $opt{'c'} );
 	sum( $_ ) if ( $opt{'a'} );
 	my $line = $_;
+	# This takes a new line because it gets trimmed during processing.
+	$line = normalize_line( $line )  if ( $opt{'n'} );
 	$line = order_line( $line )."\n" if ( $opt{'o'} );
 	$line = trim_line( $line )       if ( $opt{'t'} );
 	print "$line";
