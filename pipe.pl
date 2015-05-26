@@ -26,6 +26,9 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.3.1 - Implemented reverse sort. 
+#          0.3 - Implemented sort. 
+#          0.2 - Implemented trim, order, sum, and count. 
 #          0.1 - Implemented trim, order, sum, and count. 
 #          0.0 - Dev. 
 #
@@ -36,7 +39,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.3};
+my $VERSION    = qq{0.3.1};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -58,7 +61,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-i]<c0,c1,...,cn>]
+	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-ir]<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -79,6 +82,7 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
  -i             : Ignore case on operations dedup and sort.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -r             : Reverse sort (-s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
@@ -246,7 +250,6 @@ sub order_line( $ )
 	return join '|', @newLine;
 }
 
-#
 # Returns the key composed of the selected fields.
 # param:  string line of values from the input.
 # param:  List of desired fields, or columns.
@@ -261,7 +264,6 @@ sub getKey( $$ )
 	# key. Duplicate lines will be removed only if they match entirely.
 	if ( scalar( @columns ) < 2 )
 	{
-		print STDERR "\$key>$key<\n" if ( $opt{'D'} );
 		return $line;
 	}
 	my @newLine = ();
@@ -278,9 +280,6 @@ sub getKey( $$ )
 	}
 	# it doesn't matter what we use as a delimiter as long as we are consistent.
 	$key = join( ' ', @newLine );
-	## if the key is empty we will fill it with line, and lines that match completely will be removed.
-	# $key = $line if ( $key eq "" );
-	print STDERR "\$key=$key\n" if ( $opt{'D'} );
 	return $key;
 }
 
@@ -299,11 +298,18 @@ sub sort_list( $ )
 		# The key will now always be the first value in the pipe delimited line.
 		push @tempArray, $key . '|' . $line;
 	}
-	# Sort lexically.
-	my @nextArray = sort @tempArray;
-	
+	my @nextArray = ();
+	# reverse sort?
+	if ( $opt{'r'} )
+	{
+		@nextArray = sort { $b cmp $a } @tempArray;
+	}
+	else # Sort lexically.
+	{
+		@nextArray = sort @tempArray;
+	}
 	# now remove the key from the start of the entry for each line in the array.
-	while (@nextArray)
+	while ( @nextArray )
 	{
 		my $value = shift @nextArray;
 		# chop off the first value and push back to @ALL_LINES
@@ -314,7 +320,6 @@ sub sort_list( $ )
 		print STDERR "\$ln=$ln\n" if ( $opt{'D'} );
 		push @ALL_LINES, $ln;
 	}
-	print STDERR "sizeof ALL_LINES=".scalar @ALL_LINES . "\n" if ( $opt{'D'} );
 }
 
 # This function abstracts all line operations for line by line operations.
@@ -360,7 +365,7 @@ sub finalize_full_read_functions()
 # return: 
 sub init
 {
-    my $opt_string = 'a:c:d:Din:o:s:t:x';
+    my $opt_string = 'a:c:d:Din:o:rs:t:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
