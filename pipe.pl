@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5 - Normalize modifier options to UCase, add -r randomize flag. 
 #          0.4 - Implemented dedup with normalization option. 
 #          0.3.1 - Implemented reverse sort. 
 #          0.3 - Implemented sort. 
@@ -40,7 +41,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.4};
+my $VERSION    = qq{0.5};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -62,7 +63,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-irN]<c0,c1,...,cn>]
+	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
 Usage notes for $0. This application is a cumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -83,14 +84,16 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -i             : Ignore case on operations (-d and -s) dedup and sort.
+ -I             : Ignore case on operations (-d and -s) dedup and sort.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
                   See also (-i) for case insensitive comparisons.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
- -r             : Reverse sort (-d and -s).
+ -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
+                  order. -r0 displays all output, and -r15 outputs 15% of the input in random order.
+ -R             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
@@ -282,13 +285,30 @@ sub getKey( $$ )
 		if ( defined $columns[ $j ] and exists $columns[ $j ] )
 		{
 			my $cols = $columns[ $j ];
-			$cols = lc( $columns[ $j ] ) if ( $opt{ 'i' } );
+			$cols = lc( $columns[ $j ] ) if ( $opt{ 'I' } );
 			push( @newLine, $cols );
 		}
 	}
 	# it doesn't matter what we use as a delimiter as long as we are consistent.
 	$key = join( ' ', @newLine );
 	return $key;
+}
+
+# Test if argument is a number between 0-100.
+# param:  number to test.
+# return: 1 if the argument is a number between 0-100, and 0 otherwise.
+sub isBetweenZeroAndHundred( $ )
+{
+	my $testValue = shift;
+	chomp $testValue;
+	if ( $testValue =~ m/^\d{1,3}$/)
+	{
+		if ( 0 <= $testValue and $testValue <= 100 )
+		{
+			return 1;
+		}
+	}
+	return 0;
 }
 
 # Sorts the ALL_LINES array using (O)1 space.
@@ -309,7 +329,7 @@ sub sort_list( $ )
 	}
 	my @nextArray = ();
 	# reverse sort?
-	if ( $opt{'r'} )
+	if ( $opt{'R'} )
 	{
 		@nextArray = sort { $b cmp $a } @tempArray;
 	}
@@ -365,7 +385,7 @@ sub dedup_list( $ )
 		print STDERR "\$key=$key, \$value=$line\n" if ( $opt{'D'} );
 	}
 	my @tmp = ();
-	if ( $opt{'r'} )
+	if ( $opt{'R'} )
 	{
 		@tmp = sort { $b cmp $a } keys %{$ddup_ref};
 	}
@@ -381,6 +401,50 @@ sub dedup_list( $ )
 	}
 }
 
+# Randomizes the entire list of input lines.
+# param:  <none>
+# return: <none>
+sub randomize_list()
+{
+	# Convert the user requested number to a percent lines of the file.
+	my $count = int( ( $opt{ 'r' } / 100.0 ) * scalar @ALL_LINES ); # is already tested for valid percent in init().
+	$count = 1 if ( $count < 1 );
+	my $randomHash = {};
+	my $i = 0;
+	# Generate all the random numbers needed as indexes.
+	while ( $i != $count )
+	{
+		my $r = int( rand( scalar @ALL_LINES ) );
+		print "\$r=$r\n" if ( $opt{'D'} );
+		$randomHash->{ $r } = 1;
+		$i = scalar keys %$randomHash;
+	}
+	my @row_selection = keys %$randomHash;
+	my @new_array = ();
+	# Grab the values stored on the ALL_LINES array, but don't splice because 
+	# that will change the size and indexes will miss.
+	while ( @row_selection )
+	{
+		my $index = shift @row_selection;
+		if ( defined $ALL_LINES[ $index ] )
+		{
+			chomp $ALL_LINES[ $index ];
+			push @new_array, $ALL_LINES[ $index ];
+		}
+	}
+	# Empty original list.
+	while ( @ALL_LINES )
+	{
+		shift @ALL_LINES;
+	}
+	# Place the randomized values back onto the @ALL_LINES array.
+	while ( @new_array )
+	{
+		my $value = shift @new_array;
+		push @ALL_LINES, $value;
+	}
+}
+
 # After you have finished reading and processing all lines in the input file
 # this function will manage the output.
 # param:  <none>
@@ -391,8 +455,11 @@ sub finalize_full_read_functions()
 	{
 		dedup_list( \@DDUP_COLUMNS );
 	}
-	# Sort the items from STDIN.
-	if ( $opt{'s'} )
+	if ( $opt{'r'} ) # select 'n'% of file at random for output.
+	{
+		randomize_list();
+	}
+	if ( $opt{'s'} )# Sort the items from STDIN.
 	{
 		# We have a list of lines. We will split them creating a key that we append to the start with a delimiter of ''
 		# When it comes time to sort use the default sort in perl and then remove the prefix.
@@ -405,7 +472,7 @@ sub finalize_full_read_functions()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DiNn:o:rs:t:x';
+	my $opt_string = 'a:c:d:DINn:o:Rr:s:t:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -417,6 +484,15 @@ sub init
 	{
 		@DDUP_COLUMNS  = readRequestedColumns( $opt{'d'} );
 		$FULL_READ = 1;
+	}
+	if ( $opt{'r'} )
+	{
+		$FULL_READ = 1;
+		if ( ! isBetweenZeroAndHundred( $opt{'r'} ) )
+		{
+			print STDERR "** error, invalid random percentage selection.\n";
+			usage();
+		}
 	}
 	if ( $opt{'s'} )
 	{
