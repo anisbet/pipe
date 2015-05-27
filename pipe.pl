@@ -369,15 +369,16 @@ sub sort_list( $ )
 sub process_line( $ )
 {
 	my $line = shift;
+	chomp $line;
 	# This function allows the line by line operations to work with operations
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
 	count( $line ) if ( $opt{'c'} );
 	sum( $line ) if ( $opt{'a'} );
 	# This takes a new line because it gets trimmed during processing.
-	$line = normalize_line( $line )  if ( $opt{'n'} );
-	$line = order_line( $line )."\n" if ( $opt{'o'} );
-	$line = trim_line( $line )       if ( $opt{'t'} );
+	$line = normalize_line( $line ) if ( $opt{'n'} );
+	$line = order_line( $line )     if ( $opt{'o'} );
+	$line = trim_line( $line )      if ( $opt{'t'} );
 	return $line;
 }
 
@@ -523,8 +524,7 @@ while (<>)
 		push @ALL_LINES, $_;
 		next;
 	}
-	my $line = process_line( $_ );
-	print "$line";
+	print process_line( $_ ) . "\n";
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
