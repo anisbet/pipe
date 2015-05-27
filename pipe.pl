@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5.1 - Fix spelling mistakes. 
 #          0.5 - Normalize modifier options to UCase, add -r randomize flag. 
 #          0.4 - Implemented dedup with normalization option. 
 #          0.3.1 - Implemented reverse sort. 
@@ -41,7 +42,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5};
+my $VERSION    = qq{0.5.1};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -64,17 +65,18 @@ sub usage()
     print STDERR << "EOF";
 
 	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
-Usage notes for $0. This application is a cumulation of helpful scripts that
+Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
 functions work similarly. Stacked functions are operated on in alphabetical 
-order by flag letter, that is, if you elect to order columns and trim colums 
+order by flag letter, that is, if you elect to order columns and trim columns, 
 the columns are first ordered, then the columns are trimmed, because -o comes
 before -t.
 
 Example: cat file.lst | $0 -c"c0"
 
 $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
+All column references are 0 based.
 
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
@@ -97,8 +99,18 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -x             : This (help) message.
+ 
+A note on usage; because of the way this script works it is quite possible to produce
+mystifying results. For example, failing to remember that ordering comes before trimming
+may produce perplexing results. You can do multiple transformations, but if you are not sure
+you can pipe output from one process to another pipe process. If you  
+order column so that column 1 is output then column 0, but column 0 needs to be trimmed
+you would have to write:
+ cat file | $0 -o"c1,c0" -t"c1"
+because -o will first order the row, so the value you want trimmed is now c1. If that is
+too radical to contemplate then:
+ cat file | $0 -t"c0" | $0 -o"c1,c0"
 
-example: $0 -x
 Version: $VERSION
 EOF
     exit;
