@@ -14,13 +14,14 @@ of non-empty values in the specified columns. Other functions work similarly. St
 operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim 
 columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t.
 
-Things pipe.pl can do
+Things pipe.pl can do.
 1) Trim arbitrary fields.
 2) Order and suppress output of arbitrary fields.
 3) Randomize all, or a specific sample size of the records from input.
 4) De-duplicate records from input.
 5) Count non-empty fields from input records.
 6) Summation over non-empty numeric values of arbitrary fields.
+7) Sort input lines based on one or more arbitrary fields.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. 
 For example, failing to remember that ordering comes before trimming may produce perplexing results. 
