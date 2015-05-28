@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
-#          0.5.7 - Fix bug in summation.
+#          0.5.7 - Add -W to work on white space instead of just pipes.
+#          0.5.6 - Fix bug in summation.
 #          0.5.5 - Fix so sort always occurs last.
 #          0.5.4 - Fix sum to work on fields with digits only.
 #          0.5.3 - Clarified -r usage messaging.
