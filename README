@@ -1,13 +1,34 @@
-=== Mon May 25 15:12:15 MDT 2015 ===
+=== Mon May 28, 2015 ===
 
 Project Notes
 -------------
 
 Instructions for Running:
-./pipe
+cat file | pipe.pl [flags]
 
 Product Description:
 Perl script written by Andrew Nisbet for Edmonton Public Library, distributable by the enclosed license.
+Usage notes for /s/sirsi/Unicorn/Bincustom/pipe.pl. This application is a accumulation of helpful scripts 
+that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number 
+of non-empty values in the specified columns. Other functions work similarly. Stacked functions are 
+operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim 
+columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t.
+
+Things pipe.pl can do
+1) Trim arbitrary fields.
+2) Order and suppress output of arbitrary fields.
+3) Randomize all, or a specific sample size of the records from input.
+4) De-duplicate records from input.
+5) Count non-empty fields from input records.
+6) Summation over non-empty numeric values of arbitrary fields.
+
+A note on usage; because of the way this script works it is quite possible to produce mystifying results. 
+For example, failing to remember that ordering comes before trimming may produce perplexing results. 
+You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. 
+If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
+  cat file | pipe.pl -o"c1,c0" -t"c1"
+because -o will first order the row, so the value you want trimmed is now c1. If that is too radical to contemplate then:
+  cat file | pipe.pl -t"c0" | pipe.pl -o"c1,c0"
 
 Repository Information:
 This product is under version control using Git.
@@ -16,4 +37,4 @@ Dependencies:
 None
 
 Known Issues:
-None
+Using -r with a value of 0% has no effect, that is, all entries are output without randomization.

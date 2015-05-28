@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5.3 - Clarified -r usage messaging.
 #          0.5.2 - Fix formatting, flag error in usage.
 #          0.5.1 - Fix spelling mistakes. 
 #          0.5 - Normalize modifier options to UCase, add -r randomize flag. 
@@ -43,7 +44,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.1};
+my $VERSION    = qq{0.5.3};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -95,7 +96,7 @@ All column references are 0 based.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
-                  order. -r0 displays all output, and -r15 outputs 15% of the input in random order.
+                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
