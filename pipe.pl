@@ -26,6 +26,8 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5.5 - Fix so sort always occurs last.
+#          0.5.4 - Fix sum to work on fields with digits only.
 #          0.5.3 - Clarified -r usage messaging.
 #          0.5.2 - Fix formatting, flag error in usage.
 #          0.5.1 - Fix spelling mistakes. 
@@ -44,7 +46,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.3};
+my $VERSION    = qq{0.5.5};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -181,11 +183,18 @@ sub trim( $ )
 sub printSummary( $$ )
 {
 	my $title = shift;
-	my $lhs   = shift;
+	my $hash_ref   = shift;
 	print STDERR "=== $title ===\n";
-	while( my ($key, $v) = each %$lhs )
+	if ( scalar( keys( %{$hash_ref} ) ) == 0)
 	{
-		printf STDERR " %s = %d,", $key, $v if ( defined $lhs->{$key} );
+		printf STDERR " %d", 0;
+	}
+	else
+	{
+		while( my ( $key, $v ) = each %$hash_ref )
+		{
+			printf STDERR " %s = %d  ", $key, $v if ( defined $hash_ref->{$key} );
+		}
 	}
 	print "\n";
 }
@@ -215,7 +224,9 @@ sub sum( $ )
 	foreach my $colIndex ( @SUM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[ $colIndex ] and $line[ $colIndex ] )
+		if ( defined $line[ $colIndex ] 
+			and $line[ $colIndex ] 
+			and $line[ $colIndex ] =~ m/\d{1,}/ )
 		{
 			$sum_ref->{ "c$colIndex" } += $line[ $colIndex ];
 		}
@@ -522,7 +533,7 @@ while (<>)
 {
 	if ( $FULL_READ )
 	{
-		push @ALL_LINES, $_;
+		push @ALL_LINES, process_line( $_ );
 		next;
 	}
 	print process_line( $_ ) . "\n";
@@ -534,7 +545,8 @@ if ( $FULL_READ )
 	finalize_full_read_functions();
 	while ( @ALL_LINES )
 	{
-		print process_line( shift @ALL_LINES ) . "\n";
+		my $line = shift @ALL_LINES;
+		print $line . "\n";
 	}
 }
 
