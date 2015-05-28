@@ -90,7 +90,7 @@ All column references are 0 based.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
-                  See also (-i) for case insensitive comparisons.
+                  See also (-I) for case insensitive comparisons.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
@@ -180,7 +180,7 @@ sub printSummary( $$ )
 {
 	my $title = shift;
 	my $lhs   = shift;
-	print "=== $title ===\n";
+	print STDERR "=== $title ===\n";
 	while( my ($key, $v) = each %$lhs )
 	{
 		printf STDERR " %s = %d,", $key, $v if ( defined $lhs->{$key} );
@@ -197,7 +197,7 @@ sub count( $ )
 	foreach my $colIndex ( @COUNT_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[$colIndex] and $line[$colIndex] )
+		if ( defined $line[ $colIndex ] and $line[ $colIndex ] )
 		{
 			$count_ref->{ "c$colIndex" }++;
 		}
@@ -213,9 +213,9 @@ sub sum( $ )
 	foreach my $colIndex ( @SUM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[$colIndex] and $line[$colIndex] )
+		if ( defined $line[ $colIndex ] and $line[ $colIndex ] )
 		{
-			$sum_ref->{ "c$colIndex" } += $line[$colIndex];
+			$sum_ref->{ "c$colIndex" } += $line[ $colIndex ];
 		}
 	}
 }
@@ -229,9 +229,9 @@ sub trim_line( $ )
 	foreach my $colIndex ( @TRIM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[$colIndex] )
+		if ( defined $line[ $colIndex ] )
 		{
-			$line[$colIndex] = trim( $line[$colIndex] );
+			$line[ $colIndex ] = trim( $line[ $colIndex ] );
 		}
 	}
 	return join '|', @line;
@@ -247,9 +247,9 @@ sub normalize_line( $ )
 	foreach my $colIndex ( @NORMAL_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[$colIndex] )
+		if ( defined $line[ $colIndex ] )
 		{
-			$line[$colIndex] = normalize( $line[$colIndex] );
+			$line[ $colIndex ] = normalize( $line[ $colIndex ] );
 		}
 	}
 	return join '|', @line;
@@ -264,10 +264,9 @@ sub order_line( $ )
 	my @newLine = ();
 	foreach my $colIndex ( @ORDER_COLUMNS )
 	{
-		# print STDERR "$colIndex\n";
-		if ( defined $line[$colIndex] )
+		if ( defined $line[ $colIndex ] )
 		{
-			push @newLine, $line[$colIndex];
+			push @newLine, $line[ $colIndex ];
 		}
 	}
 	return join '|', @newLine;
@@ -291,9 +290,9 @@ sub getKey( $$ )
 	}
 	my @newLine = ();
 	# Pull out the values from the line that will make up the key for storage in a hash table.
-	for ( my $i = 0; $i < scalar(@{$wantedColumns}); $i++ )
+	for ( my $i = 0; $i < scalar( @{$wantedColumns} ); $i++ )
 	{
-		my $j = ${$wantedColumns}[$i];
+		my $j = ${$wantedColumns}[ $i ];
 		if ( defined $columns[ $j ] and exists $columns[ $j ] )
 		{
 			my $cols = $columns[ $j ];
@@ -409,8 +408,8 @@ sub dedup_list( $ )
 	while ( @tmp ) 
 	{
 		my $key = shift @tmp;
-		push @ALL_LINES, $ddup_ref->{$key};
-		delete $ddup_ref->{$key};
+		push @ALL_LINES, $ddup_ref->{ $key };
+		delete $ddup_ref->{ $key };
 	}
 }
 
@@ -533,13 +532,12 @@ if ( $FULL_READ )
 	finalize_full_read_functions();
 	while ( @ALL_LINES )
 	{
-		my $line = shift @ALL_LINES;
-		print process_line( $line ) . "\n";
+		print process_line( shift @ALL_LINES ) . "\n";
 	}
 }
 
 # Summary section.
 printSummary( "count", $count_ref ) if ( $opt{'c'} );
-printSummary( "sum", $sum_ref ) if ( $opt{'a'} );
+printSummary( "sum", $sum_ref )     if ( $opt{'a'} );
 
 # EOF
