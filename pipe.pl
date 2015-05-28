@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5.2 - Fix formatting, flag error in usage.
 #          0.5.1 - Fix spelling mistakes. 
 #          0.5 - Normalize modifier options to UCase, add -r randomize flag. 
 #          0.4 - Implemented dedup with normalization option. 
@@ -133,7 +134,7 @@ sub readRequestedColumns( $ )
 		if ( $colNum =~ m/c\d{1,}/ )
 		{
 			$colNum =~ s/c//; # get rid of the 'c' because it causes problems later.
-			push( @list, trim($colNum) );
+			push( @list, trim( $colNum ) );
 		}
 	}
 	if ( scalar(@list) == 0 )
@@ -373,7 +374,7 @@ sub process_line( $ )
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
 	count( $line ) if ( $opt{'c'} );
-	sum( $line ) if ( $opt{'a'} );
+	sum( $line )   if ( $opt{'a'} );
 	# This takes a new line because it gets trimmed during processing.
 	$line = normalize_line( $line ) if ( $opt{'n'} );
 	$line = order_line( $line )     if ( $opt{'o'} );
