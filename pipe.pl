@@ -26,7 +26,8 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
-#          0.5.6 - Fix bug in summation.
+# Rev: 
+#          0.5.7 - Fix bug in summation.
 #          0.5.5 - Fix so sort always occurs last.
 #          0.5.4 - Fix sum to work on fields with digits only.
 #          0.5.3 - Clarified -r usage messaging.
@@ -47,7 +48,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.6};
+my $VERSION    = qq{0.5.7};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -103,6 +104,7 @@ All column references are 0 based.
  -R             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -W             : Break on word spaces instead of '|' pipes.
  -x             : This (help) message.
  
 A note on usage; because of the way this script works it is quite possible to produce
@@ -496,7 +498,7 @@ sub finalize_full_read_functions()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DINn:o:Rr:s:t:x';
+	my $opt_string = 'a:c:d:DINn:o:Rr:s:t:Wx';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -530,12 +532,14 @@ init();
 # Only takes input on STDIN. All output is to STDOUT with the exception of errors.
 while (<>)
 {
+	my $line = $_;
+	$line =~ s/\s+/\|/g if ( $opt{'W'} );
 	if ( $FULL_READ )
 	{
-		push @ALL_LINES, process_line( $_ );
+		push @ALL_LINES, process_line( $line );
 		next;
 	}
-	print process_line( $_ ) . "\n";
+	print process_line( $line) . "\n";
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
