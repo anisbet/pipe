@@ -26,6 +26,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
+#          0.5.6 - Fix bug in summation.
 #          0.5.5 - Fix so sort always occurs last.
 #          0.5.4 - Fix sum to work on fields with digits only.
 #          0.5.3 - Clarified -r usage messaging.
@@ -46,7 +47,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.5};
+my $VERSION    = qq{0.5.6};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -224,11 +225,9 @@ sub sum( $ )
 	foreach my $colIndex ( @SUM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[ $colIndex ] 
-			and $line[ $colIndex ] 
-			and $line[ $colIndex ] =~ m/\d{1,}/ )
+		if ( defined $line[ $colIndex ] and trim( $line[ $colIndex ] ) =~ m/^\.?\d{1,}(\.\d+)?$/ )
 		{
-			$sum_ref->{ "c$colIndex" } += $line[ $colIndex ];
+			$sum_ref->{ "c$colIndex" } += trim( $line[ $colIndex ] );
 		}
 	}
 }
