@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
 #          0.5.8 - Make output of summaries better.
 #          0.5.7 - Add -W to work on white space instead of just pipes.
 #          0.5.6 - Fix bug in summation.
@@ -50,7 +51,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.8};
+my $VERSION    = qq{0.5.9};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -139,10 +140,14 @@ sub readRequestedColumns( $ )
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
 		# '0' as a legitimate column number.
-		if ( $colNum =~ m/c\d{1,}/ )
+		if ( $colNum =~ m/[C|c]\d{1,}/ )
 		{
-			$colNum =~ s/c//; # get rid of the 'c' because it causes problems later.
+			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
 			push( @list, trim( $colNum ) );
+		}
+		else
+		{
+			print STDERR "** Warning: illegal column designation '$colNum', ignoring.\n";
 		}
 	}
 	if ( scalar(@list) == 0 )
