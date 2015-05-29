@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.8 - Make output of summaries better.
 #          0.5.7 - Add -W to work on white space instead of just pipes.
 #          0.5.6 - Fix bug in summation.
 #          0.5.5 - Fix so sort always occurs last.
@@ -49,7 +50,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.7};
+my $VERSION    = qq{0.5.8};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -182,25 +183,26 @@ sub trim( $ )
 
 # Prints the contents of the argument hash reference.
 # param:  title of output.
-# param:  hash reference.
+# param:  hash reference of data.
+# param:  List of columns requested by user.
 # return: <none>
-sub printSummary( $$ )
+sub printSummary( $$$ )
 {
-	my $title = shift;
-	my $hash_ref   = shift;
-	print STDERR "=== $title ===\n";
-	if ( scalar( keys( %{$hash_ref} ) ) == 0)
+	my $title    = shift;
+	my $hash_ref = shift;
+	my $columns  = shift;
+	printf STDERR "== %5s\n", $title;
+	foreach my $column ( @{$columns} )
 	{
-		printf STDERR " %d", 0;
-	}
-	else
-	{
-		while( my ( $key, $v ) = each %$hash_ref )
+		if ( defined $hash_ref->{ 'c'.$column } )
 		{
-			printf STDERR " %s = %d  ", $key, $v if ( defined $hash_ref->{$key} );
+			printf STDERR " %2s: %7d\n", 'c'.$column, $hash_ref->{ 'c'.$column };
+		}
+		else
+		{
+			printf STDERR " %2s: %7d\n", 'c'.$column, 0;
 		}
 	}
-	print "\n";
 }
 
 # Counts the non-empty values of specified columns. 
@@ -555,7 +557,7 @@ if ( $FULL_READ )
 }
 
 # Summary section.
-printSummary( "count", $count_ref ) if ( $opt{'c'} );
-printSummary( "sum", $sum_ref )     if ( $opt{'a'} );
+printSummary( "count", $count_ref, \@COUNT_COLUMNS ) if ( $opt{'c'} );
+printSummary( "sum", $sum_ref, \@SUM_COLUMNS)        if ( $opt{'a'} );
 
 # EOF
