@@ -191,7 +191,6 @@ sub trim( $ )
 	my $string = shift;
 	$string =~ s/^\s+//;
 	$string =~ s/\s+$//;
-	$string = normalize( $string ) if ( $opt{'n'} );
 	return $string;
 }
 
@@ -616,7 +615,11 @@ init();
 while (<>)
 {
 	my $line = $_;
-	$line =~ s/\s+/\|/g if ( $opt{'W'} );
+	if ( $opt{'W'} )
+	{
+		$line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
+		$line =~ s/\s{1,}/\|/g;
+	}
 	if ( $FULL_READ )
 	{
 		push @ALL_LINES, process_line( $line );
