@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.11 - Bug fix for -L.
 #          0.5.10 - Add -L, line number [+n] head, [n] exact, [-n] tail [n-m] range.
 #          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
 #          0.5.8 - Make output of summaries better.
@@ -52,7 +53,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.10};
+my $VERSION    = qq{0.5.11};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -631,7 +632,7 @@ if ( $FULL_READ )
 	finalize_full_read_functions();
 	# Did the user wanted the last lines but we didn't know how many lines there are until now?
 	$END_OUTPUT = scalar @ALL_LINES if ( $END_OUTPUT == 0 );
-	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT if ( $TAIL_OUTPUT == 0 );
+	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT if ( $TAIL_OUTPUT == 1 );
 	while ( @ALL_LINES )
 	{
 		$LINE_NUMBER++;
