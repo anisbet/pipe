@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.12 - Output tables -O"HTML|WIKI".
 #          0.5.11 - Bug fix for -L.
 #          0.5.10 - Add -L, line number [+n] head, [n] exact, [-n] tail [n-m] range.
 #          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
@@ -53,7 +54,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.11};
+my $VERSION    = qq{0.5.12};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -117,6 +118,7 @@ All column references are 0 based.
  -R             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
  -W             : Break on word spaces instead of '|' pipes.
  -x             : This (help) message.
  
@@ -392,6 +394,25 @@ sub sort_list( $ )
 	}
 }
 
+# Outputs data from argument line as either HTML or WIKI.
+# param:  String of line data - pipe-delimited.
+# return: string with table formatting.
+sub prepare_table_data( $ )
+{
+	my $line = shift;
+	my @fields = split '\|', $line;
+	if ( $opt{'T'} =~ m/HTML/i )
+	{
+		$line = join '</td><td>', @fields;
+		$line = "  <tr><td>" . $line . "</td></tr>";
+	}
+	elsif ( $opt{'T'} =~ m/WIKI/i )
+	{
+		$line = join ' || ', @fields;
+		$line = "|-\n| " . $line ;
+	}
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -405,9 +426,10 @@ sub process_line( $ )
 	count( $line ) if ( $opt{'c'} );
 	sum( $line )   if ( $opt{'a'} );
 	# This takes a new line because it gets trimmed during processing.
-	$line = normalize_line( $line ) if ( $opt{'n'} );
-	$line = order_line( $line )     if ( $opt{'o'} );
-	$line = trim_line( $line )      if ( $opt{'t'} );
+	$line = normalize_line( $line )     if ( $opt{'n'} );
+	$line = order_line( $line )         if ( $opt{'o'} );
+	$line = trim_line( $line )          if ( $opt{'t'} );
+	$line = prepare_table_data( $line ) if ( $opt{'T'} );
 	return $line;
 }
 
@@ -534,7 +556,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:Wx';
+	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:T:Wx';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -609,8 +631,38 @@ sub init
 	}
 }
 
-init();
+# Outputs table header or footer, depending on argument string.
+# param:  String of either 'HEAD' or 'FOOT'.
+# return: <none>
+sub table_output( $ )
+{
+	my $placement = shift;
+	if ( $opt{'T'} =~ m/HTML/i )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			print "<table>\n  <tbody>\n";
+		}
+		else
+		{
+			print "  </tbody>\n</table>\n";
+		}
+	}
+	if ( $opt{'T'} =~ m/WIKI/i )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			print "{| class='wikitable'\n";
+		}
+		else
+		{
+			print "|-\n|}\n";
+		}
+	}
+}
 
+init();
+table_output("HEAD") if ( $opt{'T'} );
 # Only takes input on STDIN. All output is to STDOUT with the exception of errors.
 while (<>)
 {
@@ -626,7 +678,7 @@ while (<>)
 		next;
 	}
 	$LINE_NUMBER++;
-	print process_line( $line) . "\n" if ( isPrintableRange() );
+	print process_line( $line ) . "\n" if ( isPrintableRange() );
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
@@ -643,7 +695,7 @@ if ( $FULL_READ )
 		print $line . "\n" if ( isPrintableRange() );
 	}
 }
-
+table_output("FOOT") if ( $opt{'T'} );
 # Summary section.
 printSummary( "count", $count_ref, \@COUNT_COLUMNS ) if ( $opt{'c'} );
 printSummary( "sum", $sum_ref, \@SUM_COLUMNS)        if ( $opt{'a'} );
