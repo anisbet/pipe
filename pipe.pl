@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.10 - Add -L, line number [+n] head, [n] exact, [-n] tail [n-m] range.
 #          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
 #          0.5.8 - Make output of summaries better.
 #          0.5.7 - Add -W to work on white space instead of just pipes.
@@ -51,7 +52,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.9};
+my $VERSION    = qq{0.5.10};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -65,6 +66,10 @@ my @TRIM_COLUMNS   = ();
 my @ORDER_COLUMNS  = ();
 my @NORMAL_COLUMNS = ();
 my @SORT_COLUMNS   = ();
+my $LINE_NUMBER    = 0;
+my $START_OUTPUT   = 0;
+my $END_OUTPUT     = 0;
+my $TAIL_OUTPUT    = 0; # Is this a request for the tail of the file.
 
 #
 # Message about this program and how to use it.
@@ -73,7 +78,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-Dx] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
+	usage: cat file | $0 [-DxL] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -100,6 +105,10 @@ All column references are 0 based.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
+ -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
+                  Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
+                  is suppressed if the entered value is greater than lines read on STDIN.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
@@ -158,7 +167,6 @@ sub readRequestedColumns( $ )
 	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'D'} );
 	return @list;
 }
-
 
 # Compression refers to removing white space and normalizing all
 # alphabetic characters into upper case.
@@ -501,12 +509,32 @@ sub finalize_full_read_functions()
 	}
 }
 
+# Tests if a line number is to be output or not.
+# param:  <none>
+# return: 0 if the line is to be output and 1 otherwise.
+sub isPrintableRange()
+{
+	if ( $opt{'L'} )
+	{
+		if ( $LINE_NUMBER <= $END_OUTPUT )
+		{
+			if ( $LINE_NUMBER >= $START_OUTPUT )
+			{
+				return 1;
+			}
+			return 0;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DINn:o:Rr:s:t:Wx';
+	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:Wx';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -518,6 +546,52 @@ sub init
 	{
 		@DDUP_COLUMNS  = readRequestedColumns( $opt{'d'} );
 		$FULL_READ = 1;
+	}
+	# Output specific lines.
+	if ( $opt{'L'} ) 
+	{
+		# Line requests can look like this '+n', '-n', 'n-m', or 'n'.
+		# Case '+n'
+		if ( $opt{'L'} =~ m/^\+\d{1,}$/ )
+		{
+			$END_OUTPUT = $opt{'L'};
+			$END_OUTPUT =~ s/^\+//; # equiv of head n lines
+		}
+		# Case 'n'
+		elsif ( $opt{'L'} =~ m/^\d{1,}$/ )
+		{
+			$START_OUTPUT = $opt{'L'};
+			$END_OUTPUT   = $opt{'L'};
+		}
+		# Case '-n'
+		elsif ( $opt{'L'} =~ m/^\-\d{1,}$/ )
+		{
+			$START_OUTPUT = $opt{'L'};
+			$START_OUTPUT =~ s/^\-//; # equiv of tail n lines
+			$FULL_READ = 1;           # we need to compute when to start output.
+		}
+		# Case 'n-m' and 'n-'
+		elsif ( $opt{'L'} =~ m/\-/ )
+		{
+			# The easiest is if it is a range because we can just split on the dash and set start and end.
+			my @testRange = split '-', $opt{'L'};
+			if ( defined $testRange[1] and $testRange[1] =~ m/\d{1,}/ )
+			{
+				$END_OUTPUT = $testRange[1]; 
+			}
+			if ( defined $testRange[0] and $testRange[0] =~ m/\d{1,}/ )
+			{
+				$START_OUTPUT = $testRange[0];
+				$TAIL_OUTPUT = 1 if ( $END_OUTPUT == 0 );
+			}
+			$FULL_READ = 1 if ( $END_OUTPUT == 0 ); # we are going to have find just how many lines there are for 'n-'
+		}
+		else
+		{
+			print STDERR "** error, invalid range value: '" . $opt{'L'} . "'\n";
+			usage();
+		}
+		print STDERR "\$START_OUTPUT=$START_OUTPUT, \$END_OUTPUT=$END_OUTPUT\n" if ( $opt{'D'} );
 	}
 	if ( $opt{'r'} )
 	{
@@ -547,17 +621,22 @@ while (<>)
 		push @ALL_LINES, process_line( $line );
 		next;
 	}
-	print process_line( $line) . "\n";
+	$LINE_NUMBER++;
+	print process_line( $line) . "\n" if ( isPrintableRange() );
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
 if ( $FULL_READ )
 {
 	finalize_full_read_functions();
+	# Did the user wanted the last lines but we didn't know how many lines there are until now?
+	$END_OUTPUT = scalar @ALL_LINES if ( $END_OUTPUT == 0 );
+	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT if ( $TAIL_OUTPUT == 0 );
 	while ( @ALL_LINES )
 	{
+		$LINE_NUMBER++;
 		my $line = shift @ALL_LINES;
-		print $line . "\n";
+		print $line . "\n" if ( isPrintableRange() );
 	}
 }
 
