@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.14_01 - Fix usage(). 
 #          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
 #                  where '-' means suppress and '@' means output.
 #          0.5.13_01 - Bug fix for -W.
@@ -59,7 +60,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.14};
+my $VERSION    = qq{0.5.14_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -87,7 +88,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-DxLW<delimiter>] [-cnmot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
+	usage: cat file | $0 [-DxLW<delimiter>] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>] [-m<c0:<-|@>>,...]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -118,12 +119,11 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:<-|\@|*...>]: Mask specified column with the mask defined after a ':', and where '-' 
+ -m[c0:<-|\@...>]: Mask specified column with the mask defined after a ':', and where '-' 
                   means suppress, '\@' means output character. If the mask is shorter than
                   the target string, the last character of the mask will control the remainder
                   of the output. Example data: 1481241, -m"c0:--\@" produces '81241'. -m"c0:--\@-"
-                  produces '8'.
-                  and suppress the rest of the field, c3 would output characters 0-2, and from 5 on.
+                  produces '8' and suppress the rest of the field.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
