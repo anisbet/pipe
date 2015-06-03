@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.13 - Introduced new flag function for -W to allow an arbitrary delimiter.
 #          0.5.12_01 - Fixed bug that output table headers and footers for invalid table types.
 #          0.5.12 - Output tables -T"HTML|WIKI".
 #          0.5.11 - Bug fix for -L.
@@ -55,7 +56,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.12_01};
+my $VERSION    = qq{0.5.13};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -82,7 +83,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-DxL] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
+	usage: cat file | $0 [-DxLW<delimiter>] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -121,7 +122,7 @@ All column references are 0 based.
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
- -W             : Break on word spaces instead of '|' pipes.
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  
 A note on usage; because of the way this script works it is quite possible to produce
@@ -558,7 +559,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:T:Wx';
+	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:T:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -684,7 +685,8 @@ while (<>)
 	if ( $opt{'W'} )
 	{
 		$line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
-		$line =~ s/\s{1,}/\|/g;
+		# Replace delimiter selection with '|' pipe.
+		$line =~ s/($opt{'M'})/\|/g;
 	}
 	if ( $FULL_READ )
 	{
