@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
-#          0.5.12 - Output tables -O"HTML|WIKI".
+#          0.5.12_01 - Fixed bug that output table headers and footers for invalid table types.
+#          0.5.12 - Output tables -T"HTML|WIKI".
 #          0.5.11 - Bug fix for -L.
 #          0.5.10 - Add -L, line number [+n] head, [n] exact, [-n] tail [n-m] range.
 #          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
@@ -54,7 +55,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.12};
+my $VERSION    = qq{0.5.12_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -72,6 +73,7 @@ my $LINE_NUMBER    = 0;
 my $START_OUTPUT   = 0;
 my $END_OUTPUT     = 0;
 my $TAIL_OUTPUT    = 0; # Is this a request for the tail of the file.
+my $TABLE_OUTPUT   = 0; # Does the user want to output to a table.
 
 #
 # Message about this program and how to use it.
@@ -401,12 +403,12 @@ sub prepare_table_data( $ )
 {
 	my $line = shift;
 	my @fields = split '\|', $line;
-	if ( $opt{'T'} =~ m/HTML/i )
+	if ( $TABLE_OUTPUT =~ m/HTML/i )
 	{
 		$line = join '</td><td>', @fields;
 		$line = "  <tr><td>" . $line . "</td></tr>";
 	}
-	elsif ( $opt{'T'} =~ m/WIKI/i )
+	elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
 	{
 		$line = join ' || ', @fields;
 		$line = "|-\n| " . $line ;
@@ -429,7 +431,7 @@ sub process_line( $ )
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
-	$line = prepare_table_data( $line ) if ( $opt{'T'} );
+	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	return $line;
 }
 
@@ -629,6 +631,18 @@ sub init
 		@SORT_COLUMNS  = readRequestedColumns( $opt{'s'} );
 		$FULL_READ = 1;
 	}
+	
+	if ( $opt{'T'} )
+	{
+		if ( $opt{'T'} =~ m/HTML/i )
+		{
+			$TABLE_OUTPUT = "HTML";
+		}
+		if ( $opt{'T'} =~ m/WIKI/i )
+		{
+			$TABLE_OUTPUT = "WIKI";
+		}
+	}
 }
 
 # Outputs table header or footer, depending on argument string.
@@ -637,7 +651,7 @@ sub init
 sub table_output( $ )
 {
 	my $placement = shift;
-	if ( $opt{'T'} =~ m/HTML/i )
+	if ( $TABLE_OUTPUT =~ m/HTML/ )
 	{
 		if ( $placement =~ m/HEAD/ )
 		{
@@ -648,7 +662,7 @@ sub table_output( $ )
 			print "  </tbody>\n</table>\n";
 		}
 	}
-	if ( $opt{'T'} =~ m/WIKI/i )
+	if ( $TABLE_OUTPUT =~ m/WIKI/ )
 	{
 		if ( $placement =~ m/HEAD/ )
 		{
@@ -662,7 +676,7 @@ sub table_output( $ )
 }
 
 init();
-table_output("HEAD") if ( $opt{'T'} );
+table_output("HEAD") if ( $TABLE_OUTPUT );
 # Only takes input on STDIN. All output is to STDOUT with the exception of errors.
 while (<>)
 {
@@ -695,7 +709,7 @@ if ( $FULL_READ )
 		print $line . "\n" if ( isPrintableRange() );
 	}
 }
-table_output("FOOT") if ( $opt{'T'} );
+table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
 printSummary( "count", $count_ref, \@COUNT_COLUMNS ) if ( $opt{'c'} );
 printSummary( "sum", $sum_ref, \@SUM_COLUMNS)        if ( $opt{'a'} );
