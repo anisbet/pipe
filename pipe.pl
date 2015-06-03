@@ -27,6 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
+#                  where '-' means suppress and '@' means output.
 #          0.5.13_01 - Bug fix for -W.
 #          0.5.13 - Introduced new flag function for -W to allow an arbitrary delimiter.
 #          0.5.12_01 - Fixed bug that output table headers and footers for invalid table types.
@@ -57,7 +59,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.13_01};
+my $VERSION    = qq{0.5.14};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -71,6 +73,7 @@ my @TRIM_COLUMNS   = ();
 my @ORDER_COLUMNS  = ();
 my @NORMAL_COLUMNS = ();
 my @SORT_COLUMNS   = ();
+my @MASK_COLUMNS   = ();  my $mask_ref  = {}; # Stores the masks by column number.
 my $LINE_NUMBER    = 0;
 my $START_OUTPUT   = 0;
 my $END_OUTPUT     = 0;
@@ -84,7 +87,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-DxLW<delimiter>] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
+	usage: cat file | $0 [-DxLW<delimiter>] [-cnmot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -115,6 +118,12 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
+ -m[c0:<-|\@|*...>]: Mask specified column with the mask defined after a ':', and where '-' 
+                  means suppress, '\@' means output character. If the mask is shorter than
+                  the target string, the last character of the mask will control the remainder
+                  of the output. Example data: 1481241, -m"c0:--\@" produces '81241'. -m"c0:--\@-"
+                  produces '8'.
+                  and suppress the rest of the field, c3 would output characters 0-2, and from 5 on.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
@@ -140,6 +149,50 @@ too radical to contemplate then:
 Version: $VERSION
 EOF
     exit;
+}
+
+# Reads the values supplied on the command line and parses them out into the argument list, 
+# and populates the appropriate hash reference of column qualifiers hash-reference.
+# param:  command line string of requested columns.
+# param:  hash reference of column names and qualifiers.
+# return: New array.
+sub readRequestedQualifiedColumns( $$ )
+{
+	my $line     = shift;
+	my @list     = ();
+	my $hash_ref = shift;
+	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
+	$line .= "," if ( $line !~ m/,/ );
+	my @cols = split( ',', $line );
+	foreach my $colNum ( @cols )
+	{
+		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
+		# '0' as a legitimate column number.
+		if ( $colNum =~ m/[C|c]\d{1,}/ )
+		{
+			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
+			my @nameQualifier = split ':', $colNum;
+			if ( scalar @nameQualifier != 2 )
+			{
+				print STDERR "*** Error missing qualifier '$colNum'. ***\n";
+				usage();
+			}
+			push( @list, trim( $nameQualifier[0] ) );
+			# Add the qualifier to the hash reference too for reference later.
+			$hash_ref->{$nameQualifier[0]} = trim( $nameQualifier[1] );
+		}
+		else
+		{
+			print STDERR "** Warning: illegal column designation '$colNum', ignoring.\n";
+		}
+	}
+	if ( scalar(@list) == 0 )
+	{
+		print STDERR "*** Error no valid columns selected. ***\n";
+		usage();
+	}
+	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'D'} );
+	return @list;
 }
 
 # Reads the values supplied on the command line and parses them out into the argument list.
@@ -417,6 +470,53 @@ sub prepare_table_data( $ )
 	}
 }
 
+# Applies the mask specified in argument 2 to string in argument 1.
+# param:  String - target of masking operation.
+# param:  String - mask specification.
+# return: String modified by mask.
+sub apply_mask( $$ )
+{
+	my @chars = split '', shift;
+	my @mask  = split '', shift;
+	my @word  = "";
+	my $current_char = '';
+	my $mask_char = '';
+	while ( @chars )
+	{
+		my $char = shift @chars;
+		$mask_char = shift @mask if ( @mask );
+		print STDERR "\$char=$char and \$mask_char=$mask_char\n" if ( $opt{'D'} );
+		if ( defined $mask_char )
+		{
+			# If we run out of mask just keep going with what the user last specified for output.
+			$current_char = $mask_char;
+		}
+		else
+		{
+			$mask_char = $current_char;
+		}
+		push @word, $char if ( $mask_char eq '@' );
+	} 
+	return join '', @word; 
+}
+
+# Outputs masked column data as per specification. See usage().
+# param:  String of line data - pipe-delimited.
+# return: string with table formatting.
+sub mask_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	foreach my $colIndex ( @MASK_COLUMNS )
+	{
+		if ( defined $line[ $colIndex ] )
+		{
+			push @newLine, apply_mask( $line[ $colIndex ], $mask_ref->{ $colIndex } );
+		}
+	}
+	return join '|', @newLine;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -430,6 +530,7 @@ sub process_line( $ )
 	count( $line ) if ( $opt{'c'} );
 	sum( $line )   if ( $opt{'a'} );
 	# This takes a new line because it gets trimmed during processing.
+	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
@@ -560,11 +661,12 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DIL:Nn:o:Rr:s:t:T:W:x';
+	my $opt_string = 'a:c:d:DIL:Nn:m:o:Rr:s:t:T:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
+	@MASK_COLUMNS  = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
