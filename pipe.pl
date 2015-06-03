@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.13_01 - Bug fix for -W.
 #          0.5.13 - Introduced new flag function for -W to allow an arbitrary delimiter.
 #          0.5.12_01 - Fixed bug that output table headers and footers for invalid table types.
 #          0.5.12 - Output tables -T"HTML|WIKI".
@@ -56,7 +57,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.13};
+my $VERSION    = qq{0.5.13_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -686,7 +687,7 @@ while (<>)
 	{
 		$line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
 		# Replace delimiter selection with '|' pipe.
-		$line =~ s/($opt{'M'})/\|/g;
+		$line =~ s/($opt{'W'})/\|/g;
 	}
 	if ( $FULL_READ )
 	{
