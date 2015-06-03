@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
 #          0.5.14_01 - Fix usage(). 
 #          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
 #                  where '-' means suppress and '@' means output.
@@ -60,7 +61,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.14_01};
+my $VERSION    = qq{0.5.14_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -507,12 +508,19 @@ sub mask_line( $ )
 {
 	my @line = split '\|', shift;
 	my @newLine = ();
-	foreach my $colIndex ( @MASK_COLUMNS )
+	my $colIndex= 0;
+	while ( @line )
 	{
-		if ( defined $line[ $colIndex ] )
+		my $field = shift @line;
+		if ( exists $mask_ref->{ $colIndex } )
 		{
-			push @newLine, apply_mask( $line[ $colIndex ], $mask_ref->{ $colIndex } );
+			push @newLine, apply_mask( $field, $mask_ref->{ $colIndex } );
 		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
 	}
 	return join '|', @newLine;
 }
