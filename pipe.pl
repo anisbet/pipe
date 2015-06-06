@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.15_01 - Allow -c On dedup. Outputs like uniq -c. 
 #          0.5.15 - Allow -U to sort numerically. 
 #          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
 #          0.5.14_01 - Fix usage(). 
@@ -62,7 +63,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.15};
+my $VERSION    = qq{0.5.15_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -105,9 +106,12 @@ $0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based.
 
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
+ -A             : Modifier that outputs the number of key matches from dedup.
+                  The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
+                  for a line that was duplicated 4 times on a given key. 
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
-                  don't count otherwise add 1 to the column tally.
+                  don't count otherwise add 1 to the column tally. 
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -586,6 +590,7 @@ sub process_line( $ )
 sub dedup_list( $ )
 {
 	my $wantedColumns = shift;
+	my $count         = {};
 	while( @ALL_LINES )
 	{
 		my $line = shift @ALL_LINES;
@@ -593,6 +598,11 @@ sub dedup_list( $ )
 		my $key = getKey( $line, $wantedColumns );
 		$key = normalize( $key ) if ( $opt{'N'} );
 		$ddup_ref->{ $key } = $line;
+		if ( $opt{ 'A' } )
+		{
+			$count->{ $key } = 0 if ( ! exists $count->{ $key } );
+			$count->{ $key }++;
+		}
 		print STDERR "\$key=$key, \$value=$line\n" if ( $opt{'D'} );
 	}
 	my @tmp = ();
@@ -621,7 +631,15 @@ sub dedup_list( $ )
 	while ( @tmp ) 
 	{
 		my $key = shift @tmp;
-		push @ALL_LINES, $ddup_ref->{ $key };
+		if ( $opt{ 'A' } )
+		{
+			my $summary = sprintf " %3d ", $count->{ $key };
+			push @ALL_LINES, $summary . $ddup_ref->{ $key };
+		}
+		else
+		{
+			push @ALL_LINES, $ddup_ref->{ $key };
+		}
 		delete $ddup_ref->{ $key };
 	}
 }
@@ -717,7 +735,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DIL:Nn:m:o:Rr:s:t:T:UW:x';
+	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:Rr:s:t:T:UW:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
