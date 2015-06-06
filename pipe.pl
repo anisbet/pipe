@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
+#          0.5.14_03 - Allow -U to sort numerically. 
 #          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
 #          0.5.14_01 - Fix usage(). 
 #          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
@@ -61,7 +62,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.14_02};
+my $VERSION    = qq{0.5.14_03};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -112,10 +113,6 @@ All column references are 0 based.
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
  -I             : Ignore case on operations (-d and -s) dedup and sort.
- -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
-                  Makes the keys upper case and remove white space before comparison.
-                  Output is not normalized. For that see (-n).
-                  See also (-I) for case insensitive comparisons.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
@@ -126,6 +123,10 @@ All column references are 0 based.
                   of the output. Example data: 1481241, -m"c0:--\@" produces '81241'. -m"c0:--\@-"
                   produces '8' and suppress the rest of the field.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
+ -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+                  Makes the keys upper case and remove white space before comparison.
+                  Output is not normalized. For that see (-n).
+                  See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
@@ -133,6 +134,8 @@ All column references are 0 based.
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -U             : Sort numerically. If multiple fields selected, the combined fields are coerced into
+                  an integer before comparison.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  
@@ -391,7 +394,7 @@ sub getKey( $$ )
 		}
 	}
 	# it doesn't matter what we use as a delimiter as long as we are consistent.
-	$key = join( ' ', @newLine );
+	$key = join( '', @newLine );
 	return $key;
 }
 
@@ -417,8 +420,9 @@ sub isBetweenZeroAndHundred( $ )
 # return: <none> - reorders the ALL_LINES list.
 sub sort_list( $ )
 {
-	my @tempArray = ();
+	my @tempArray     = ();
 	my $wantedColumns = shift;
+	my @tempKeys      = ();
 	while( @ALL_LINES )
 	{
 		my $line = shift @ALL_LINES;
@@ -427,29 +431,58 @@ sub sort_list( $ )
 		$key = normalize( $key ) if ( $opt{'N'} );
 		# The key will now always be the first value in the pipe delimited line.
 		push @tempArray, $key . '|' . $line;
+		push @tempKeys, $key;
 	}
-	my @nextArray = ();
+	my @sortedKeysArray = ();
 	# reverse sort?
 	if ( $opt{'R'} )
 	{
-		@nextArray = sort { $b cmp $a } @tempArray;
+		if ( $opt{'U'} )
+		{
+			@sortedKeysArray = sort { $b <=> $a } @tempKeys;
+		}
+		else
+		{
+			@sortedKeysArray = sort { $b cmp $a } @tempKeys;
+		}
 	}
-	else # Sort lexically.
+	else # Sort descending.
 	{
-		@nextArray = sort @tempArray;
+		if ( $opt{'U'} )
+		{
+			@sortedKeysArray = sort { $a <=> $b } @tempKeys;
+		}
+		else
+		{
+			@sortedKeysArray = sort @tempKeys;
+		}
 	}
+	@tempKeys = ();
 	# now remove the key from the start of the entry for each line in the array.
-	while ( @nextArray )
+	while ( @sortedKeysArray )
 	{
-		my $value = shift @nextArray;
-		# chop off the first value and push back to @ALL_LINES
-		my @line = split '\|', $value;
-		# Toss away the key.
-		shift @line;
-		my $ln = join '|', @line;
-		print STDERR "\$ln=$ln\n" if ( $opt{'D'} );
-		push @ALL_LINES, $ln;
+		my $key = shift @sortedKeysArray;
+		# Grep the key from the arrays of lines, it is the first element on each line.
+		# The next line gets the indexes of all the matches, but just need the first.
+		# All subsequent key matches will match on remainder of elements on the next
+		# iteration. If you try and process all the indexes now you end up with a 
+		# complicated index value computation when trying to splice the array.
+		# http://stackoverflow.com/questions/174292/what-is-the-best-way-to-delete-a-value-from-an-array-in-perl
+		my @indexes = grep { $tempArray[ $_ ] =~ m/^($key)\|/ } 0..$#tempArray;
+		print STDERR "\$key=$key\n" if ( $opt{'D'} );
+		# chop off the first key and push back to @ALL_LINES
+		if ( defined $indexes[ 0 ] )
+		{
+			my @line = split '\|', $tempArray[ $indexes[ 0 ] ];
+			# Toss away the key.
+			shift @line;
+			my $ln = join '|', @line;
+			print STDERR "::\$ln=$ln\n" if ( $opt{'D'} );
+			push @ALL_LINES, $ln;
+			splice( @tempArray, $indexes[ 0 ], 1 );
+		}
 	}
+	@tempArray = ();
 }
 
 # Outputs data from argument line as either HTML or WIKI.
@@ -564,11 +597,25 @@ sub dedup_list( $ )
 	my @tmp = ();
 	if ( $opt{'R'} )
 	{
-		@tmp = sort { $b cmp $a } keys %{$ddup_ref};
+		if ( $opt{'U'} )
+		{
+			@tmp = sort { $b <=> $a } keys %{$ddup_ref};
+		}
+		else
+		{
+			@tmp = sort { $b cmp $a } keys %{$ddup_ref};
+		}
 	}
 	else
 	{
-		@tmp = sort { $a cmp $b } keys %{$ddup_ref};
+		if ( $opt{'U'} )
+		{
+			@tmp = sort { $a <=> $b } keys %{$ddup_ref};
+		}
+		else
+		{
+			@tmp = sort { $a cmp $b } keys %{$ddup_ref};
+		}
 	}
 	while ( @tmp ) 
 	{
@@ -669,7 +716,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:c:d:DIL:Nn:m:o:Rr:s:t:T:W:x';
+	my $opt_string = 'a:c:d:DIL:Nn:m:o:Rr:s:t:T:UW:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
