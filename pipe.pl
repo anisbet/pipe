@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
-#          0.5.14_03 - Allow -U to sort numerically. 
+#          0.5.15 - Allow -U to sort numerically. 
 #          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
 #          0.5.14_01 - Fix usage(). 
 #          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
@@ -62,7 +62,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.14_03};
+my $VERSION    = qq{0.5.15};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -134,8 +134,9 @@ All column references are 0 based.
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
- -U             : Sort numerically. If multiple fields selected, the combined fields are coerced into
-                  an integer before comparison.
+ -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
+                  if any of the columns used as a key, combined, produce a non-numeric value
+                  during the comparison.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  
