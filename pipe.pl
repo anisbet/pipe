@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # Rev: 
 # Rev: 
-#          0.5.15_01 - Allow -c On dedup. Outputs like uniq -c. 
+#          0.5.16 - Implemented averages. Beefed-up number detection for sum and average.
+#          0.5.15_01 - Allow -A On dedup. Outputs like uniq -c. 
 #          0.5.15 - Allow -U to sort numerically. 
 #          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
 #          0.5.14_01 - Fix usage(). 
@@ -63,7 +64,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.15_01};
+my $VERSION    = qq{0.5.16};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -72,6 +73,7 @@ my @ALL_LINES  = ();
 # columns working at the same time. We store different columns totals on a hash ref.
 my @COUNT_COLUMNS  = (); my $count_ref = {};
 my @SUM_COLUMNS    = (); my $sum_ref   = {};
+my @AVG_COLUMNS    = (); my $avg_ref   = {}; my $avg_count = {};
 my @DDUP_COLUMNS   = (); my $ddup_ref  = {};
 my @TRIM_COLUMNS   = ();
 my @ORDER_COLUMNS  = ();
@@ -91,7 +93,10 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: cat file | $0 [-DxLW<delimiter>] [-cnot<c0,c1,...,cn>] [-ds[-IRN]<c0,c1,...,cn>] [-m<c0:<-|@>>,...]
+    usage: cat file | $0 [-ADxLUW<delimiter>] 
+       [-cnotv<c0,c1,...,cn>] 
+       [-ds[-IRN]<c0,c1,...,cn>] 
+       [-m<c0:<-|@>>,...]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -141,6 +146,7 @@ All column references are 0 based.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison.
+ -v[c0,c1,...cn]: Average over non-empty values in specified columns.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  
@@ -273,7 +279,7 @@ sub printSummary( $$$ )
 	my $hash_ref = shift;
 	my $columns  = shift;
 	printf STDERR "== %5s\n", $title;
-	foreach my $column ( @{$columns} )
+	foreach my $column ( sort @{$columns} )
 	{
 		if ( defined $hash_ref->{ 'c'.$column } )
 		{
@@ -282,6 +288,30 @@ sub printSummary( $$$ )
 		else
 		{
 			printf STDERR " %2s: %7d\n", 'c'.$column, 0;
+		}
+	}
+}
+
+# Prints the contents of the argument hash reference as float values.
+# param:  title of output.
+# param:  hash reference of data.
+# param:  List of columns requested by user.
+# return: <none>
+sub printFloatSummary( $$$ )
+{
+	my $title    = shift;
+	my $hash_ref = shift;
+	my $columns  = shift;
+	printf STDERR "== %5s\n", $title;
+	foreach my $column ( sort @{$columns} )
+	{
+		if ( defined $hash_ref->{ 'c'.$column } )
+		{
+			printf STDERR " %2s: %7.2f\n", 'c'.$column, $hash_ref->{ 'c'.$column };
+		}
+		else
+		{
+			printf STDERR " %2s: %7.2f\n", 'c'.$column, 0;
 		}
 	}
 }
@@ -295,7 +325,7 @@ sub count( $ )
 	foreach my $colIndex ( @COUNT_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[ $colIndex ] and $line[ $colIndex ] )
+		if ( defined $line[ $colIndex ] )
 		{
 			$count_ref->{ "c$colIndex" }++;
 		}
@@ -311,9 +341,27 @@ sub sum( $ )
 	foreach my $colIndex ( @SUM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[ $colIndex ] and trim( $line[ $colIndex ] ) =~ m/^\.?\d{1,}(\.\d+)?$/ )
+		if ( defined $line[ $colIndex ] and trim( $line[ $colIndex ] ) =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
 		{
 			$sum_ref->{ "c$colIndex" } += trim( $line[ $colIndex ] );
+		}
+	}
+}
+
+# Average the non-empty values of specified columns. 
+# param:  line to pull out columns from.
+# return: string line with requested columns removed.
+sub average( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @AVG_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined $line[ $colIndex ] and trim( $line[ $colIndex ] ) =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
+		{
+			$avg_ref->{ "c$colIndex" } += trim( $line[ $colIndex ] );
+			$avg_count->{ "c$colIndex" } = 0 if ( ! exists $avg_count->{ "c$colIndex" } );
+			$avg_count->{ "c$colIndex" }++;
 		}
 	}
 }
@@ -573,8 +621,9 @@ sub process_line( $ )
 	# This function allows the line by line operations to work with operations
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
-	count( $line ) if ( $opt{'c'} );
-	sum( $line )   if ( $opt{'a'} );
+	count( $line )   if ( $opt{'c'} );
+	sum( $line )     if ( $opt{'a'} );
+	average( $line ) if ( $opt{'v'} );
 	# This takes a new line because it gets trimmed during processing.
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
@@ -708,6 +757,18 @@ sub finalize_full_read_functions()
 		# When it comes time to sort use the default sort in perl and then remove the prefix.
 		sort_list( \@SORT_COLUMNS );
 	}
+	if ( $opt{'v'} ) # Compute averages now we have read the entire input.
+	{
+		foreach my $column ( keys %{$avg_ref} )
+		{
+			if ( exists $avg_count->{ $column } and $avg_count->{ $column } != 0 )
+			{
+				my $result = sprintf "%.3f", ( $avg_ref->{ $column } / $avg_count->{ $column } );
+				# replace the previous column sum with the average.
+				$avg_ref->{ $column } = $result;
+			}
+		}
+	}
 }
 
 # Tests if a line number is to be output or not.
@@ -735,7 +796,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:Rr:s:t:T:UW:x';
+	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:Rr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -744,6 +805,11 @@ sub init
 	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
+	if ( $opt{'v'} )
+	{
+		@AVG_COLUMNS   = readRequestedColumns( $opt{'v'} ) if ( $opt{'v'} );
+		$FULL_READ = 1;
+	}
 	if ( $opt{'d'} )
 	{
 		@DDUP_COLUMNS  = readRequestedColumns( $opt{'d'} );
@@ -890,7 +956,8 @@ if ( $FULL_READ )
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
-printSummary( "count", $count_ref, \@COUNT_COLUMNS ) if ( $opt{'c'} );
-printSummary( "sum", $sum_ref, \@SUM_COLUMNS)        if ( $opt{'a'} );
+printSummary( "count", $count_ref, \@COUNT_COLUMNS )   if ( $opt{'c'} );
+printSummary( "sum", $sum_ref, \@SUM_COLUMNS)          if ( $opt{'a'} );
+printFloatSummary( "average", $avg_ref, \@AVG_COLUMNS) if ( $opt{'v'} );
 
 # EOF
