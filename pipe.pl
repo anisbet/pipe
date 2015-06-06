@@ -25,7 +25,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
-# Rev: 
+# 
 # Rev: 
 #          0.5.16 - Implemented averages. Beefed-up number detection for sum and average.
 #          0.5.15_01 - Allow -A On dedup. Outputs like uniq -c. 
