@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.16_01 - Fix bug that was ordering before dedup operation causing confusing output.
 #          0.5.16 - Implemented averages. Beefed-up number detection for sum and average.
 #          0.5.15_01 - Allow -A On dedup. Outputs like uniq -c. 
 #          0.5.15 - Allow -U to sort numerically. 
@@ -64,7 +65,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16};
+my $VERSION    = qq{0.5.16_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -103,7 +104,10 @@ example counts the number of non-empty values in the specified columns. Other
 functions work similarly. Stacked functions are operated on in alphabetical 
 order by flag letter, that is, if you elect to order columns and trim columns, 
 the columns are first ordered, then the columns are trimmed, because -o comes
-before -t.
+before -t. The exceptions to this rule are those commands that require the 
+entire file to be read before operations can proceed (-d dedup, -r random, and
+-s sort). Those operations will be done first then just before output the
+remaining operations are performed.
 
 Example: cat file.lst | $0 -c"c0"
 
@@ -875,7 +879,6 @@ sub init
 		@SORT_COLUMNS  = readRequestedColumns( $opt{'s'} );
 		$FULL_READ = 1;
 	}
-	
 	if ( $opt{'T'} )
 	{
 		if ( $opt{'T'} =~ m/HTML/i )
@@ -933,7 +936,8 @@ while (<>)
 	}
 	if ( $FULL_READ )
 	{
-		push @ALL_LINES, process_line( $line );
+		# push @ALL_LINES, process_line( $line );
+		push @ALL_LINES, $line;
 		next;
 	}
 	$LINE_NUMBER++;
@@ -951,7 +955,7 @@ if ( $FULL_READ )
 	{
 		$LINE_NUMBER++;
 		my $line = shift @ALL_LINES;
-		print $line . "\n" if ( isPrintableRange() );
+		print process_line( $line ) . "\n" if ( isPrintableRange() );
 	}
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
