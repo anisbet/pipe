@@ -27,6 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.16_03 - Added -P to add a trailing delimiter before each end of line character.
+#          0.5.16_02 - Output line numbers, but if -d is selected outputs duplicate counts instead.
 #          0.5.16_01 - Fix bug that was ordering before dedup operation causing confusing output.
 #          0.5.16 - Implemented averages. Beefed-up number detection for sum and average.
 #          0.5.15_01 - Allow -A On dedup. Outputs like uniq -c. 
@@ -65,7 +67,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16_01};
+my $VERSION    = qq{0.5.16_03};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -117,7 +119,9 @@ All column references are 0 based.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
-                  for a line that was duplicated 4 times on a given key. 
+                  for a line that was duplicated 4 times on a given key. If 
+                  -d is not selected, each line of output is numbered sequentially
+                  prior to output. 
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally. 
@@ -141,6 +145,7 @@ All column references are 0 based.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -P             : Output a trailing delimiter before ouputting a new line on output. See -W.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -634,7 +639,17 @@ sub process_line( $ )
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
-	return $line;
+	if ( $opt{'P'} )
+	{
+		chomp $line;
+		$line .= "|";
+	}
+	# Output line numbering, but if -d selected, output dedup'ed counts instead.
+	if ( $opt{'A'} and ! $opt{'d'} )
+	{
+		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
+	}
+	return $line . "\n";
 }
 
 # Dedups the ALL_LINES array using (O)1 space.
@@ -800,7 +815,7 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:Rr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
@@ -936,12 +951,11 @@ while (<>)
 	}
 	if ( $FULL_READ )
 	{
-		# push @ALL_LINES, process_line( $line );
 		push @ALL_LINES, $line;
 		next;
 	}
 	$LINE_NUMBER++;
-	print process_line( $line ) . "\n" if ( isPrintableRange() );
+	print process_line( $line ) if ( isPrintableRange() );
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
@@ -955,7 +969,7 @@ if ( $FULL_READ )
 	{
 		$LINE_NUMBER++;
 		my $line = shift @ALL_LINES;
-		print process_line( $line ) . "\n" if ( isPrintableRange() );
+		print process_line( $line ) if ( isPrintableRange() );
 	}
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
