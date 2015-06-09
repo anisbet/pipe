@@ -145,7 +145,7 @@ All column references are 0 based.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
- -P             : Output a trailing delimiter before ouputting a new line on output. See -W.
+ -P             : utput a trailing pipe before new line on output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
