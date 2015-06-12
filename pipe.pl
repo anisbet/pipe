@@ -140,7 +140,8 @@ All column references are 0 based.
                   position will be inserted. If the mask is shorter than the target string, 
                   the last character of the mask will control the remainder of the output.
                   If the last character is neither '-' or '\@', then it will be repeated for 
-                  the number of characters left in the line.
+                  the number of characters left in the line. 
+                  Characters '-', '@' or ',' are reserved and cannot be used within a mask.
                   Example data: 1481241, -m"c0:--\@" produces '81241'. -m"c0:--\@-"
                   produces '8' and suppress the rest of the field.
                   Example data: E201501051855331663R,  -m"c0:-\@\@\@\@/\@\@/\@\@ \@\@:\@\@:\@\@-"
