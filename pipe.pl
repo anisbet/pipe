@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.16_05 - Fix bug in -L tail function.
 #          0.5.16_04 - Modified mask function to allow insert of arbitrary characters.
 #          0.5.16_03 - Added -P to add a trailing delimiter before each end of line character.
 #          0.5.16_02 - Output line numbers, but if -d is selected outputs duplicate counts instead.
@@ -68,7 +69,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16_04};
+my $VERSION    = qq{0.5.16_05};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -874,7 +875,8 @@ sub init
 		{
 			$START_OUTPUT = $opt{'L'};
 			$START_OUTPUT =~ s/^\-//; # equiv of tail n lines
-			$FULL_READ = 1;           # we need to compute when to start output.
+			$FULL_READ    = 1;        # we need to compute when to start output.
+			$TAIL_OUTPUT  = 1;        # Reading from the end of the input.
 		}
 		# Case 'n-m' and 'n-'
 		elsif ( $opt{'L'} =~ m/\-/ )
@@ -983,7 +985,8 @@ if ( $FULL_READ )
 	finalize_full_read_functions();
 	# Did the user wanted the last lines but we didn't know how many lines there are until now?
 	$END_OUTPUT = scalar @ALL_LINES if ( $END_OUTPUT == 0 );
-	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT if ( $TAIL_OUTPUT == 1 );
+	# if the input is 5 lines long, we want the last 2, we need 5 - 2 + 1
+	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT + 1 if ( $TAIL_OUTPUT == 1 );
 	while ( @ALL_LINES )
 	{
 		$LINE_NUMBER++;
