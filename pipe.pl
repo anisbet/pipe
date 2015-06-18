@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.16_06 - Fixed -m to allow all non-'@|-' characters to be output.
 #          0.5.16_05 - Fix bug in -L tail function.
 #          0.5.16_04 - Modified mask function to allow insert of arbitrary characters.
 #          0.5.16_03 - Added -P to add a trailing delimiter before each end of line character.
@@ -69,7 +70,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16_05};
+my $VERSION    = qq{0.5.16_06};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -147,6 +148,7 @@ All column references are 0 based.
                   produces '8' and suppress the rest of the field.
                   Example data: E201501051855331663R,  -m"c0:-\@\@\@\@/\@\@/\@\@ \@\@:\@\@:\@\@-"
                   produces '2015/01/05 18:55:33'.
+                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/\@"' produces '/foo/bar/README.txt'.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -599,8 +601,12 @@ sub apply_mask( $$ )
 		# Any character other than '@' or '-' should be output then go get the next mask this acts as an insert.
 		if ( $mask_char ne '-' and $mask_char ne '@' )
 		{
-			push @word, $mask_char;
-			$mask_char = shift @mask if ( @mask );
+			# Keep consuming the mask characters until we find one that matches the special characters.
+			do 
+			{
+				push @word, $mask_char;
+				$mask_char = shift @mask if ( @mask );
+			} while ( @mask and $mask_char ne '-' and $mask_char ne '@' );
 		}
 		if ( defined $mask_char )
 		{
