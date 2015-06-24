@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.16_06a - Fixed -m to allow all escaped '-' and '@' characters to be output.
 #          0.5.16_06 - Fixed -m to allow all non-'@|-' characters to be output.
 #          0.5.16_05 - Fix bug in -L tail function.
 #          0.5.16_04 - Modified mask function to allow insert of arbitrary characters.
@@ -70,7 +71,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16_06};
+my $VERSION    = qq{0.5.16_06a};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -149,6 +150,7 @@ All column references are 0 based.
                   Example data: E201501051855331663R,  -m"c0:-\@\@\@\@/\@\@/\@\@ \@\@:\@\@:\@\@-"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/\@"' produces '/foo/bar/README.txt'.
+                  Use '\' to escape either '-' or '\@'.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -197,7 +199,9 @@ sub readRequestedQualifiedColumns( $$ )
 	my $hash_ref = shift;
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
-	my @cols = split( ',', $line );
+	# To accommodate expressions that include a ',' as part of the mask split on non-escaped ','s
+	# we use a negative look behind. 
+	my @cols = split( m/(?<!\\),/g, $line );
 	foreach my $colNum ( @cols )
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
@@ -604,6 +608,9 @@ sub apply_mask( $$ )
 			# Keep consuming the mask characters until we find one that matches the special characters.
 			do 
 			{
+				# If the character is a literal '\' then ignore it grab the next char and output it 
+				# even if it is a special character '-' or '@'.
+				$mask_char = shift @mask if ( @mask and $mask_char eq '\\' );
 				push @word, $mask_char;
 				$mask_char = shift @mask if ( @mask );
 			} while ( @mask and $mask_char ne '-' and $mask_char ne '@' );
