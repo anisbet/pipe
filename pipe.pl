@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.17 - Added -g to grep a regex on a specific column.
 #          0.5.16_06a - Fixed -m to allow all escaped '-' and '@' characters to be output.
 #          0.5.16_06 - Fixed -m to allow all non-'@|-' characters to be output.
 #          0.5.16_05 - Fix bug in -L tail function.
@@ -71,7 +72,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.16_06a};
+my $VERSION    = qq{0.5.17};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -87,6 +88,7 @@ my @ORDER_COLUMNS  = ();
 my @NORMAL_COLUMNS = ();
 my @SORT_COLUMNS   = ();
 my @MASK_COLUMNS   = ();  my $mask_ref  = {}; # Stores the masks by column number.
+my @MATCH_COLUMNS   = (); my $match_ref = {}; # Stores regular expressions.
 my $LINE_NUMBER    = 0;
 my $START_OUTPUT   = 0;
 my $END_OUTPUT     = 0;
@@ -133,6 +135,10 @@ All column references are 0 based.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
+                  escaped commas specify a ',' in a regular expression because comma
+                  is the column definition delimiter. See also '-m' mask.
  -I             : Ignore case on operations (-d and -s) dedup and sort.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
@@ -150,7 +156,7 @@ All column references are 0 based.
                   Example data: E201501051855331663R,  -m"c0:-\@\@\@\@/\@\@/\@\@ \@\@:\@\@:\@\@-"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/\@"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '-' or '\@'.
+                  Use '\' to escape either '-', ',' or '\@'. 
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -201,7 +207,7 @@ sub readRequestedQualifiedColumns( $$ )
 	$line .= "," if ( $line !~ m/,/ );
 	# To accommodate expressions that include a ',' as part of the mask split on non-escaped ','s
 	# we use a negative look behind. 
-	my @cols = split( m/(?<!\\),/g, $line );
+	my @cols = split( m/(?<!\\),/, $line );
 	foreach my $colNum ( @cols )
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
@@ -653,6 +659,23 @@ sub mask_line( $ )
 	return join '|', @newLine;
 }
 
+# Greps specific columns for a given Perl pattern. See usage().
+# param:  String of line data - pipe-delimited.
+# return: line if the pattern matched and nothing if it didn't.
+sub is_match( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @MATCH_COLUMNS )
+	{
+		if ( defined $line[ $colIndex ] and exists $match_ref->{ $colIndex } )
+		{
+			printf STDERR "regex: '%s' \n", $match_ref->{$colIndex} if ( $opt{'D'} );
+			return 1 if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
+		}
+	} 
+	return 0;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -663,9 +686,11 @@ sub process_line( $ )
 	# This function allows the line by line operations to work with operations
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
-	count( $line )   if ( $opt{'c'} );
-	sum( $line )     if ( $opt{'a'} );
-	average( $line ) if ( $opt{'v'} );
+	# Grep comes first because it assumes that non-matching lines don't require additional operations.
+	return '' if ( $opt{'g'} and ! is_match( $line ) );
+	sum( $line )       if ( $opt{'a'} );
+	count( $line )     if ( $opt{'c'} );
+	average( $line )   if ( $opt{'v'} );
 	# This takes a new line because it gets trimmed during processing.
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
@@ -848,11 +873,12 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:DIL:Nn:m:o:PRr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:Dg:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
+	@MATCH_COLUMNS = readRequestedQualifiedColumns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS  = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
