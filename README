@@ -5,37 +5,290 @@ Project Notes
 
 Instructions for Running:
 cat file | pipe.pl [flags]
+Usage notes for /s/sirsi/Unicorn/Bincustom/pipe.pl. This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number of non-empty values in the specified columns. Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). Those operations will be done first then just before output the remaining operations are performed.
 
-Product Description:
-Perl script written by Andrew Nisbet for Edmonton Public Library, distributable by the enclosed license.
-Usage notes for /s/sirsi/Unicorn/Bincustom/pipe.pl. This application is a accumulation of helpful scripts 
-that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number 
-of non-empty values in the specified columns. Other functions work similarly. Stacked functions are 
-operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim 
-columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t.
+Example: 
+ cat file.lst | pipe.pl -c"c0"
 
-Things pipe.pl can do.
-1) Trim arbitrary fields.
-2) Order and suppress output of arbitrary fields.
-3) Randomize all, or a specific sample size of the records from input.
-4) De-duplicate records from input.
-5) Count non-empty fields from input records.
-6) Summation over non-empty numeric values of arbitrary fields.
-7) Sort input lines based on one or more arbitrary fields.
+pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 
-A note on usage; because of the way this script works it is quite possible to produce mystifying results. 
-For example, failing to remember that ordering comes before trimming may produce perplexing results. 
-You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. 
-If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
-  cat file | pipe.pl -o"c1,c0" -t"c1"
+== Things pipe.pl can do ==
+# Trim arbitrary fields.
+# Order and suppress output of arbitrary fields.
+# Randomize all, or a specific sample size of the records from input.
+# De-duplicate records from input.
+# Count non-empty fields from input records.
+# Summation over non-empty numeric values of arbitrary fields.
+# Sort input lines based on one or more arbitrary fields, numerically or lexical-ly.
+# Mask output of specific characters, and range of characters, within arbitrary fields.
+# Averages over columns.
+# Output line numbers or counts of dedups.
+# Force trailing pipe on output.
+# Grep a specific column value with regular expressions.
+
+A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
+ cat file | pipe.pl -o"c1,c0" -t"c1"
 because -o will first order the row, so the value you want trimmed is now c1. If that is too radical to contemplate then:
-  cat file | pipe.pl -t"c0" | pipe.pl -o"c1,c0"
+ cat file | pipe.pl -t"c0" | pipe.pl -o"c1,c0"
+'''Note''': I recommend that you put your command line flags in alphabetical order as in the example below.
 
-Repository Information:
-This product is under version control using Git.
+== Example 1, ordering, sorting, and splitting on non-pipe character ==
 
-Dependencies:
-None
+ head file
+ Catkey 1456824 has 114 T024's
+ Catkey 1458347 has 136 T024's
+ Catkey 1458804 has 284 T024's
+ Catkey 1462712 has 153 T024's
+ Catkey 1463986 has 174 T024's
+ Catkey 1465362 has 195 T024's
+ Catkey 1465466 has 206 T024's
+ Catkey 1465861 has 116 T024's
+ Catkey 1467080 has 157 T024's
+ Catkey 1468840 has 100 T024's
+ Catkey 1478591 has 207 T024's
+For all records we are only interested in field 2 (index 1) and field 4 (index 3). We want a count of lines in the file and a summation of index 3, but we don't need the other fields.
+ cat file | pipe.pl -a"c3" -c"c0" -o"c1,c3" -s"c0" -W" "
+ 1456824|114
+ 1458347|136
+ 1458804|284
+ 1462712|153
+ 1463986|174
+ 1465362|195
+ 1465466|206
+ 1465861|116
+ 1467080|157
+ 1468840|100
+ ...
+ == count
+ c0:      31
+ === sum ===
+ c3:    5641
+Here c3 was summed up, then a count of all lines each line was then ordered and finally we sorted the list by c0, which is where index 3 ended up after ordering.
 
-Known Issues:
-Using -r with a value of 0% has no effect, that is, all entries are output without randomization.
+
+=== Alternate example: grepping a specific field value, and counting the results ===
+In this example we show the use of the -g flag. You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
+ cat t.lst | ./pipe.pl -W' ' -g"c3:^20.$"  -c"c0"
+ Catkey|1465466|has|206|T024's
+ Catkey|1478591|has|207|T024's
+ == count
+ c0:       2
+
+== Example 2: cleaning log entries using masks, outputting as tables ==
+Given the following history file entries:
+ ...
+ E201411051046470005R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815538^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411051046470005R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815504^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411051046470005R ^S03JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815512^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411081238191637R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815504^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
+ E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815512^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
+ ...
+Output the user IDs and item IDs, the date without '-' and the last 3 characters of the library code.
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@"
+ CPL|21221019966206|31221106815538|11052015
+ CPL|21221019966206|31221106815504|11052015
+ CPL|21221019966206|31221106815512|11052015
+ RIV|21221014186727|31221106815504|11082015
+ RIV|21221014186727|31221106815512|11082015
+ LON|21221022260092|31221106815496|11122015
+ LON|21221022260092|31221106815520|11122015
+ LON|21221022260092|31221106815504|11122015
+ LON|21221022260092|31221106815512|11122015
+ WMC|21221019655684|31221106815504|11172015
+Want to order it by item ID?
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@" -s"c2"
+ LON|21221022260092|31221106815496|11122015
+ CPL|21221019966206|31221106815504|11052015
+ LON|21221022260092|31221106815504|11122015
+ RIV|21221014186727|31221106815504|11082015
+ WMC|21221019655684|31221106815504|11172015
+ CPL|21221019966206|31221106815512|11052015
+ LON|21221022260092|31221106815512|11122015
+ RIV|21221014186727|31221106815512|11082015
+ LON|21221022260092|31221106815520|11122015
+ CPL|21221019966206|31221106815538|11052015
+Or as a table?
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@" -s"c2" -T"HTML"
+<pre>
+<table>
+  <tbody>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815512</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815538</td><td>11052015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815496</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815504</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815512</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815520</td><td>11122015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815504</td><td>11082015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815512</td><td>11082015</td></tr>
+  <tr><td>WMC</td><td>21221019655684</td><td>31221106815504</td><td>11172015</td></tr>
+  </tbody>
+</table>
+</pre>
+
+New feature in -m to allow arbitrary characters to be inserted. For data like this:
+ E201411051046470005R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815538^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411051046470005R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815504^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411051046470005R ^S03JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815512^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+ E201411081238191637R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815504^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
+ E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815512^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
+Try 
+ bash-3.2$  cat s.lst | pipe.pl -W"\^" -o"c0,c3" -m"c0:-@@@@/@@/@@ @@:@@:@@-,c3:-----@@@" -T"HTML"
+<pre>
+<table>
+  <tbody>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
+  <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
+  </tbody>
+</table>
+</pre>
+
+== Example 3 Formatting troublesome Unix tool outputs like '''ls -la''', and a handy hack with masks ==
+ ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])'
+ -rw-r--r--   1 sirsi    sirsi    102193407 Jul  1  2014 201406.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    108121444 Aug  1  2014 201407.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    104152833 Sep  1  2014 201408.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    105069921 Oct  1  2014 201409.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    101697441 Nov  1  2014 201410.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    102343923 Dec  1  2014 201411.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    102214661 Jan  1 00:05 201412.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    104051909 Feb  1 00:05 201501.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    97355207 Mar  1 00:05 201502.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    109503879 Apr  8 00:05 201503.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    104102435 May  1 00:05 201504.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    112107549 Jun  3 00:18 201505.hist.Z
+ -rw-r--r--   1 sirsi    sirsi    276267771 Jun 18 00:05 201506.hist
+ -rw-r--r--   1 sirsi    sirsi    3390599 Jun 18 10:12 20150618.hist
+If you just want the file names you could just use <code>ls</code> but that is boring so let's use pipe.
+ ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8'
+ 201406.hist.Z
+ 201407.hist.Z
+ 201408.hist.Z
+ 201409.hist.Z
+ 201410.hist.Z
+ 201411.hist.Z
+ 201412.hist.Z
+ 201501.hist.Z
+ 201502.hist.Z
+ 201503.hist.Z
+ 201504.hist.Z
+ 201505.hist.Z
+ 201506.hist
+ 20150618.hist
+Now to show off:
+ ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8' -m"c8:/s/sirsi/Unicorn/Hist/@"
+ /s/sirsi/Unicorn/Hist/201406.hist.Z
+ /s/sirsi/Unicorn/Hist/201407.hist.Z
+ /s/sirsi/Unicorn/Hist/201408.hist.Z
+ /s/sirsi/Unicorn/Hist/201409.hist.Z
+ /s/sirsi/Unicorn/Hist/201410.hist.Z
+ /s/sirsi/Unicorn/Hist/201411.hist.Z
+ /s/sirsi/Unicorn/Hist/201412.hist.Z
+ /s/sirsi/Unicorn/Hist/201501.hist.Z
+ /s/sirsi/Unicorn/Hist/201502.hist.Z
+ /s/sirsi/Unicorn/Hist/201503.hist.Z
+ /s/sirsi/Unicorn/Hist/201504.hist.Z
+ /s/sirsi/Unicorn/Hist/201505.hist.Z
+ /s/sirsi/Unicorn/Hist/201506.hist
+ /s/sirsi/Unicorn/Hist/20150618.hist
+
+== Example 4: Dedup with counts compared to line counts ('-A') ==
+ cat test.lst
+ 1010152186019|4|
+ 1010152186019|9|
+ 1010152186019|7|
+ 1010152186019|0|
+ 1010152186019|0|
+ 1010152186019|1|
+ cat test.lst | pipe.pl -d'c0' -A
+ 6 1010152186019|1|
+ cat test.lst | pipe.pl -A
+  1  1010152186019|4|
+  2  1010152186019|9|
+  3  1010152186019|7|
+  4  1010152186019|0|
+  5  1010152186019|0|
+  6  1010152186019|1|
+
+== See also ==
+[[randomselection.pl]]
+[[dedup.pl]]
+
+== Danger level ==
+
+{| class="wikitable"
+|-
+| [[File:halfskull.png]] || [[File:noskull.png]] || [[File:noskull.png]] || [[File:noskull.png]] || [[File:noskull.png]]
+|}
+The script does not affect input, and only writes to STOUT and STDERR.
+
+== Usage ==
+The script is a stand alone Perl script, and requires no special libraries or dependencies.
+
+== Flags ==
+ -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
+ -A             : Modifier that outputs the number of key matches from dedup.
+                  The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
+                  for a line that was duplicated 4 times on a given key. If 
+                  -d is not selected, each line of output is numbered sequentially
+                  prior to output. 
+ -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
+                  if a value for a specified column is empty or doesn't exist,
+                  don't count otherwise add 1 to the column tally. 
+ -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
+                  which is then over written with lines that produce
+                  the same key, thus keeping the most recent match. Respects (-r).
+ -D             : Debug switch.
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
+                  escaped commas specify a ',' in a regular expression because comma
+                  is the column definition delimiter. See also '-m' mask.
+ -I             : Ignore case on operations (-d and -s) dedup and sort.
+ -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
+                  Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
+                  is suppressed if the entered value is greater than lines read on STDIN.
+ -m[c0:<-|\@[*]>]: Mask specified column with the mask defined after a ':', and where '-' 
+                  means suppress, '@' means output character, any other character at that 
+                  position will be inserted. If the mask is shorter than the target string, 
+                  the last character of the mask will control the remainder of the output.
+                  If the last character is neither '-' or '@', then it will be repeated for 
+                  the number of characters left in the line. 
+                  Characters '-', '@' and ',' are reserved and cannot be inserted within a mask.
+                  Example data: 1481241, -m"c0:--@" produces '81241'. -m"c0:--@-"
+                  produces '8' and suppress the rest of the field.
+                  Example data: E201501051855331663R,  -m"c0:-@@@@/@@/@@ @@:@@:@@-"
+                  produces '2015/01/05 18:55:33'.
+                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/@"' produces '/foo/bar/README.txt'.
+                  Use '\' to escape either '-', ',' or '@'. 
+ -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
+ -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+                  Makes the keys upper case and remove white space before comparison.
+                  Output is not normalized. For that see (-n).
+                  See also (-I) for case insensitive comparisons.
+ -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -P             : utput a trailing pipe before new line on output.
+ -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
+                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
+ -R             : Reverse sort (-d and -s).
+ -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
+ -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
+                  if any of the columns used as a key, combined, produce a non-numeric value
+                  during the comparison.
+ -v[c0,c1,...cn]: Average over non-empty values in specified columns.
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
+ -x             : This (help) message.
+
+== API ==
+None.
+
+== Current status ==
+Version 0.5.16_07
+
+== Location ==
+ /s/sirsi/Unicorn/Bincustom
