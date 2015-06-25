@@ -219,10 +219,6 @@ Now to show off:
 
 == Danger level ==
 
-{| class="wikitable"
-|-
-| [[File:halfskull.png]] || [[File:noskull.png]] || [[File:noskull.png]] || [[File:noskull.png]] || [[File:noskull.png]]
-|}
 The script does not affect input, and only writes to STOUT and STDERR.
 
 == Usage ==
