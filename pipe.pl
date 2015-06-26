@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.17_01 - Added -G to invert the regex used with -g on a specific column.
 #          0.5.17 - Added -g to grep a regex on a specific column.
 #          0.5.16_06a - Fixed -m to allow all escaped '-' and '@' characters to be output.
 #          0.5.16_06 - Fixed -m to allow all non-'@|-' characters to be output.
@@ -72,28 +73,29 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.17};
+my $VERSION    = qq{0.5.17_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
-my @COUNT_COLUMNS  = (); my $count_ref = {};
-my @SUM_COLUMNS    = (); my $sum_ref   = {};
-my @AVG_COLUMNS    = (); my $avg_ref   = {}; my $avg_count = {};
-my @DDUP_COLUMNS   = (); my $ddup_ref  = {};
-my @TRIM_COLUMNS   = ();
-my @ORDER_COLUMNS  = ();
-my @NORMAL_COLUMNS = ();
-my @SORT_COLUMNS   = ();
-my @MASK_COLUMNS   = ();  my $mask_ref  = {}; # Stores the masks by column number.
-my @MATCH_COLUMNS   = (); my $match_ref = {}; # Stores regular expressions.
-my $LINE_NUMBER    = 0;
-my $START_OUTPUT   = 0;
-my $END_OUTPUT     = 0;
-my $TAIL_OUTPUT    = 0; # Is this a request for the tail of the file.
-my $TABLE_OUTPUT   = 0; # Does the user want to output to a table.
+my @COUNT_COLUMNS     = (); my $count_ref = {};
+my @SUM_COLUMNS       = (); my $sum_ref   = {};
+my @AVG_COLUMNS       = (); my $avg_ref   = {}; my $avg_count = {};
+my @DDUP_COLUMNS      = (); my $ddup_ref  = {};
+my @TRIM_COLUMNS      = ();
+my @ORDER_COLUMNS     = ();
+my @NORMAL_COLUMNS    = ();
+my @SORT_COLUMNS      = ();
+my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
+my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
+my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
+my $LINE_NUMBER       = 0;
+my $START_OUTPUT      = 0;
+my $END_OUTPUT        = 0;
+my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
+my $TABLE_OUTPUT      = 0; # Does the user want to output to a table.
 
 #
 # Message about this program and how to use it.
@@ -134,11 +136,13 @@ All column references are 0 based.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
- -D             : Debug switch.
+ -D             : Debug switch.  
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. See also '-m' mask.
+ -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
+                  return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
@@ -676,6 +680,23 @@ sub is_match( $ )
 	return 0;
 }
 
+# Inverse grep specific columns for a given Perl pattern. See usage().
+# param:  String of line data - pipe-delimited.
+# return: line if the pattern matched and nothing if it didn't.
+sub is_not_match( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @NOT_MATCH_COLUMNS )
+	{
+		if ( defined $line[ $colIndex ] and exists $not_match_ref->{ $colIndex } )
+		{
+			printf STDERR "regex: '%s' \n", $not_match_ref->{$colIndex} if ( $opt{'D'} );
+			return 0 if ( $line[ $colIndex ] =~ m/($not_match_ref->{$colIndex})/ );
+		}
+	} 
+	return 1;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -687,7 +708,18 @@ sub process_line( $ )
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
 	# Grep comes first because it assumes that non-matching lines don't require additional operations.
-	return '' if ( $opt{'g'} and ! is_match( $line ) );
+	if ( $opt{'g'} and $opt{'G'} )
+	{
+		return '' if ( ! ( is_match( $line ) and is_not_match( $line ) ) );
+	}
+	elsif ( $opt{'g'} and ! is_match( $line ) )
+	{
+		return '';
+	}
+	elsif ( $opt{'G'} and ! is_not_match( $line ) )
+	{
+		return '';
+	}
 	sum( $line )       if ( $opt{'a'} );
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
@@ -873,16 +905,17 @@ sub isPrintableRange()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:Dg:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
-	@SUM_COLUMNS   = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
-	@COUNT_COLUMNS = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
-	@MATCH_COLUMNS = readRequestedQualifiedColumns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
-	@MASK_COLUMNS  = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
-	@NORMAL_COLUMNS= readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
-	@ORDER_COLUMNS = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
-	@TRIM_COLUMNS  = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
+	@SUM_COLUMNS       = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
+	@COUNT_COLUMNS     = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
+	@NOT_MATCH_COLUMNS = readRequestedQualifiedColumns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
+	@MATCH_COLUMNS     = readRequestedQualifiedColumns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
+	@MASK_COLUMNS      = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
+	@NORMAL_COLUMNS    = readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
+	@ORDER_COLUMNS     = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
+	@TRIM_COLUMNS      = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
 	if ( $opt{'v'} )
 	{
 		@AVG_COLUMNS   = readRequestedColumns( $opt{'v'} ) if ( $opt{'v'} );
