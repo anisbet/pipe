@@ -145,6 +145,14 @@ Try
   </tbody>
 </table>
 </pre>
+=== Example: printing the first 15 characters of a long string ===
+ echo "It was the best of times, it was the worst of times." | pipe.pl -m'c0:@@@@@@@@@@@@@@@... -'
+produces:
+ It was the best...
+If you know the width of the field you can print last, say 4 characters of a bar code with ellipsis like this:
+ echo 21221014186727 | pipe.pl -m'c0:----------...@@@@'
+produces:
+ ...6727
 
 == Example 3 Formatting troublesome Unix tool outputs like '''ls -la''', and a handy hack with masks ==
  ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])'
