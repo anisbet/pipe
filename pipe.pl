@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.18 - Added -e URL encode a specific column.
 #          0.5.17_01 - Added -G to invert the regex used with -g on a specific column.
 #          0.5.17 - Added -g to grep a regex on a specific column.
 #          0.5.16_06a - Fixed -m to allow all escaped '-' and '@' characters to be output.
@@ -73,7 +74,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.17_01};
+my $VERSION    = qq{0.5.18};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -91,6 +92,7 @@ my @SORT_COLUMNS      = ();
 my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
 my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
+my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
@@ -105,9 +107,10 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | $0 [-ADxLUW<delimiter>] 
-       [-cnotv<c0,c1,...,cn>] 
+       [-cenotv<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
-       [-m<c0:<-|@>>,...]
+       [-m<cn:<-|@*,...>]
+       [-gG<cn:regex,...>]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -136,7 +139,8 @@ All column references are 0 based.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
- -D             : Debug switch.  
+ -D             : Debug switch.
+ -e[c0,c1,...cn]: URL encodes specified columns.
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
@@ -723,7 +727,7 @@ sub process_line( $ )
 	sum( $line )       if ( $opt{'a'} );
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
-	# This takes a new line because it gets trimmed during processing.
+	$line = url_encode_line( $line )    if ( $opt{'e'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
@@ -900,16 +904,94 @@ sub isPrintableRange()
 	return 1;
 }
 
+# Takes a string and encodes it with URL-safe characters.
+# param:  string.
+# return: encoded string.
+sub map_url_characters( $ )
+{
+	my @characters = split '', shift;
+	my @newString  = ();
+	while ( @characters )
+	{
+		my $c = shift @characters;
+		next if ( ! defined $c or ! $c );
+		if ( exists $url_characters->{ ord $c } )
+		{
+			push @newString, $url_characters->{ ord $c };
+			next;
+		}
+		push @newString, $c;
+	}
+	return join '', @newString;
+}
+
+# Performs URL encoding of given columns.
+# param:  line from input.
+# return: line with requested columns encoded as URL.
+sub url_encode_line( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @U_ENCODE_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined $line[ $colIndex ] )
+		{
+			$line[ $colIndex ] = map_url_characters( $line[ $colIndex ] );
+		}
+	}
+	return join '|', @line;
+}
+
+# Builds a map of URL characters to URL encoded values.
+# param:  <none>
+# return: <none>
+sub build_encoding_table()
+{
+	$url_characters->{ord ' '} = '%20';
+	$url_characters->{ord '!'} = '%21';
+	$url_characters->{ord '"'} = '%22';
+	$url_characters->{ord '#'} = '%23';
+	$url_characters->{ord '$'} = '%24';
+	$url_characters->{ord '%'} = '%25';
+	$url_characters->{ord '&'} = '%26';
+	$url_characters->{ord '\''} = '%27';
+	$url_characters->{ord '('} = '%28';
+	$url_characters->{ord ')'} = '%29';
+	$url_characters->{ord '*'} = '%2A';
+	$url_characters->{ord '+'} = '%2B';
+	$url_characters->{ord ','} = '%2C';
+	$url_characters->{ord '-'} = '%2D';
+	$url_characters->{ord '.'} = '%2E';
+	$url_characters->{ord '/'} = '%2F';
+	$url_characters->{ord ':'} = '%3A';
+	$url_characters->{ord ';'} = '%3B';
+	$url_characters->{ord '<'} = '%3C';
+	$url_characters->{ord '='} = '%3D';
+	$url_characters->{ord '>'} = '%3E';
+	$url_characters->{ord '?'} = '%3F';
+	$url_characters->{ord '@'} = '%40';
+	$url_characters->{ord '{'} = '%7B';
+	$url_characters->{ord '|'} = '%7C';
+	$url_characters->{ord '}'} = '%7D';
+	$url_characters->{ord '~'} = '%7E';
+	$url_characters->{ord '`'} = '%E2%82%AC';
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:De:g:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
+	if ( $opt{'e'} )
+	{
+		build_encoding_table();
+		@U_ENCODE_COLUMNS  = readRequestedColumns( $opt{'e'} );
+	}
 	@NOT_MATCH_COLUMNS = readRequestedQualifiedColumns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = readRequestedQualifiedColumns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
