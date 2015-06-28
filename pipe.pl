@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.18_02 - Standardized function-naming conventions.
 #          0.5.18_01 - Fixed: missing characters in URL encoding.
 #          0.5.18 - Added -e URL encode a specific column.
 #          0.5.17_01 - Added -G to invert the regex used with -g on a specific column.
@@ -75,7 +76,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.18_01};
+my $VERSION    = qq{0.5.18_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
