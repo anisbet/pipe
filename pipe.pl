@@ -207,7 +207,7 @@ EOF
 # param:  command line string of requested columns.
 # param:  hash reference of column names and qualifiers.
 # return: New array.
-sub readRequestedQualifiedColumns( $$ )
+sub read_requested_qualified_columns( $$ )
 {
 	my $line     = shift;
 	my @list     = ();
@@ -257,7 +257,7 @@ sub readRequestedQualifiedColumns( $$ )
 # Reads the values supplied on the command line and parses them out into the argument list.
 # param:  command line string of requested columns.
 # return: New array.
-sub readRequestedColumns( $ )
+sub read_requested_columns( $ )
 {
 	my $line = shift;
 	my @list = ();
@@ -317,7 +317,7 @@ sub trim( $ )
 # param:  hash reference of data.
 # param:  List of columns requested by user.
 # return: <none>
-sub printSummary( $$$ )
+sub print_summary( $$$ )
 {
 	my $title    = shift;
 	my $hash_ref = shift;
@@ -341,7 +341,7 @@ sub printSummary( $$$ )
 # param:  hash reference of data.
 # param:  List of columns requested by user.
 # return: <none>
-sub printFloatSummary( $$$ )
+sub print_float_summary( $$$ )
 {
 	my $title    = shift;
 	my $hash_ref = shift;
@@ -466,7 +466,7 @@ sub order_line( $ )
 # param:  string line of values from the input.
 # param:  List of desired fields, or columns.
 # return: string composed of each string selected as column pasted together without trailing spaces.
-sub getKey( $$ )
+sub get_key( $$ )
 {
 	my $line          = shift;
 	my $wantedColumns = shift;
@@ -498,7 +498,7 @@ sub getKey( $$ )
 # Test if argument is a number between 0-100.
 # param:  number to test.
 # return: 1 if the argument is a number between 0-100, and 0 otherwise.
-sub isBetweenZeroAndHundred( $ )
+sub is_between_zero_and_hundred( $ )
 {
 	my $testValue = shift;
 	chomp $testValue;
@@ -524,7 +524,7 @@ sub sort_list( $ )
 	{
 		my $line = shift @ALL_LINES;
 		chomp $line;
-		my $key = getKey( $line, $wantedColumns );
+		my $key = get_key( $line, $wantedColumns );
 		$key = normalize( $key ) if ( $opt{'N'} );
 		# The key will now always be the first value in the pipe delimited line.
 		push @tempArray, $key . '|' . $line;
@@ -758,7 +758,7 @@ sub dedup_list( $ )
 	{
 		my $line = shift @ALL_LINES;
 		chomp $line;
-		my $key = getKey( $line, $wantedColumns );
+		my $key = get_key( $line, $wantedColumns );
 		$key = normalize( $key ) if ( $opt{'N'} );
 		$ddup_ref->{ $key } = $line;
 		if ( $opt{ 'A' } )
@@ -888,7 +888,7 @@ sub finalize_full_read_functions()
 # Tests if a line number is to be output or not.
 # param:  <none>
 # return: 0 if the line is to be output and 1 otherwise.
-sub isPrintableRange()
+sub is_printable_range()
 {
 	if ( $opt{'L'} )
 	{
@@ -969,27 +969,27 @@ sub init
 	my $opt_string = 'a:Ac:d:De:g:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
-	@SUM_COLUMNS       = readRequestedColumns( $opt{'a'} ) if ( $opt{'a'} );
-	@COUNT_COLUMNS     = readRequestedColumns( $opt{'c'} ) if ( $opt{'c'} );
+	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
+	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
 	if ( $opt{'e'} )
 	{
 		build_encoding_table();
-		@U_ENCODE_COLUMNS  = readRequestedColumns( $opt{'e'} );
+		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'e'} );
 	}
-	@NOT_MATCH_COLUMNS = readRequestedQualifiedColumns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
-	@MATCH_COLUMNS     = readRequestedQualifiedColumns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
-	@MASK_COLUMNS      = readRequestedQualifiedColumns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
-	@NORMAL_COLUMNS    = readRequestedColumns( $opt{'n'} ) if ( $opt{'n'} );
-	@ORDER_COLUMNS     = readRequestedColumns( $opt{'o'} ) if ( $opt{'o'} );
-	@TRIM_COLUMNS      = readRequestedColumns( $opt{'t'} ) if ( $opt{'t'} );
+	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
+	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
+	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
+	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} ) if ( $opt{'n'} );
+	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'} ) if ( $opt{'o'} );
+	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'} ) if ( $opt{'t'} );
 	if ( $opt{'v'} )
 	{
-		@AVG_COLUMNS   = readRequestedColumns( $opt{'v'} ) if ( $opt{'v'} );
+		@AVG_COLUMNS   = read_requested_columns( $opt{'v'} ) if ( $opt{'v'} );
 		$FULL_READ = 1;
 	}
 	if ( $opt{'d'} )
 	{
-		@DDUP_COLUMNS  = readRequestedColumns( $opt{'d'} );
+		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'} );
 		$FULL_READ = 1;
 	}
 	# Output specific lines.
@@ -1042,7 +1042,7 @@ sub init
 	if ( $opt{'r'} )
 	{
 		$FULL_READ = 1;
-		if ( ! isBetweenZeroAndHundred( $opt{'r'} ) )
+		if ( ! is_between_zero_and_hundred( $opt{'r'} ) )
 		{
 			print STDERR "** error, invalid random percentage selection.\n";
 			usage();
@@ -1050,7 +1050,7 @@ sub init
 	}
 	if ( $opt{'s'} )
 	{
-		@SORT_COLUMNS  = readRequestedColumns( $opt{'s'} );
+		@SORT_COLUMNS  = read_requested_columns( $opt{'s'} );
 		$FULL_READ = 1;
 	}
 	if ( $opt{'T'} )
@@ -1114,7 +1114,7 @@ while (<>)
 		next;
 	}
 	$LINE_NUMBER++;
-	print process_line( $line ) if ( isPrintableRange() );
+	print process_line( $line ) if ( is_printable_range() );
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
@@ -1129,13 +1129,13 @@ if ( $FULL_READ )
 	{
 		$LINE_NUMBER++;
 		my $line = shift @ALL_LINES;
-		print process_line( $line ) if ( isPrintableRange() );
+		print process_line( $line ) if ( is_printable_range() );
 	}
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
-printSummary( "count", $count_ref, \@COUNT_COLUMNS )   if ( $opt{'c'} );
-printSummary( "sum", $sum_ref, \@SUM_COLUMNS)          if ( $opt{'a'} );
-printFloatSummary( "average", $avg_ref, \@AVG_COLUMNS) if ( $opt{'v'} );
+print_summary( "count", $count_ref, \@COUNT_COLUMNS )   if ( $opt{'c'} );
+print_summary( "sum", $sum_ref, \@SUM_COLUMNS)          if ( $opt{'a'} );
+print_float_summary( "average", $avg_ref, \@AVG_COLUMNS) if ( $opt{'v'} );
 
 # EOF
