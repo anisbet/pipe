@@ -974,7 +974,13 @@ sub build_encoding_table()
 	$url_characters->{ord '|'} = '%7C';
 	$url_characters->{ord '}'} = '%7D';
 	$url_characters->{ord '~'} = '%7E';
-	$url_characters->{ord '`'} = '%E2%82%AC';
+	# $url_characters->{ord '`'} = '%E2%82%AC';
+	$url_characters->{ord '['} = '%5B';
+	$url_characters->{ord '\\'} = '%5C';
+	$url_characters->{ord ']'} = '%5D';
+	$url_characters->{ord '^'} = '%5E';
+	$url_characters->{ord '_'} = '%5F';
+	$url_characters->{ord '`'} = '%60';
 }
 
 # Kicks off the setting of various switches.
