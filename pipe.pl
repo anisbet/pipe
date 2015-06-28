@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.18_01 - Fixed: missing characters in URL encoding.
 #          0.5.18 - Added -e URL encode a specific column.
 #          0.5.17_01 - Added -G to invert the regex used with -g on a specific column.
 #          0.5.17 - Added -g to grep a regex on a specific column.
@@ -74,7 +75,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.18};
+my $VERSION    = qq{0.5.18_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -140,7 +141,7 @@ All column references are 0 based.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e[c0,c1,...cn]: URL encodes specified columns.
+ -e[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
@@ -947,40 +948,17 @@ sub url_encode_line( $ )
 # return: <none>
 sub build_encoding_table()
 {
-	$url_characters->{ord ' '} = '%20';
-	$url_characters->{ord '!'} = '%21';
-	$url_characters->{ord '"'} = '%22';
-	$url_characters->{ord '#'} = '%23';
-	$url_characters->{ord '$'} = '%24';
-	$url_characters->{ord '%'} = '%25';
-	$url_characters->{ord '&'} = '%26';
-	$url_characters->{ord '\''} = '%27';
-	$url_characters->{ord '('} = '%28';
-	$url_characters->{ord ')'} = '%29';
-	$url_characters->{ord '*'} = '%2A';
-	$url_characters->{ord '+'} = '%2B';
-	$url_characters->{ord ','} = '%2C';
-	$url_characters->{ord '-'} = '%2D';
-	$url_characters->{ord '.'} = '%2E';
-	$url_characters->{ord '/'} = '%2F';
-	$url_characters->{ord ':'} = '%3A';
-	$url_characters->{ord ';'} = '%3B';
-	$url_characters->{ord '<'} = '%3C';
-	$url_characters->{ord '='} = '%3D';
-	$url_characters->{ord '>'} = '%3E';
-	$url_characters->{ord '?'} = '%3F';
-	$url_characters->{ord '@'} = '%40';
-	$url_characters->{ord '{'} = '%7B';
-	$url_characters->{ord '|'} = '%7C';
-	$url_characters->{ord '}'} = '%7D';
-	$url_characters->{ord '~'} = '%7E';
-	# $url_characters->{ord '`'} = '%E2%82%AC';
-	$url_characters->{ord '['} = '%5B';
-	$url_characters->{ord '\\'} = '%5C';
-	$url_characters->{ord ']'} = '%5D';
-	$url_characters->{ord '^'} = '%5E';
-	$url_characters->{ord '_'} = '%5F';
-	$url_characters->{ord '`'} = '%60';
+	$url_characters->{ord ' '} = '%20'; $url_characters->{ord '!'} = '%21';  $url_characters->{ord '"'} = '%22';
+	$url_characters->{ord '#'} = '%23'; $url_characters->{ord '$'} = '%24';  $url_characters->{ord '%'} = '%25';
+	$url_characters->{ord '&'} = '%26'; $url_characters->{ord '\''} = '%27'; $url_characters->{ord '('} = '%28';
+	$url_characters->{ord ')'} = '%29'; $url_characters->{ord '*'} = '%2A';  $url_characters->{ord '+'} = '%2B';
+	$url_characters->{ord ','} = '%2C'; $url_characters->{ord '-'} = '%2D';  $url_characters->{ord '.'} = '%2E';
+	$url_characters->{ord '/'} = '%2F'; $url_characters->{ord ':'} = '%3A';  $url_characters->{ord ';'} = '%3B';
+	$url_characters->{ord '<'} = '%3C'; $url_characters->{ord '='} = '%3D';  $url_characters->{ord '>'} = '%3E';
+	$url_characters->{ord '?'} = '%3F'; $url_characters->{ord '@'} = '%40';  $url_characters->{ord '{'} = '%7B';
+	$url_characters->{ord '|'} = '%7C'; $url_characters->{ord '}'} = '%7D';  $url_characters->{ord '~'} = '%7E';
+	$url_characters->{ord '['} = '%5B'; $url_characters->{ord '\\'} = '%5C'; $url_characters->{ord ']'} = '%5D';
+	$url_characters->{ord '^'} = '%5E'; $url_characters->{ord '_'} = '%5F';  $url_characters->{ord '`'} = '%60';
 }
 
 # Kicks off the setting of various switches.
