@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6 - Pipe changes use of '#'<=>'@', and '_'<=>'-' for easier use in system calls.
 #          0.5.18_03 - Fix URL encoding of '0'.
 #          0.5.18_02 - Standardized function-naming conventions.
 #          0.5.18_01 - Fixed: missing characters in URL encoding.
@@ -77,7 +78,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.18_03};
+my $VERSION    = qq{0.6};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -112,7 +113,7 @@ sub usage()
     usage: cat file | $0 [-ADxLUW<delimiter>] 
        [-cenotv<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
-       [-m<cn:<-|@*,...>]
+       [-m<cn:<_|#*,...>]
        [-gG<cn:regex,...>]
 Usage notes for $0. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -155,19 +156,19 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:<-|\@[*]>]: Mask specified column with the mask defined after a ':', and where '-' 
-                  means suppress, '\@' means output character, any other character at that 
+ -m[c0:<_|\#[*]>]: Mask specified column with the mask defined after a ':', and where '_' 
+                  means suppress, '#' means output character, any other character at that 
                   position will be inserted. If the mask is shorter than the target string, 
                   the last character of the mask will control the remainder of the output.
-                  If the last character is neither '-' or '\@', then it will be repeated for 
+                  If the last character is neither '_' or '#', then it will be repeated for 
                   the number of characters left in the line. 
-                  Characters '-', '\@' and ',' are reserved and cannot be inserted within a mask.
-                  Example data: 1481241, -m"c0:--\@" produces '81241'. -m"c0:--\@-"
+                  Characters '_', '#' and ',' are reserved and cannot be inserted within a mask.
+                  Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
                   produces '8' and suppress the rest of the field.
-                  Example data: E201501051855331663R,  -m"c0:-\@\@\@\@/\@\@/\@\@ \@\@:\@\@:\@\@-"
+                  Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
-                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/\@"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '-', ',' or '\@'. 
+                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
+                  Use '\' to escape either '_', ',' or '#'. 
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -619,18 +620,18 @@ sub apply_mask( $$ )
 		my $char = shift @chars;
 		$mask_char = shift @mask if ( @mask );
 		print STDERR "\$char=$char and \$mask_char=$mask_char\n" if ( $opt{'D'} );
-		# Any character other than '@' or '-' should be output then go get the next mask this acts as an insert.
-		if ( $mask_char ne '-' and $mask_char ne '@' )
+		# Any character other than '#' or '_' should be output then go get the next mask this acts as an insert.
+		if ( $mask_char ne '_' and $mask_char ne '#' )
 		{
 			# Keep consuming the mask characters until we find one that matches the special characters.
 			do 
 			{
 				# If the character is a literal '\' then ignore it grab the next char and output it 
-				# even if it is a special character '-' or '@'.
+				# even if it is a special character '_' or '#'.
 				$mask_char = shift @mask if ( @mask and $mask_char eq '\\' );
 				push @word, $mask_char;
 				$mask_char = shift @mask if ( @mask );
-			} while ( @mask and $mask_char ne '-' and $mask_char ne '@' );
+			} while ( @mask and $mask_char ne '_' and $mask_char ne '#' );
 		}
 		if ( defined $mask_char )
 		{
@@ -641,7 +642,7 @@ sub apply_mask( $$ )
 		{
 			$mask_char = $current_char;
 		}
-		push @word, $char if ( $mask_char eq '@' );
+		push @word, $char if ( $mask_char eq '#' );
 	} 
 	return join '', @word; 
 }

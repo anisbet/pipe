@@ -84,7 +84,7 @@ Given the following history file entries:
  E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815512^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
  ...
 Output the user IDs and item IDs, the date without '-' and the last 3 characters of the library code.
- bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@"
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:_____###,c4:__#,c6:__#,c7:__##_##_####"
  CPL|21221019966206|31221106815538|11052015
  CPL|21221019966206|31221106815504|11052015
  CPL|21221019966206|31221106815512|11052015
@@ -96,7 +96,7 @@ Output the user IDs and item IDs, the date without '-' and the last 3 characters
  LON|21221022260092|31221106815512|11122015
  WMC|21221019655684|31221106815504|11172015
 Want to order it by item ID?
- bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@" -s"c2"
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:_____###,c4:__#,c6:__#,c7:__##_##_####" -s"c2"
  LON|21221022260092|31221106815496|11122015
  CPL|21221019966206|31221106815504|11052015
  LON|21221022260092|31221106815504|11122015
@@ -108,7 +108,7 @@ Want to order it by item ID?
  LON|21221022260092|31221106815520|11122015
  CPL|21221019966206|31221106815538|11052015
 Or as a table?
- bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:-----@@@,c4:--@,c6:--@,c7:--@@-@@-@@@@" -s"c2" -T"HTML"
+ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o"c3,c4,c6,c7" -m"c3:_____###,c4:__#,c6:__#,c7:__##_##_####" -s"c2" -T"HTML"
 <pre>
 <table>
   <tbody>
@@ -133,7 +133,7 @@ New feature in -m to allow arbitrary characters to be inserted. For data like th
  E201411081238191637R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815504^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
  E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^NQ31221106815512^HB11/08/2015^HKTITLE^HOEPLRIV^^O00108
 Try 
- bash-3.2$  cat s.lst | pipe.pl -W"\^" -o"c0,c3" -m"c0:-@@@@/@@/@@ @@:@@:@@-,c3:-----@@@" -T"HTML"
+ bash-3.2$  cat s.lst | pipe.pl -W"\^" -o"c0,c3" -m"c0:_####/##/## ##:##:##_,c3:_____###" -T"HTML"
 <pre>
 <table>
   <tbody>
@@ -146,11 +146,11 @@ Try
 </table>
 </pre>
 === Example: printing the first 15 characters of a long string ===
- echo "It was the best of times, it was the worst of times." | pipe.pl -m'c0:@@@@@@@@@@@@@@@... -'
+ echo "It was the best of times, it was the worst of times." | pipe.pl -m'c0:###############... _'
 produces:
  It was the best...
 If you know the width of the field you can print last, say 4 characters of a bar code with ellipsis like this:
- echo 21221014186727 | pipe.pl -m'c0:----------...@@@@'
+ echo 21221014186727 | pipe.pl -m'c0:__________...####'
 produces:
  ...6727
 
@@ -187,7 +187,7 @@ If you just want the file names you could just use <code>ls</code> but that is b
  201506.hist
  20150618.hist
 Now to show off:
- ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8' -m"c8:/s/sirsi/Unicorn/Hist/@"
+ ls -l `gpn hist`/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8' -m"c8:/s/sirsi/Unicorn/Hist/#"
  /s/sirsi/Unicorn/Hist/201406.hist.Z
  /s/sirsi/Unicorn/Hist/201407.hist.Z
  /s/sirsi/Unicorn/Hist/201408.hist.Z
@@ -255,19 +255,19 @@ The script is a stand alone Perl script, and requires no special libraries or de
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:<-|\@[*]>]: Mask specified column with the mask defined after a ':', and where '-' 
-                  means suppress, '@' means output character, any other character at that 
+ -m[c0:<_|#[*]>]: Mask specified column with the mask defined after a ':', and where '_' 
+                  means suppress, '#' means output character, any other character at that 
                   position will be inserted. If the mask is shorter than the target string, 
                   the last character of the mask will control the remainder of the output.
-                  If the last character is neither '-' or '@', then it will be repeated for 
+                  If the last character is neither '_' or '#', then it will be repeated for 
                   the number of characters left in the line. 
-                  Characters '-', '@' and ',' are reserved and cannot be inserted within a mask.
-                  Example data: 1481241, -m"c0:--@" produces '81241'. -m"c0:--@-"
+                  Characters '_', '#' and ',' are reserved and cannot be inserted within a mask.
+                  Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
                   produces '8' and suppress the rest of the field.
-                  Example data: E201501051855331663R,  -m"c0:-@@@@/@@/@@ @@:@@:@@-"
+                  Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
-                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/@"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '-', ',' or '@'. 
+                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
+                  Use '\' to escape either '_', ',' or '#'. 
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
