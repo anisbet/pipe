@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.5.18_03 - Fix URL encoding of '0'.
 #          0.5.18_02 - Standardized function-naming conventions.
 #          0.5.18_01 - Fixed: missing characters in URL encoding.
 #          0.5.18 - Added -e URL encode a specific column.
@@ -76,7 +77,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.5.18_02};
+my $VERSION    = qq{0.5.18_03};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -916,7 +917,7 @@ sub map_url_characters( $ )
 	while ( @characters )
 	{
 		my $c = shift @characters;
-		next if ( ! defined $c or ! $c );
+		next if ( ! defined $c );
 		if ( exists $url_characters->{ ord $c } )
 		{
 			push @newString, $url_characters->{ ord $c };
