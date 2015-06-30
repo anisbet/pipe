@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.0_01 - Cleaned up usage().
 #          0.6 - Pipe changes use of '#'<=>'@', and '_'<=>'-' for easier use in system calls.
 #          0.5.18_03 - Fix URL encoding of '0'.
 #          0.5.18_02 - Standardized function-naming conventions.
@@ -78,7 +79,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6};
+my $VERSION    = qq{0.6.0_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -110,12 +111,12 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | $0 [-ADxLUW<delimiter>] 
+    usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
        [-cenotv<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
        [-m<cn:<_|#*,...>]
        [-gG<cn:regex,...>]
-Usage notes for $0. This application is a accumulation of helpful scripts that
+Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
 functions work similarly. Stacked functions are operated on in alphabetical 
@@ -126,9 +127,9 @@ entire file to be read before operations can proceed (-d dedup, -r random, and
 -s sort). Those operations will be done first then just before output the
 remaining operations are performed.
 
-Example: cat file.lst | $0 -c"c0"
+Example: cat file.lst | pipe.pl -c"c0"
 
-$0 only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
+pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based.
 
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
@@ -189,16 +190,25 @@ All column references are 0 based.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  
-A note on usage; because of the way this script works it is quite possible to produce
-mystifying results. For example, failing to remember that ordering comes before trimming
-may produce perplexing results. You can do multiple transformations, but if you are not sure
-you can pipe output from one process to another pipe process. If you  
-order column so that column 1 is output then column 0, but column 0 needs to be trimmed
-you would have to write:
- cat file | $0 -o"c1,c0" -t"c1"
-because -o will first order the row, so the value you want trimmed is now c1. If that is
-too radical to contemplate then:
- cat file | $0 -t"c0" | $0 -o"c1,c0"
+The order of operations is as follows:
+  -x - Usage message, then exits.
+  -a - Sum of numeric values in specific columns.
+  -A - Like '-L' but numbering proceeds output. '-D' displays summary of duplicates. 
+  -c - Count numeric values in specified columns.
+  -e - Encode specified columns into URL-safe strings.
+  -G - Inverse grep specified columns.
+  -g - Grep values in specified columns.
+  -m - Mask specified column values.
+  -n - Remove white space and upper case specified columns.
+  -o - Order selected columns.
+  -t - Trim selected columns.
+  -v - Average numerical values in selected columns.
+  -d - De-duplicate selected columns.
+  -L - Line numbering. Prints original line number of randomized selection (-r).
+  -r - Randomize line output.
+  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
+  -s - Sort columns.
+  -T - Output in table form.
 
 Version: $VERSION
 EOF
