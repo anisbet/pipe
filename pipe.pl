@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.1 - Fixed bug in avg function.
 #          0.6.0_02 - Added more error reporting with invalid use of -L.
 #          0.6.0_01 - Cleaned up usage().
 #          0.6 - Pipe changes use of '#'<=>'@', and '_'<=>'-' for easier use in system calls.
@@ -80,7 +81,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.0_02};
+my $VERSION    = qq{0.6.1};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
