@@ -195,8 +195,9 @@ All column references are 0 based.
  
 The order of operations is as follows:
   -x - Usage message, then exits.
+  -L - Output only specified lines, or range of lines.
   -a - Sum of numeric values in specific columns.
-  -A - Like '-L' but numbering proceeds output. '-D' displays summary of duplicates.
+  -A - Displays line numbers or summary of duplicates if '-D' is selected.
   -c - Count numeric values in specified columns.
   -e - Encode specified columns into URL-safe strings.
   -G - Inverse grep specified columns.
@@ -208,7 +209,6 @@ The order of operations is as follows:
   -v - Average numerical values in selected columns.
   -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
   -d - De-duplicate selected columns.
-  -L - Output only specified lines, or range of lines.
   -r - Randomize line output.
   -s - Sort columns.
   -T - Output in table form.
