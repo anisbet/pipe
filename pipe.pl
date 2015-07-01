@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.1_01 - Documentation update.
 #          0.6.1 - Fixed bug in avg function.
 #          0.6.0_02 - Added more error reporting with invalid use of -L.
 #          0.6.0_01 - Cleaned up usage().
@@ -81,7 +82,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.1};
+my $VERSION    = qq{0.6.1_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -205,10 +206,10 @@ The order of operations is as follows:
   -o - Order selected columns.
   -t - Trim selected columns.
   -v - Average numerical values in selected columns.
+  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
   -d - De-duplicate selected columns.
   -L - Output only specified lines, or range of lines.
   -r - Randomize line output.
-  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
   -s - Sort columns.
   -T - Output in table form.
 
