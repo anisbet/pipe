@@ -1163,7 +1163,7 @@ if ( $opt{'v'} )
 	# compute average for each column.
 	foreach my $key ( keys %{$avg_ref} )
 	{
-		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key};
+		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key} if ( exists $avg_count->{$key} and $avg_count->{$key} > 0 );
 	}
 	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
 }
