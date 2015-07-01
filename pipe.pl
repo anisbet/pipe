@@ -1158,14 +1158,15 @@ table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
 print_summary( "count", $count_ref, \@COUNT_COLUMNS )    if ( $opt{'c'} );
 print_summary( "sum", $sum_ref, \@SUM_COLUMNS)           if ( $opt{'a'} );
- if ( $opt{'v'} )
- {
- 	foreach my $key ( keys %{$avg_ref} )
- 	{
- 		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key};
- 	}
- 	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
- }
+if ( $opt{'v'} )
+{
+	# compute average for each column.
+	foreach my $key ( keys %{$avg_ref} )
+	{
+		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key};
+	}
+	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
+}
 
 
 # EOF
