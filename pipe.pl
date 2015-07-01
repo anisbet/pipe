@@ -363,7 +363,7 @@ sub print_float_summary( $$$ )
 	printf STDERR "== %5s\n", $title;
 	foreach my $column ( sort @{$columns} )
 	{
-		if ( defined $hash_ref->{ 'c'.$column } )
+		if ( defined $hash_ref->{ 'c'.$column } and keys( %{$hash_ref} ) > 0 )
 		{
 			printf STDERR " %2s: %7.2f\n", 'c'.$column, $hash_ref->{ 'c'.$column };
 		}
@@ -1155,8 +1155,16 @@ if ( $FULL_READ )
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
-print_summary( "count", $count_ref, \@COUNT_COLUMNS )   if ( $opt{'c'} );
-print_summary( "sum", $sum_ref, \@SUM_COLUMNS)          if ( $opt{'a'} );
-print_float_summary( "average", $avg_ref, \@AVG_COLUMNS) if ( $opt{'v'} );
+print_summary( "count", $count_ref, \@COUNT_COLUMNS )    if ( $opt{'c'} );
+print_summary( "sum", $sum_ref, \@SUM_COLUMNS)           if ( $opt{'a'} );
+ if ( $opt{'v'} )
+ {
+ 	foreach my $key ( keys %{$avg_ref} )
+ 	{
+ 		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key};
+ 	}
+ 	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
+ }
+
 
 # EOF
