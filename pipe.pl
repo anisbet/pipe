@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.1_02 - Bug fix in average display.
 #          0.6.1_01 - Documentation update.
 #          0.6.1 - Fixed bug in avg function.
 #          0.6.0_02 - Added more error reporting with invalid use of -L.
@@ -82,7 +83,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.1_01};
+my $VERSION    = qq{0.6.1_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -1164,10 +1165,15 @@ if ( $opt{'v'} )
 	# compute average for each column.
 	foreach my $key ( keys %{$avg_ref} )
 	{
-		$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key} if ( exists $avg_count->{$key} and $avg_count->{$key} > 0 );
+		if ( exists $avg_count->{$key} and $avg_count->{$key} > 0 )
+		{
+			$avg_ref->{$key} = $avg_ref->{$key} / $avg_count->{$key};
+		}
+		else
+		{
+			$avg_ref->{$key} = 0.0;
+		}
 	}
 	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
 }
-
-
 # EOF
