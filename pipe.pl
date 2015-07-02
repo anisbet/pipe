@@ -162,13 +162,12 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:<_|\#[*]>]: Mask specified column with the mask defined after a ':', and where '_' 
+ -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_' 
                   means suppress, '#' means output character, any other character at that 
-                  position will be inserted. If the mask is shorter than the target string, 
-                  the last character of the mask will control the remainder of the output.
-                  If the last character is neither '_' or '#', then it will be repeated for 
-                  the number of characters left in the line. 
-                  Characters '_', '#' and ',' are reserved and cannot be inserted within a mask.
+                  position will be inserted.
+                  If the last character is either '_' or '#', then it will be repeated until 
+                  the input line is exhausted. 
+                  Characters '_', '#' and ',' can be output by escaping them with a back slash.
                   Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
                   produces '8' and suppress the rest of the field.
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
