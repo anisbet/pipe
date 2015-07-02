@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.2 - Extend -m to continue outputting mask if not '#' or '_' after line consumed.
 #          0.6.1_02 - Bug fix in average display.
 #          0.6.1_01 - Documentation update.
 #          0.6.1 - Fixed bug in avg function.
@@ -83,7 +84,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.1_02};
+my $VERSION    = qq{0.6.2};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -627,37 +628,28 @@ sub apply_mask( $$ )
 	my @chars = split '', shift;
 	my @mask  = split '', shift;
 	my @word  = "";
-	my $current_char = '';
-	my $mask_char = '';
-	while ( @chars )
+	my $mask_char = '#'; # pre-load so if -m'c0:' will default output line.
+	while ( @mask )
 	{
-		my $char = shift @chars;
 		$mask_char = shift @mask if ( @mask );
-		print STDERR "\$char=$char and \$mask_char=$mask_char\n" if ( $opt{'D'} );
-		# Any character other than '#' or '_' should be output then go get the next mask this acts as an insert.
-		if ( $mask_char ne '_' and $mask_char ne '#' )
+		if ( $mask_char eq '\\' ) # Literal character '#' or '_'
 		{
-			# Keep consuming the mask characters until we find one that matches the special characters.
-			do 
-			{
-				# If the character is a literal '\' then ignore it grab the next char and output it 
-				# even if it is a special character '_' or '#'.
-				$mask_char = shift @mask if ( @mask and $mask_char eq '\\' );
-				push @word, $mask_char;
-				$mask_char = shift @mask if ( @mask );
-			} while ( @mask and $mask_char ne '_' and $mask_char ne '#' );
+			push @word, shift @mask if ( @mask );
 		}
-		if ( defined $mask_char )
+		elsif ( $mask_char eq '_' )
 		{
-			# If we run out of mask just keep going with what the user last specified for output.
-			$current_char = $mask_char;
+			shift @chars if ( @chars );
+		}
+		elsif ( $mask_char eq '#' )
+		{
+			push @word, shift @chars if ( @chars );
 		}
 		else
 		{
-			$mask_char = $current_char;
+			push @word, $mask_char;
 		}
-		push @word, $char if ( $mask_char eq '#' );
-	} 
+	}
+	push @word, @chars if ( @chars and $mask_char eq '#' );
 	return join '', @word; 
 }
 
