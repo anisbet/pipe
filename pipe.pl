@@ -27,6 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.7 - Changed -e to -u, use -e to suppress on empty field.
+#                Count only if none empty value in selected field.
 #          0.6.3 - Add -E to suppress empty lines on output.
 #          0.6.2 - Extend -m to continue outputting mask if not '#' or '_' after line consumed.
 #          0.6.1_02 - Bug fix in average display.
@@ -85,7 +87,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.3};
+my $VERSION    = qq{0.7};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -104,6 +106,7 @@ my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column num
 my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
+my @EMPTY_COLUMNS     = (); # empty column number checks.
 my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
@@ -118,7 +121,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
-       [-cenotv<c0,c1,...,cn>] 
+       [-cnotuvz<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
        [-m<cn:<_|#*,...>]
        [-gG<cn:regex,...>]
@@ -151,8 +154,6 @@ All column references are 0 based.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
- -E             : Suppress empty lines on output.
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
@@ -189,12 +190,14 @@ All column references are 0 based.
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
+ -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  
 The order of operations is as follows:
   -x - Usage message, then exits.
@@ -202,7 +205,7 @@ The order of operations is as follows:
   -a - Sum of numeric values in specific columns.
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
   -c - Count numeric values in specified columns.
-  -e - Encode specified columns into URL-safe strings.
+  -u - Encode specified columns into URL-safe strings.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
@@ -214,7 +217,7 @@ The order of operations is as follows:
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
-  -E - Suppress line output if empty.
+  -z - Suppress line output if column(s) test empty.
   -T - Output in table form.
 
 Version: $VERSION
@@ -270,7 +273,7 @@ sub read_requested_qualified_columns( $$ )
 		print STDERR "*** Error no valid columns selected. ***\n";
 		usage();
 	}
-	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'D'} );
+	print STDERR "columns requested: '@list'\n" if ( $opt{'D'} );
 	return @list;
 }
 
@@ -303,7 +306,7 @@ sub read_requested_columns( $ )
 		print STDERR "*** Error no valid columns selected. ***\n";
 		usage();
 	}
-	print STDERR "columns requested from first file: '@list'\n" if ( $opt{'D'} );
+	print STDERR "columns requested: '@list'\n" if ( $opt{'D'} );
 	return @list;
 }
 
@@ -389,7 +392,7 @@ sub count( $ )
 	foreach my $colIndex ( @COUNT_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
-		if ( defined $line[ $colIndex ] )
+		if ( defined $line[ $colIndex ] and $line[ $colIndex ] =~ m/\S/ )
 		{
 			$count_ref->{ "c$colIndex" }++;
 		}
@@ -713,22 +716,21 @@ sub is_not_match( $ )
 	return 1;
 }
 
-# Tests if a line is empty of content.
+# Tests if a line is empty of content. Empty includes column doesn't exist and or is empty.
 # param:  string (line) to test.
 # return: 1 if there is a non-empty field, and 0 otherwise.
 sub is_empty( $ )
 {
 	my @line = split '\|', shift;
-	return 1 if ( ! @line );
-	my $fullFieldCount = 0;
 	printf STDERR "LINE: " if ( $opt{'D'} );
-	foreach my $colValue ( @line )
+	foreach my $colIndex ( @EMPTY_COLUMNS )
 	{
-		printf STDERR "'%s', ", $colValue if ( $opt{'D'} );
-		$fullFieldCount++ if ( ! $colValue or $colValue =~ m/^\s{1,}?$/ );
+		return 1 if ( ! defined $line[ $colIndex ] );
+		printf STDERR "'%s', ", $line[ $colIndex ] if ( $opt{'D'} );
+		return 1 if ( $line[ $colIndex ] =~ m/^\s{1,}?$/ );
 	}
 	printf STDERR "\n" if ( $opt{'D'} );
-	return $fullFieldCount;
+	return 0;
 }
 
 # This function abstracts all line operations for line by line operations.
@@ -757,12 +759,13 @@ sub process_line( $ )
 	sum( $line )       if ( $opt{'a'} );
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
-	$line = url_encode_line( $line )    if ( $opt{'e'} );
+	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
-	return ''     if ( $opt{'E'} and is_empty( $line ) );
+	# Stop processing lines if the requested column(s) test empty.
+	return ''      if ( $opt{'z'} and is_empty( $line ));
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
@@ -996,15 +999,16 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:De:Eg:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uu:v:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
-	if ( $opt{'e'} )
+	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
+	if ( $opt{'u'} )
 	{
 		build_encoding_table();
-		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'e'} );
+		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'u'} );
 	}
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
