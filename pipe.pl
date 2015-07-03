@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.6.3 - Add -E to suppress empty lines on output.
 #          0.6.2 - Extend -m to continue outputting mask if not '#' or '_' after line consumed.
 #          0.6.1_02 - Bug fix in average display.
 #          0.6.1_01 - Documentation update.
@@ -84,7 +85,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.6.2};
+my $VERSION    = qq{0.6.3};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -151,6 +152,7 @@ All column references are 0 based.
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
  -e[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
+ -E             : Suppress empty lines on output.
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
@@ -212,6 +214,7 @@ The order of operations is as follows:
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
+  -E - Suppress line output if empty.
   -T - Output in table form.
 
 Version: $VERSION
@@ -710,6 +713,24 @@ sub is_not_match( $ )
 	return 1;
 }
 
+# Tests if a line is empty of content.
+# param:  string (line) to test.
+# return: 1 if there is a non-empty field, and 0 otherwise.
+sub is_empty( $ )
+{
+	my @line = split '\|', shift;
+	return 1 if ( ! @line );
+	my $fullFieldCount = 0;
+	printf STDERR "LINE: " if ( $opt{'D'} );
+	foreach my $colValue ( @line )
+	{
+		printf STDERR "'%s', ", $colValue if ( $opt{'D'} );
+		$fullFieldCount++ if ( ! $colValue or $colValue =~ m/^\s{1,}?$/ );
+	}
+	printf STDERR "\n" if ( $opt{'D'} );
+	return $fullFieldCount;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -741,6 +762,7 @@ sub process_line( $ )
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
+	return ''     if ( $opt{'E'} and is_empty( $line ) );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
@@ -974,7 +996,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:De:g:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
+	my $opt_string = 'a:Ac:d:De:Eg:G:IL:Nn:m:o:PRr:s:t:T:Uv:W:x';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
