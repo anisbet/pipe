@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.8 - Add -b, -B to compare fields are same or different.
 #          0.7 - Changed -e to -u, use -e to suppress on empty field.
 #                Count only if none empty value in selected field.
 #          0.6.3 - Add -E to suppress empty lines on output.
@@ -87,7 +88,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.7};
+my $VERSION    = qq{0.8};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -107,6 +108,8 @@ my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
+my @COMPARE_COLUMNS   = (); # Compare all collected columns and report if equal.
+my @NO_COMPARE_COLUMNS= (); # ! Compare all collected columns and report if equal.
 my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
@@ -121,7 +124,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
-       [-cnotuvz<c0,c1,...,cn>] 
+       [-bBcnotuvz<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
        [-m<cn:<_|#*,...>]
        [-gG<cn:regex,...>]
@@ -147,6 +150,8 @@ All column references are 0 based.
                   for a line that was duplicated 4 times on a given key. If 
                   -d is not selected, each line of output is numbered sequentially
                   prior to output. 
+ -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
+ -B[c0,c1,...cn]: Compare fields and output if columns differ.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally. 
@@ -217,6 +222,8 @@ The order of operations is as follows:
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
+  -b - Suppress line output if columns' values differ.
+  -B - Only show lines where columns are different.
   -z - Suppress line output if column(s) test empty.
   -T - Output in table form.
 
@@ -722,7 +729,7 @@ sub is_not_match( $ )
 sub is_empty( $ )
 {
 	my @line = split '\|', shift;
-	printf STDERR "LINE: " if ( $opt{'D'} );
+	printf STDERR "EMPTY_LINE: " if ( $opt{'D'} );
 	foreach my $colIndex ( @EMPTY_COLUMNS )
 	{
 		return 1 if ( ! defined $line[ $colIndex ] );
@@ -731,6 +738,35 @@ sub is_empty( $ )
 	}
 	printf STDERR "\n" if ( $opt{'D'} );
 	return 0;
+}
+
+# Compares requested fields and returns line if they match.
+# param:  string, pipe delimited line.
+# param:  list of column indexes to compare on.
+# return: 1 if the fields matched and 0 otherwise.
+sub contain_same_value( $$ )
+{
+	my @line = split '\|', shift;
+	my $wantedColumns = shift;
+	printf STDERR "CMP_LINE: " if ( $opt{'D'} );
+	my $lastValue = '';
+	my $matchCount = 0;
+	my $isInitialLoop = 1;
+	foreach my $colIndex ( @{$wantedColumns} )
+	{
+		next if ( ! defined $line[ $colIndex ] );
+		printf STDERR "'%s', ", $line[ $colIndex ] if ( $opt{'D'} );
+		if ( $isInitialLoop )
+		{
+			$lastValue = $line[ $colIndex ];
+			$isInitialLoop = 0;
+			$matchCount++; # If there is only one column selected it matches.
+			next;
+		}
+		$matchCount++ if ( $line[ $colIndex ] =~ m/^($lastValue)$/ );
+	}
+	printf STDERR "MATCHES: '%d'\n", $matchCount if ( $opt{'D'} );
+	return $matchCount == scalar( @{$wantedColumns} );
 }
 
 # This function abstracts all line operations for line by line operations.
@@ -765,7 +801,9 @@ sub process_line( $ )
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
 	# Stop processing lines if the requested column(s) test empty.
-	return ''      if ( $opt{'z'} and is_empty( $line ));
+	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
+	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
+	return '' if ( $opt{'z'} and is_empty( $line ));
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
@@ -999,7 +1037,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ac:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uu:v:W:xz:';
+	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uu:v:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1013,6 +1051,8 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
+	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} ) if ( $opt{'b'} );
+	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} ) if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} ) if ( $opt{'n'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'} ) if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'} ) if ( $opt{'t'} );
