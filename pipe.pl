@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.8 - Add -p to pad fields.
 #          0.8 - Add -b, -B to compare fields are same or different.
 #          0.7 - Changed -e to -u, use -e to suppress on empty field.
 #                Count only if none empty value in selected field.
@@ -88,7 +89,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.8};
+my $VERSION    = qq{0.9};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -104,6 +105,7 @@ my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
 my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
+my @PAD_COLUMNS       = (); my $pad_ref   = {}; # Stores the pad instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
@@ -126,7 +128,8 @@ sub usage()
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
        [-bBcnotuvz<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
-       [-m<cn:<_|#*,...>]
+       [-m'cn:[_|#]*,...']
+       [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -188,6 +191,8 @@ All column references are 0 based.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
+                  maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Output a trailing pipe before new line on output.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
@@ -769,6 +774,88 @@ sub contain_same_value( $$ )
 	return $matchCount == scalar( @{$wantedColumns} );
 }
 
+# Applies padding to a given field.
+# param:  string field to pad.
+# param:  padding instructions.
+# return: padded field.
+sub apply_padding( $$ )
+{
+	my $field       = shift;
+	my $instruction = shift;
+	my @newField    = '';
+	printf "PAD: '%s'.\n", $instruction if ( $opt{'D'} );
+	my $count = 0;
+	my $character = '';
+	if ( $instruction =~ m/^[+|-]?\d{1,}/ )
+	{
+		$count = $&;
+		$character = $';
+		$character = ' ' if ( ! $character );
+		printf STDERR "padding '$count' char '$character'\n" if ( $opt{'D'} );
+	}
+	else
+	{
+		print STDERR "*** syntax error in padding instruction.\n";
+		usage();
+	}
+	return $field if ( abs($count) <= length $field );
+	my @chars = split '', $field;
+	if ( $count < 0 ) # Goes on end
+	{
+		$count = abs( $count );
+		for ( my $i = 0; $i < $count; $i++ )
+		{
+			while ( @chars )
+			{
+				push @newField, shift @chars;
+				$i++;
+			}
+			push @newField, $character;
+		}
+	}
+	else # goes on front
+	{
+		@chars = reverse @chars;
+		for ( my $i = 0; $i < $count; $i++ )
+		{
+			while ( @chars )
+			{
+				push @newField, shift @chars;
+				$i++;
+			}
+			push @newField, $character;
+		}
+		@newField = reverse @newField;
+	}
+	return join '', @newField;
+}
+
+# Outputs padded column data as per specification. See usage().
+# Syntax: n.c, where n is an integer (either + for leading, or - for trailing), '.' and character(s) to 
+# be used as padding.
+# param:  String of line data - pipe-delimited.
+# return: string with padded formatting.
+sub pad_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( exists $pad_ref->{ $colIndex } )
+		{
+			push @newLine, apply_padding( $field, $pad_ref->{ $colIndex } );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -800,6 +887,7 @@ sub process_line( $ )
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
+	$line = pad_line( $line )           if ( $opt{'p'} );
 	# Stop processing lines if the requested column(s) test empty.
 	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
 	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
@@ -1037,7 +1125,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:PRr:s:t:T:Uu:v:W:xz:';
+	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1051,6 +1139,7 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
+	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} ) if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} ) if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} ) if ( $opt{'n'} );
