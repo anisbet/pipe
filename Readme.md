@@ -695,5 +695,60 @@ Flags
 
 `                 Characters '_', '#' and ',' are reserved and cannot be inserted within a mask.`
 
-`                 Example data: `
+`                 Example data: 1481241, -m`“`c0:__#`”` produces '81241'. -m`“`c0:__#_`”
+`                 produces '8' and suppress the rest of the field.`
+
+`                 Example data: E201501051855331663R,  -m`“`c0:_####/##/##` `##:##:##_`”
+`                 produces '2015/01/05 18:55:33'.`
+
+`                 Example: 'ls *.txt | pipe.pl -m`“`c0:/foo/bar/#`”`' produces '/foo/bar/README.txt'.`
+
+`                 Use '\' to escape either '_', ',' or '#'. `
+
+`-n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.`
+
+`-N             : Normalize keys before comparison when using (-d and -s) dedup and sort.`
+
+`                 Makes the keys upper case and remove white space before comparison.`
+
+`                 Output is not normalized. For that see (-n).`
+
+`                 See also (-I) for case insensitive comparisons.`
+
+`-o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.`
+
+`-p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a`
+
+`                 maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.`
+
+`-P             : utput a trailing pipe before new line on output.`
+
+`-r`<percent>`    : Output a random percentage of records, ie: -r100 output all lines in random`
+
+`                 order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.`
+
+`-R             : Reverse sort (-d and -s).`
+
+`-s[c0,c1,...cn]: Sort on the specified columns in the specified order.`
+
+`-t[c0,c1,...cn]: Trim the specified columns of white space front and back.`
+
+`-T[HTML|WIKI]  : Output as a Wiki table or an HTML table.`
+
+`-u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.`
+
+`-U             : Sort numerically. Multiple fields may be selected, but an warning is issued`
+
+`                 if any of the columns used as a key, combined, produce a non-numeric value`
+
+`                 during the comparison.`
+
+`-v[c0,c1,...cn]: Average over non-empty values in specified columns.`
+
+`-W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".`
+
+`-x             : This (help) message.`
+
+`-z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.`
+
 
