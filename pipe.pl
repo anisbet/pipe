@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-#          0.8 - Add -p to pad fields.
+#          0.10 - Report maximum and minimum width of specified columns.
+#          0.9 - Add -p to pad fields.
 #          0.8 - Add -b, -B to compare fields are same or different.
 #          0.7 - Changed -e to -u, use -e to suppress on empty field.
 #                Count only if none empty value in selected field.
@@ -89,7 +90,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.9};
+my $VERSION    = qq{0.10};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -98,6 +99,7 @@ my @ALL_LINES  = ();
 # columns working at the same time. We store different columns totals on a hash ref.
 my @COUNT_COLUMNS     = (); my $count_ref = {};
 my @SUM_COLUMNS       = (); my $sum_ref   = {};
+my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {};
 my @AVG_COLUMNS       = (); my $avg_ref   = {}; my $avg_count = {};
 my @DDUP_COLUMNS      = (); my $ddup_ref  = {};
 my @TRIM_COLUMNS      = ();
@@ -126,7 +128,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
-       [-bBcnotuvz<c0,c1,...,cn>] 
+       [-bBcnotuvwz<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>] 
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
@@ -205,6 +207,7 @@ All column references are 0 based.
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
+ -w[c0,c1,...cn]: Report min and max number of characters in specified columns.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
@@ -230,6 +233,7 @@ The order of operations is as follows:
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
   -z - Suppress line output if column(s) test empty.
+  -w - Output minimum an maximum width of column data.
   -T - Output in table form.
 
 Version: $VERSION
@@ -357,7 +361,7 @@ sub print_summary( $$$ )
 	my $title    = shift;
 	my $hash_ref = shift;
 	my $columns  = shift;
-	printf STDERR "== %5s\n", $title;
+	printf STDERR "== %5s\n", $title if ( $title );
 	foreach my $column ( sort @{$columns} )
 	{
 		if ( defined $hash_ref->{ 'c'.$column } )
@@ -423,6 +427,40 @@ sub sum( $ )
 		if ( defined $line[ $colIndex ] and trim( $line[ $colIndex ] ) =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
 		{
 			$sum_ref->{ "c$colIndex" } += trim( $line[ $colIndex ] );
+		}
+	}
+}
+
+# Computes the maximum and minimum width of all the data in the column. 
+# param:  line to pull out columns from.
+# return: string line with requested columns removed.
+sub width( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @WIDTH_COLUMNS )
+	{
+		if ( defined $line[ $colIndex ] )
+		{
+			my $length = length $line[ $colIndex ];
+			printf STDERR "COL: '%s'::LEN '%d'\n", $line[ $colIndex ], $length;
+			if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
+			{
+				$width_min_ref->{ "c$colIndex" } = $length;
+				$width_max_ref->{ "c$colIndex" } = $length;
+				next;
+			}
+			$width_min_ref->{ "c$colIndex" } = $length if ( $length < $width_min_ref->{ "c$colIndex" } );
+			$width_max_ref->{ "c$colIndex" } = $length if ( $length > $width_max_ref->{ "c$colIndex" } );
+		}
+		else
+		{
+			if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
+			{
+				$width_min_ref->{ "c$colIndex" } = 0;
+				$width_max_ref->{ "c$colIndex" } = 0;
+				next;
+			}
+			$width_min_ref->{ "c$colIndex" } = 0;
 		}
 	}
 }
@@ -892,6 +930,7 @@ sub process_line( $ )
 	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
 	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
 	return '' if ( $opt{'z'} and is_empty( $line ));
+	width( $line )   if ( $opt{'w'} );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
@@ -1125,7 +1164,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:W:xz:';
+	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1221,6 +1260,11 @@ sub init
 	if ( $opt{'s'} )
 	{
 		@SORT_COLUMNS  = read_requested_columns( $opt{'s'} );
+		$FULL_READ = 1;
+	}
+	if ( $opt{'w'} )
+	{
+		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'} );
 		$FULL_READ = 1;
 	}
 	if ( $opt{'T'} )
@@ -1321,5 +1365,20 @@ if ( $opt{'v'} )
 		}
 	}
 	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
+}
+if ( $opt{'w'} )
+{
+	printf STDERR "== width\n";
+	foreach my $column ( sort @WIDTH_COLUMNS )
+	{
+		if ( defined $width_max_ref->{ 'c'.$column } )
+		{
+			printf STDERR " %2s: min: %4d, max: %4d\n", 'c'.$column, $width_min_ref->{ 'c'.$column }, $width_max_ref->{ 'c'.$column };
+		}
+		else
+		{
+			printf STDERR " %2s: min: %4d, max: %4d\n", 'c'.$column, 0, 0;
+		}
+	}
 }
 # EOF

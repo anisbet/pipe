@@ -18,6 +18,7 @@ Things pipe.pl can do
 12. Grep a specific column value with regular expressions.
 13. Compare columns for differences.
 14. Flexibly pad output fields.
+15. Report maximum and minimum width of column data.
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 cat file | pipe.pl -o“c1,c0” -t“c1”
 because -o will first order the row, so the value you want trimmed is now c1. If that is too radical to contemplate then:
@@ -47,6 +48,7 @@ The order of operations is as follows:
 -b - Suppress line output if columns' values differ.
 -B - Only show lines where columns are different.
 -z - Suppress line output if column(s) test empty.
+-w - Output minimum an maximum width of column data.
 -T - Output in table form.
 ```
 Ordering, sorting, and splitting on non-pipe character
@@ -453,6 +455,7 @@ Flags
                  if any of the columns used as a key, combined, produce a non-numeric value
                  during the comparison.
 -v[c0,c1,...cn]: Average over non-empty values in specified columns.
+-w[c0,c1,...cn]: Report min and max number of characters in specified columns.
 -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
 -x             : This (help) message.
 -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
