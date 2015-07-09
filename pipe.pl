@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.10.2_02 - Fixed min max reporting of row widths.
 #          0.10.2_01 - Added reporting min/max number of columns and lines.
 #          0.10.2 - Added line numbers to -w.
 #          0.10.1 - Added min stat to -w.
@@ -1415,7 +1416,7 @@ if ( $opt{'w'} )
 	}
 	if ( %{$WIDTHS_COLUMNS} )
 	{
-		my @keys   = sort( keys %{$WIDTHS_COLUMNS} );
+		my @keys   = sort { $a <=> $b } keys %{$WIDTHS_COLUMNS};
 		my $metric = shift @keys;
 		my $min    = $metric;
 		unshift @keys, $metric;
