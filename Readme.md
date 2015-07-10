@@ -118,6 +118,25 @@ echo “abcd” | ./pipe.pl -m“c0:##”
 abcd
 echo “abcd” | ./pipe.pl -m“c0:#_#”
 acd
+cat printlist | pipe.pl -g'c5:adutext' -o'c0,c2,c3' | pipe.pl -m'c1:####-##-##_,c0:/s/sirsi/Unicorn/Rptprint/####.prn'
+...
+/s/sirsi/Unicorn/Rptprint/mxnd.prn|2015-05-29|OK
+/s/sirsi/Unicorn/Rptprint/mxrt.prn|2015-05-30|OK
+/s/sirsi/Unicorn/Rptprint/mxva.prn|2015-05-31|OK
+/s/sirsi/Unicorn/Rptprint/myhf.prn|2015-06-01|ERROR
+/s/sirsi/Unicorn/Rptprint/mypu.prn|2015-06-03|OK
+/s/sirsi/Unicorn/Rptprint/mzbb.prn|2015-06-03|OK
+...
+echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\_”
+/foo/bar/a_
+echo “abcd” | ./pipe.pl -m“c0:/foo/bar/________________.List”
+/foo/bar/.List
+echo “abcd” | ./pipe.pl -m“c0:/foo/bar/\_\_\_\_\_\_.List”
+/foo/bar/______.List
+echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\#”
+/foo/bar/a#
+echo “Balzac Billy, 21221012345678” | pipe.pl -W',' -m'c0:####_...,c1:___________#'
+Balz...|5678
 ```
 
 Given the following history file entries:
@@ -201,35 +220,6 @@ bash-3.2$  cat s.lst | pipe.pl -W"\^" -o“c0,c3” -m“c0:_####/##/## ##:##:##_,c3:_
       <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
       </tbody>
     </table>
-```
-
-### More mask examples
-```
-cat printlist | pipe.pl -g'c5:adutext' -o'c0,c2,c3' | pipe.pl -m'c1:####-##-##_,c0:/s/sirsi/Unicorn/Rptprint/####.prn'
-...
-/s/sirsi/Unicorn/Rptprint/mxnd.prn|2015-05-29|OK
-/s/sirsi/Unicorn/Rptprint/mxrt.prn|2015-05-30|OK
-/s/sirsi/Unicorn/Rptprint/mxva.prn|2015-05-31|OK
-/s/sirsi/Unicorn/Rptprint/myhf.prn|2015-06-01|ERROR
-/s/sirsi/Unicorn/Rptprint/mypu.prn|2015-06-03|OK
-/s/sirsi/Unicorn/Rptprint/mzbb.prn|2015-06-03|OK
-...
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\_”
-/foo/bar/a_
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/________________.List”
-/foo/bar/.List
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/\_\_\_\_\_\_.List”
-/foo/bar/______.List
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\#”
-/foo/bar/a#
-echo “abcd” | ./pipe.pl -m“c0:#”
-abcd
-echo “abcd” | ./pipe.pl -m“c0:”
-abcd
-echo “abcd” | ./pipe.pl -m“c0:#_##”
-acd
-echo “Balzac Billy, 21221012345678” | pipe.pl -W',' -m'c0:####_...,c1:___________#'
-Balz...|5678
 ```
 
 Formatting troublesome Unix tool outputs like **ls -la**, and a handy hack with masks
