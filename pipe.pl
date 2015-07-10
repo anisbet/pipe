@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.10.1 - Added min stat to -w.
 #          0.10 - Report maximum and minimum width of specified columns.
 #          0.9 - Add -p to pad fields.
 #          0.8 - Add -b, -B to compare fields are same or different.
