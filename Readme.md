@@ -19,10 +19,15 @@ Things pipe.pl can do
 13. Compare columns for differences.
 14. Flexibly pad output fields.
 15. Report maximum and minimum width of column data.
+
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
+```
 cat file | pipe.pl -o“c1,c0” -t“c1”
+```
 because -o will first order the row, so the value you want trimmed is now c1. If that is too radical to contemplate then:
+```
 cat file | pipe.pl -t“c0” | pipe.pl -o“c1,c0”
+```
 **Note**: I recommend that you put your command line flags in alphabetical order as in the example below.
 Order of operations
 -------------------
