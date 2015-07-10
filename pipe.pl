@@ -442,7 +442,7 @@ sub width( $ )
 		if ( defined $line[ $colIndex ] )
 		{
 			my $length = length $line[ $colIndex ];
-			printf STDERR "COL: '%s'::LEN '%d'\n", $line[ $colIndex ], $length;
+			printf STDERR "COL: '%s'::LEN '%d'\n", $line[ $colIndex ], $length if ( $opt{'D'} );
 			if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
 			{
 				$width_min_ref->{ "c$colIndex" } = $length;
@@ -1373,11 +1373,15 @@ if ( $opt{'w'} )
 	{
 		if ( defined $width_max_ref->{ 'c'.$column } )
 		{
-			printf STDERR " %2s: min: %4d, max: %4d\n", 'c'.$column, $width_min_ref->{ 'c'.$column }, $width_max_ref->{ 'c'.$column };
+			printf STDERR " %2s: min: %2d, max: %2d, mid: %2.1f\n", 
+			'c'.$column, 
+			$width_min_ref->{ 'c'.$column }, 
+			$width_max_ref->{ 'c'.$column },
+			($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
 		}
 		else
 		{
-			printf STDERR " %2s: min: %4d, max: %4d\n", 'c'.$column, 0, 0;
+			printf STDERR " %2s: min: %2d, max: %2d, mid: %2.1f\n", 'c'.$column, 0, 0, 0;
 		}
 	}
 }
