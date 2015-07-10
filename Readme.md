@@ -394,10 +394,14 @@ echo 21221012345678 | pipe.pl -p'c0:16:'
 ::21221012345678
 echo 21221012345678 | pipe.pl -p'c0:+16:'
 ::21221012345678
+```
 Multiple characters may be used, but each string counts as a single padding sequence as show in the next example.
+```
 echo 21221012345678 | pipe.pl -p'c0:16this'
 thisthis21221012345678
+```
 and
+```
 echo 21221012345678 | pipe.pl -p'c0:-16this'
 21221012345678thisthis
 ```
@@ -406,7 +410,7 @@ echo 21221012345678 | pipe.pl -p'c0:-16this'
 See also **-m** for additional formatting features.
 Usage
 -----
-The script is a stand alone Perl script, and requires no special libraries or dependencies.
+The script is a stand alone Perl script, and requires no special libraries.
 Flags
 -----
 ```
