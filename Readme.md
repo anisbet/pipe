@@ -395,7 +395,7 @@ echo 21221012345678 | pipe.pl -p'c0:16:'
 echo 21221012345678 | pipe.pl -p'c0:+16:'
 ::21221012345678
 ```
-Multiple characters may be used, but each string counts as a single padding sequence as show in the next example.
+Multiple characters may be used, but each string counts as a single padding sequence as shown in the next example.
 ```
 echo 21221012345678 | pipe.pl -p'c0:16this'
 thisthis21221012345678
