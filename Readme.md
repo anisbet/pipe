@@ -374,16 +374,15 @@ cat test.lst | ./pipe.pl -W'\s+' -w"c8" -A -L'10-13'
 Another example
 
 ```
-cat test.lst | ./pipe.pl -w'c8,c1,c6' -W'\s+' -L'16-20'
 drwxr-xr-x@|41|anisbet|staff|1394|10|May|21:06|blender
 drwxr-xr-x@|7|anisbet|staff|238|1|May|21:34|c
 drwxr-xr-x@|7|anisbet|staff|238|2|May|11:04|createyourproglang
 drwxr-xr-x@|6|anisbet|staff|204|1|May|22:02|cybera
 drwxr-xr-x@|11|anisbet|staff|374|1|May|21:36|d3
 == width
- c1: min:  1, max:  2, mid: 1.5
- c6: min:  3, max:  3, mid: 3.0
- c8: min:  1, max: 18, mid: 9.5
+ c1: min:  1 at line 17, max:  2 at line 16, mid: 1.5
+ c6: min:  3 at line 16, max:  3 at line 16, mid: 3.0
+ c8: min:  1 at line 17, max: 18 at line 18, mid: 9.5
 ```
 
 Encode string in URL safe characters
