@@ -357,8 +357,22 @@ Catkey|1481241|has|134|T024's
  c0:       2
 ```
 
-Compute the width of columns
-----------------------------
+Width reporting
+---------------
+Pipe can report the shortest and longest field of selected fields.
+```
+cat test.lst | ./pipe.pl -W'\s+' -w"c8" -A -L'10-13' 
+ ...
+ 10 drwxr-xr-x@|43|anisbet|staff|1462|1|May|21:39|MeCard
+ 11 drwxr-xr-x@|10|anisbet|staff|340|1|May|21:36|MetroGUI
+ 12 drwxr-xr-x@|9|anisbet|staff|306|1|May|21:40|NewFolder
+ 13 drwxr-xr-x@|3|anisbet|staff|102|1|May|21:35|VisualStudio
+ ...
+== width
+ c8: min:  6 at line 10, max: 12 at line 13, mid: 9.0
+ ```
+Another example
+
 ```
 cat test.lst | ./pipe.pl -w'c8,c1,c6' -W'\s+' -L'16-20'
 drwxr-xr-x@|41|anisbet|staff|1394|10|May|21:06|blender
@@ -402,21 +416,6 @@ echo 21221012345678 | pipe.pl -p'c0:-16this'
 ```
 
 See also **-m** for additional formatting features.
-
-Width reporting
----------------
-Pipe can report the shortest and longest field of selected fields.
-```
-cat test.lst | ./pipe.pl -W'\s+' -w"c8" -A -L'10-13' 
- ...
- 10 drwxr-xr-x@|43|anisbet|staff|1462|1|May|21:39|MeCard
- 11 drwxr-xr-x@|10|anisbet|staff|340|1|May|21:36|MetroGUI
- 12 drwxr-xr-x@|9|anisbet|staff|306|1|May|21:40|NewFolder
- 13 drwxr-xr-x@|3|anisbet|staff|102|1|May|21:35|VisualStudio
- ...
-== width
- c8: min:  6 at line 10, max: 12 at line 13, mid: 9.0
- ```
 
 Usage
 -----
