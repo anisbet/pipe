@@ -1240,7 +1240,10 @@ sub init
 				{
 					$END_OUTPUT = $testRange[1];
 				}
-				printf STDERR "** error, invalid range value: '%s'\n", $opt{'L'};
+				else
+				{
+					printf STDERR "** error, invalid range value: '%s'\n", $opt{'L'};
+				}
 			}
 			else
 			{
