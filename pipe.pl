@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.10.2 - Added line numbers to -w.
 #          0.10.1 - Added min stat to -w.
 #          0.10 - Report maximum and minimum width of specified columns.
 #          0.9 - Add -p to pad fields.
@@ -91,7 +92,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.10.1};
+my $VERSION    = qq{0.10.2};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -100,7 +101,7 @@ my @ALL_LINES  = ();
 # columns working at the same time. We store different columns totals on a hash ref.
 my @COUNT_COLUMNS     = (); my $count_ref = {};
 my @SUM_COLUMNS       = (); my $sum_ref   = {};
-my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {};
+my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
 my @AVG_COLUMNS       = (); my $avg_ref   = {}; my $avg_count = {};
 my @DDUP_COLUMNS      = (); my $ddup_ref  = {};
 my @TRIM_COLUMNS      = ();
@@ -434,10 +435,12 @@ sub sum( $ )
 
 # Computes the maximum and minimum width of all the data in the column. 
 # param:  line to pull out columns from.
+# param:  line number.
 # return: string line with requested columns removed.
-sub width( $ )
+sub width( $$)
 {
 	my @line = split '\|', shift;
+	my $line_no = shift;
 	foreach my $colIndex ( @WIDTH_COLUMNS )
 	{
 		if ( defined $line[ $colIndex ] )
@@ -446,10 +449,14 @@ sub width( $ )
 			printf STDERR "COL: '%s'::LEN '%d'\n", $line[ $colIndex ], $length if ( $opt{'D'} );
 			if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
 			{
+				$width_line_min_ref->{ "c$colIndex" } = $line_no;
+				$width_line_max_ref->{ "c$colIndex" } = $line_no;
 				$width_min_ref->{ "c$colIndex" } = $length;
 				$width_max_ref->{ "c$colIndex" } = $length;
 				next;
 			}
+			$width_line_min_ref->{ "c$colIndex" } = $line_no if ( $length < $width_min_ref->{ "c$colIndex" } );
+			$width_line_max_ref->{ "c$colIndex" } = $line_no if ( $length > $width_max_ref->{ "c$colIndex" } );
 			$width_min_ref->{ "c$colIndex" } = $length if ( $length < $width_min_ref->{ "c$colIndex" } );
 			$width_max_ref->{ "c$colIndex" } = $length if ( $length > $width_max_ref->{ "c$colIndex" } );
 		}
@@ -457,10 +464,13 @@ sub width( $ )
 		{
 			if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
 			{
+				$width_line_min_ref->{ "c$colIndex" } = 0;
+				$width_line_max_ref->{ "c$colIndex" } = 0;
 				$width_min_ref->{ "c$colIndex" } = 0;
 				$width_max_ref->{ "c$colIndex" } = 0;
 				next;
 			}
+			$width_line_min_ref->{ "c$colIndex" } = 0;
 			$width_min_ref->{ "c$colIndex" } = 0;
 		}
 	}
@@ -931,7 +941,7 @@ sub process_line( $ )
 	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
 	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
 	return '' if ( $opt{'z'} and is_empty( $line ));
-	width( $line )   if ( $opt{'w'} );
+	width( $line, $LINE_NUMBER )   if ( $opt{'w'} );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
@@ -1224,9 +1234,17 @@ sub init
 		{
 			# The easiest is if it is a range because we can just split on the dash and set start and end.
 			my @testRange = split '-', $opt{'L'};
-			if ( defined $testRange[1] and $testRange[1] =~ m/\d{1,}/ )
+			if ( defined $testRange[1] )
 			{
-				$END_OUTPUT = $testRange[1]; 
+				if ( $testRange[1] =~ m/\d{1,}/ )
+				{
+					$END_OUTPUT = $testRange[1];
+				}
+				printf STDERR "** error, invalid range value: '%s'\n", $opt{'L'};
+			}
+			else
+			{
+				$END_OUTPUT = 100000000;
 			}
 			if ( defined $testRange[0] and $testRange[0] =~ m/\d{1,}/ )
 			{
@@ -1374,15 +1392,18 @@ if ( $opt{'w'} )
 	{
 		if ( defined $width_max_ref->{ 'c'.$column } )
 		{
-			printf STDERR " %2s: min: %2d, max: %2d, mid: %2.1f\n", 
+			printf STDERR " %2s: min: %2d at line %d, max: %2d at line %d, mid: %2.1f\n", 
 			'c'.$column, 
 			$width_min_ref->{ 'c'.$column }, 
+			$width_line_min_ref->{ 'c'.$column }, 
 			$width_max_ref->{ 'c'.$column },
+			$width_line_max_ref->{ 'c'.$column },
 			($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
 		}
 		else
 		{
-			printf STDERR " %2s: min: %2d, max: %2d, mid: %2.1f\n", 'c'.$column, 0, 0, 0;
+			printf STDERR " %2s: min: %2d at line -, max: %2d at line -, mid: %2.1f\n",
+			'c'.$column, 0, 0, 0;
 		}
 	}
 }
