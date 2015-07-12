@@ -166,9 +166,6 @@ If the last character of the mask is a special character '\#' or '\_', the defau
 ```
 echo “abcd” | ./pipe.pl -m“c0:#”
 abcd
-```
-or
-```
 echo “abcd” | ./pipe.pl -m“c0:#_”
 a
 echo “abcd” | ./pipe.pl -m“c0:#_#”
