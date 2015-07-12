@@ -97,8 +97,16 @@ c3:    5641
 Here c3 was summed up, then a count of all lines each line was then ordered and finally we sorted the list by c0, which is where index 3 ended up after ordering.
 
  
-grep with -g and -G
--------------------
+Grepping a specific field value, and counting the results
+---------------------------------------------------------
+You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
+```
+cat t.lst | ./pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
+Catkey|1465466|has|206|T024's
+Catkey|1478591|has|207|T024's
+== count
+c0:       2
+```
 ```
 cat test.lst | ./pipe.pl -W' '  -c“c0”
 Catkey|1456824|has|114|T024's
@@ -149,17 +157,6 @@ Catkey|1480485|has|168|T024's
 Catkey|1481241|has|134|T024's
 == count
  c0:       2
-```
-
-Alternate example: grepping a specific field value, and counting the results
-----------------------------------------------------------------------------
-In this example we show the use of the -g flag. You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
-```
-cat t.lst | ./pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
-Catkey|1465466|has|206|T024's
-Catkey|1478591|has|207|T024's
-== count
-c0:       2
 ```
 
 Cleaning log entries using masks, outputting as tables
