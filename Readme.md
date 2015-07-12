@@ -170,15 +170,6 @@ echo “abcd” | ./pipe.pl -m“c0:#_”
 a
 echo “abcd” | ./pipe.pl -m“c0:#_#”
 acd
-cat printlist | pipe.pl -g'c5:adutext' -o'c0,c2,c3' | pipe.pl -m'c1:####-##-##_,c0:/s/sirsi/Unicorn/Rptprint/####.prn'
-...
-/s/sirsi/Unicorn/Rptprint/mxnd.prn|2015-05-29|OK
-/s/sirsi/Unicorn/Rptprint/mxrt.prn|2015-05-30|OK
-/s/sirsi/Unicorn/Rptprint/mxva.prn|2015-05-31|OK
-/s/sirsi/Unicorn/Rptprint/myhf.prn|2015-06-01|ERROR
-/s/sirsi/Unicorn/Rptprint/mypu.prn|2015-06-03|OK
-/s/sirsi/Unicorn/Rptprint/mzbb.prn|2015-06-03|OK
-...
 echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\_”
 /foo/bar/a_
 echo “abcd” | ./pipe.pl -m“c0:/foo/bar/________________.List”
@@ -190,7 +181,18 @@ echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\#”
 echo “Balzac Billy, 21221012345678” | pipe.pl -W',' -m'c0:####_...,c1:___________#'
 Balz...|5678
 ```
-
+Reading the schedule of printed reports (printlist) is much easier with pipe than rptstat.pl.
+```
+cat printlist | pipe.pl -g'c5:adutext' -o'c0,c2,c3' | pipe.pl -m'c1:####-##-##_,c0:/s/sirsi/Unicorn/Rptprint/####.prn'
+...
+/s/sirsi/Unicorn/Rptprint/mxnd.prn|2015-05-29|OK
+/s/sirsi/Unicorn/Rptprint/mxrt.prn|2015-05-30|OK
+/s/sirsi/Unicorn/Rptprint/mxva.prn|2015-05-31|OK
+/s/sirsi/Unicorn/Rptprint/myhf.prn|2015-06-01|ERROR
+/s/sirsi/Unicorn/Rptprint/mypu.prn|2015-06-03|OK
+/s/sirsi/Unicorn/Rptprint/mzbb.prn|2015-06-03|OK
+...
+```
 Given the following history file entries:
 ```
 ...
@@ -274,10 +276,11 @@ bash-3.2$  cat s.lst | pipe.pl -W"\^" -o“c0,c3” -m“c0:_####/##/## ##:##:##_,c3:_
     </table>
 ```
 
-Formatting troublesome Unix tool outputs like **ls -la**, and a handy hack with masks
--------------------------------------------------------------------------------------
+Formatting Unix tool outputs like **ls -la**, and a handy hack with masks
+-------------------------------------------------------------------------
+To get a list of all the Symphony history files from a 12 month period starting June of 2014 to June 2015 
 ```
- ls -l gpn hist/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' 
+ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])' 
 -rw-r--r--   1 sirsi    sirsi    102193407 Jul  1  2014 201406.hist.Z
 -rw-r--r--   1 sirsi    sirsi    108121444 Aug  1  2014 201407.hist.Z
 -rw-r--r--   1 sirsi    sirsi    104152833 Sep  1  2014 201408.hist.Z
@@ -296,7 +299,7 @@ Formatting troublesome Unix tool outputs like **ls -la**, and a handy hack with 
 
 If you just want the file names you could just use ls but that is boring so let's use pipe.
 ```
-ls -l gpn hist/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8' 
+ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])' -o'c8' 
 201406.hist.Z
 201407.hist.Z
 201408.hist.Z
@@ -316,7 +319,7 @@ ls -l gpn hist/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' 
 To add a path:
 
 ```
-ls -l gpn hist/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' -o'c8' -m “c8:/s/sirsi/Unicorn/Hist/#”
+ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])' -o'c8' -m “c8:/s/sirsi/Unicorn/Hist/#”
 /s/sirsi/Unicorn/Hist/201406.hist.Z
 /s/sirsi/Unicorn/Hist/201407.hist.Z
 /s/sirsi/Unicorn/Hist/201408.hist.Z
@@ -335,24 +338,20 @@ ls -l gpn hist/ | egrep -e '(2014(0[6-9]|1[0-2])|20150[1-6])' | pipe.pl -W'\s+' 
 
 Dedup with counts compared to line counts ('-A')
 ------------------------------------------------
-
+To output the data set with line counts:
 ```
-cat test.lst
-1010152186019|4|
-1010152186019|9|
-1010152186019|7|
-1010152186019|0|
-1010152186019|0|
-1010152186019|1|
-cat test.lst | pipe.pl -d'c0' -A
-6 1010152186019|1|
 cat test.lst | pipe.pl -A
- 1  1010152186019|4|
- 2  1010152186019|9|
- 3  1010152186019|7|
- 4  1010152186019|0|
- 5  1010152186019|0|
- 6  1010152186019|1|
+ 1  86019|4|
+ 2  86019|9|
+ 3  86019|7|
+ 4  86019|0|
+ 5  86019|0|
+ 6  86019|1|
+```
+With -d the line count feature changes to reporting the number of redundant lines.
+```
+cat test.lst | pipe.pl -d'c0' -A
+6 86019|1|
  ```
 
 Width reporting
@@ -394,28 +393,99 @@ Padding example
 ---------------
 Padding allows you to pad a field to a maximum of 'n' fill characters. If the string you are padding is longer than the requested pad field width, the field will be output unaffected. A negative number denotes that the padding should be added to the end of the field, a '+', or no modifier, denotes padding on the front of the string. If you don't specify a padding character a single white space is used.
 ```
-echo 21221012345678 | pipe.pl -p'c0:-16:'
-21221012345678::
-echo 21221012345678 | pipe.pl -p'c0:16:'
-::21221012345678
-echo 21221012345678 | pipe.pl -p'c0:+16:'
-::21221012345678
+echo 21221012345678 | pipe.pl -p'c0:-17.'
+21221012345678...
+echo 21221012345678 | pipe.pl -p'c0:17.'
+...21221012345678
+echo 21221012345678 | pipe.pl -p'c0:+17.'
+...21221012345678
 ```
 Multiple characters may be used, but each string counts as a single padding sequence as shown in the next example.
 ```
-echo 21221012345678 | pipe.pl -p'c0:16this'
-thisthis21221012345678
+echo 21221012345678 | pipe.pl -p'c0:17dot'
+dotdotdot21221012345678
 ```
 and
 ```
-echo 21221012345678 | pipe.pl -p'c0:-16this'
-21221012345678thisthis
+echo 21221012345678 | pipe.pl -p'c0:-17dot'
+21221012345678dotdotdot
 ```
 
 See also **-m** for additional formatting features.
 
-Usage
------
+Random line selection from data
+-------------------------------
+Sometimes it's helpful to get a random selection of input to use as test data for another process. With pipe this is easy:
+```
+cat t1.lst
+1
+2
+3
+4
+5
+```
+...
+```
+18
+19
+20
+cat t1.lst | ./pipe.pl -r'1'
+19
+20
+cat t1.lst | ./pipe.pl -r'1'
+9
+13
+cat t1.lst | ./pipe.pl -r'1'
+3
+16
+cat t1.lst | ./pipe.pl -r'1'
+10
+3
+```
+Selection by line number or range of lines
+------------------------------------------
+Using the same data and the '-L' we can output specific lines or ranges of lines.
+```
+cat t1.lst | ./pipe.pl -L'10'
+10
+
+```
+The '+' produces output from the head of the file.
+```
+cat t1.lst | ./pipe.pl -L'+5'
+1
+2
+3
+4
+5
+```
+The '-' produces output from the tail of the file.
+```
+cat t1.lst | ./pipe.pl -L'-5'
+16
+17
+18
+19
+20
+```
+A range can be specified as follows:
+```
+cat t1.lst | ./pipe.pl -L'11-15'
+11
+12
+13
+14
+15
+```
+You can specify the output from a specific line onward to the end of the file.
+```
+cat t1.lst | ./pipe.pl -L'17-'
+17
+18
+19
+20
+```
+
 The script is a stand alone Perl script, and requires no special libraries.
 Flags
 -----
