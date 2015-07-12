@@ -95,7 +95,64 @@ c3:    5641
 ```
 
 Here c3 was summed up, then a count of all lines each line was then ordered and finally we sorted the list by c0, which is where index 3 ended up after ordering.
-### Alternate example: grepping a specific field value, and counting the results
+
+ 
+grep with -g and -G
+-------------------
+```
+cat test.lst | ./pipe.pl -W' '  -c“c0”
+Catkey|1456824|has|114|T024's
+Catkey|1458347|has|136|T024's
+Catkey|1458804|has|284|T024's
+Catkey|1462712|has|153|T024's
+Catkey|1463986|has|174|T024's
+Catkey|1465362|has|195|T024's
+Catkey|1465466|has|206|T024's
+Catkey|1465861|has|116|T024's
+Catkey|1467080|has|157|T024's
+Catkey|1468840|has|100|T024's
+Catkey|1469205|has|157|T024's
+Catkey|1469335|has|135|T024's
+Catkey|1471170|has|102|T024's
+Catkey|1474195|has|168|T024's
+Catkey|1474421|has|172|T024's
+Catkey|1474423|has|301|T024's
+Catkey|1474761|has|102|T024's
+Catkey|1475077|has|101|T024's
+Catkey|1475754|has|126|T024's
+Catkey|1475760|has|109|T024's
+Catkey|1476430|has|410|T024's
+Catkey|1477339|has|195|T024's
+Catkey|1477343|has|101|T024's
+Catkey|1478189|has|167|T024's
+Catkey|1478591|has|207|T024's
+Catkey|1478687|has|624|T024's
+Catkey|1478965|has|165|T024's
+Catkey|1479679|has|116|T024's
+Catkey|1480485|has|168|T024's
+Catkey|1481038|has|246|T024's
+Catkey|1481241|has|134|T024's
+== count
+c0:      31
+cat t.lst | ./pipe.pl -W' ' -G'c3:^1..' -c“c0”
+Catkey|1458804|has|284|T024's
+Catkey|1465466|has|206|T024's
+Catkey|1474423|has|301|T024's
+Catkey|1476430|has|410|T024's
+Catkey|1478591|has|207|T024's
+Catkey|1478687|has|624|T024's
+Catkey|1481038|has|246|T024's
+== count
+c0:       7
+cat t.lst | ./pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c“c0”
+Catkey|1480485|has|168|T024's
+Catkey|1481241|has|134|T024's
+== count
+ c0:       2
+```
+
+Alternate example: grepping a specific field value, and counting the results
+----------------------------------------------------------------------------
 In this example we show the use of the -g flag. You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
 ```
 cat t.lst | ./pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
@@ -302,60 +359,6 @@ cat test.lst | pipe.pl -A
  5  1010152186019|0|
  6  1010152186019|1|
  ```
- 
-grep with -g and -G
--------------------
-```
-cat test.lst | ./pipe.pl -W' '  -c“c0”
-Catkey|1456824|has|114|T024's
-Catkey|1458347|has|136|T024's
-Catkey|1458804|has|284|T024's
-Catkey|1462712|has|153|T024's
-Catkey|1463986|has|174|T024's
-Catkey|1465362|has|195|T024's
-Catkey|1465466|has|206|T024's
-Catkey|1465861|has|116|T024's
-Catkey|1467080|has|157|T024's
-Catkey|1468840|has|100|T024's
-Catkey|1469205|has|157|T024's
-Catkey|1469335|has|135|T024's
-Catkey|1471170|has|102|T024's
-Catkey|1474195|has|168|T024's
-Catkey|1474421|has|172|T024's
-Catkey|1474423|has|301|T024's
-Catkey|1474761|has|102|T024's
-Catkey|1475077|has|101|T024's
-Catkey|1475754|has|126|T024's
-Catkey|1475760|has|109|T024's
-Catkey|1476430|has|410|T024's
-Catkey|1477339|has|195|T024's
-Catkey|1477343|has|101|T024's
-Catkey|1478189|has|167|T024's
-Catkey|1478591|has|207|T024's
-Catkey|1478687|has|624|T024's
-Catkey|1478965|has|165|T024's
-Catkey|1479679|has|116|T024's
-Catkey|1480485|has|168|T024's
-Catkey|1481038|has|246|T024's
-Catkey|1481241|has|134|T024's
-== count
-c0:      31
-cat t.lst | ./pipe.pl -W' ' -G'c3:^1..' -c“c0”
-Catkey|1458804|has|284|T024's
-Catkey|1465466|has|206|T024's
-Catkey|1474423|has|301|T024's
-Catkey|1476430|has|410|T024's
-Catkey|1478591|has|207|T024's
-Catkey|1478687|has|624|T024's
-Catkey|1481038|has|246|T024's
-== count
-c0:       7
-cat t.lst | ./pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c“c0”
-Catkey|1480485|has|168|T024's
-Catkey|1481241|has|134|T024's
-== count
- c0:       2
-```
 
 Width reporting
 ---------------
