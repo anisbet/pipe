@@ -429,16 +429,16 @@ cat t1.lst
 18
 19
 20
-cat t1.lst | ./pipe.pl -r'1'
+cat t1.lst | ./pipe.pl -r'10'
 19
 20
-cat t1.lst | ./pipe.pl -r'1'
+cat t1.lst | ./pipe.pl -r'10'
 9
 13
-cat t1.lst | ./pipe.pl -r'1'
+cat t1.lst | ./pipe.pl -r'10'
 3
 16
-cat t1.lst | ./pipe.pl -r'1'
+cat t1.lst | ./pipe.pl -r'10'
 10
 3
 ```
