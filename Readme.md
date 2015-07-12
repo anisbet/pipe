@@ -165,11 +165,12 @@ Masks work using two special characters '\#' to print a character, and '\_' to s
 If the last character of the mask is a special character '\#' or '\_', the default behavior is to output, or suppress, the rest of the contents of the field.
 ```
 echo “abcd” | ./pipe.pl -m“c0:#”
+abcd
 ```
 or
 ```
-echo “abcd” | ./pipe.pl -m“c0:##”
-abcd
+echo “abcd” | ./pipe.pl -m“c0:#_”
+a
 echo “abcd” | ./pipe.pl -m“c0:#_#”
 acd
 cat printlist | pipe.pl -g'c5:adutext' -o'c0,c2,c3' | pipe.pl -m'c1:####-##-##_,c0:/s/sirsi/Unicorn/Rptprint/####.prn'
