@@ -469,7 +469,7 @@ Flags
 -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
 -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                  maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
--P             : utput a trailing pipe before new line on output.
+-P             : Output a trailing pipe before new line on output.
 -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
 -R             : Reverse sort (-d and -s).
