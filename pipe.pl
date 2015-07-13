@@ -477,7 +477,7 @@ sub width( $$)
 			$width_min_ref->{ "c$colIndex" } = 0;
 		}
 	}
-	$WIDTHS_COLUMNS->{$LINE_NUMBER} = @line;
+	$WIDTHS_COLUMNS->{ @line } = $LINE_NUMBER;
 }
 
 # Average the non-empty values of specified columns. 
@@ -1420,15 +1420,17 @@ if ( $opt{'w'} )
 		my $min    = $metric;
 		unshift @keys, $metric;
 		$metric = pop @keys;
-		# push @keys, $metric; # if you need to reuse the array of number of columns.
-		if ( $WIDTHS_COLUMNS->{ $min } == $WIDTHS_COLUMNS->{ $metric } )
+		push @keys, $metric;
+		if ( $min == $metric )
 		{
-			printf STDERR " number of columns: %d \n", $WIDTHS_COLUMNS->{ $metric };
+			printf STDERR " number of columns: min, max: %d, ", $metric;
+			printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
 		}
 		else
 		{
-			printf STDERR " number of columns min: %d at line: %3d, ", $WIDTHS_COLUMNS->{ $min }, $min;
-			printf STDERR "max: %d at line: %3d\n", $WIDTHS_COLUMNS->{ $metric }, $metric;
+			printf STDERR " number of columns:  min: %d at line: %d, ", $min, $WIDTHS_COLUMNS->{ $min };
+			printf STDERR "max: %d at line: %d, ", $metric, $WIDTHS_COLUMNS->{ $metric };
+			printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
 		}
 	}
 }
