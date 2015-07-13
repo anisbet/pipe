@@ -369,19 +369,21 @@ cat test.lst | ./pipe.pl -W'\s+' -w"c8" -A -L'10-13'
  ...
 == width
  c8: min:  6 at line 10, max: 12 at line 13, mid: 9.0
+ number of columns min: 2 at line:   1, max: 9 at line:   9
  ```
 Another example
 
 ```
-drwxr-xr-x@|41|anisbet|staff|1394|10|May|21:06|blender
-drwxr-xr-x@|7|anisbet|staff|238|1|May|21:34|c
-drwxr-xr-x@|7|anisbet|staff|238|2|May|11:04|createyourproglang
-drwxr-xr-x@|6|anisbet|staff|204|1|May|22:02|cybera
-drwxr-xr-x@|11|anisbet|staff|374|1|May|21:36|d3
+cat test.lst | ./pipe.pl -W'\s+' -w"c6,c1,c8" -A -L'10-13'
+ 10 drwxr-xr-x@|43|anisbet|staff|1462|1|May|21:39|MeCard
+ 11 drwxr-xr-x@|10|anisbet|staff|340|1|May|21:36|MetroGUI
+ 12 drwxr-xr-x@|9|anisbet|staff|306|1|May|21:40|NewFolder
+ 13 drwxr-xr-x@|3|anisbet|staff|102|1|May|21:35|VisualStudio
 == width
- c1: min:  1 at line 17, max:  2 at line 16, mid: 1.5
- c6: min:  3 at line 16, max:  3 at line 16, mid: 3.0
- c8: min:  1 at line 17, max: 18 at line 18, mid: 9.5
+ c1: min:  1 at line 12, max:  2 at line 10, mid: 1.5
+ c6: min:  3 at line 10, max:  3 at line 10, mid: 3.0
+ c8: min:  6 at line 10, max: 12 at line 13, mid: 9.0
+ number of columns: 9
 ```
 
 Encode string in URL safe characters
