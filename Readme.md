@@ -159,8 +159,8 @@ Catkey|1478591|has|207|T024's
 == count
 c0:       2
 ```
-Cleaning log entries using masks, outputting as tables
-------------------------------------------------------
+Using masks
+-----------
 Masks work using two special characters '\#' to print a character, and '\_' to suppress a character. Any other character is output as-is, in order, until both the mask and the input string are exhausted. The special characters can also be output as literals if they are escaped with a back slash '\\'.
 If the last character of the mask is a special character '\#' or '\_', the default behavior is to output, or suppress, the rest of the contents of the field.
 ```
@@ -234,23 +234,25 @@ LON|21221022260092|31221106815520|11122015
 CPL|21221019966206|31221106815538|11052015
 ```
 
-Or as a table?
+Output as tables
+----------------
+Pipe supports currently supports output as HTML or MediaWiki table format.
 ```
 bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o“c3,c4,c6,c7” -m“c3:_____###,c4:__#,c6:__#,c7:__##_##_####” -s“c2” -T“HTML”
-    <table>
-      <tbody>
-      <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
-      <tr><td>CPL</td><td>21221019966206</td><td>31221106815512</td><td>11052015</td></tr>
-      <tr><td>CPL</td><td>21221019966206</td><td>31221106815538</td><td>11052015</td></tr>
-      <tr><td>LON</td><td>21221022260092</td><td>31221106815496</td><td>11122015</td></tr>
-      <tr><td>LON</td><td>21221022260092</td><td>31221106815504</td><td>11122015</td></tr>
-      <tr><td>LON</td><td>21221022260092</td><td>31221106815512</td><td>11122015</td></tr>
-      <tr><td>LON</td><td>21221022260092</td><td>31221106815520</td><td>11122015</td></tr>
-      <tr><td>RIV</td><td>21221014186727</td><td>31221106815504</td><td>11082015</td></tr>
-      <tr><td>RIV</td><td>21221014186727</td><td>31221106815512</td><td>11082015</td></tr>
-      <tr><td>WMC</td><td>21221019655684</td><td>31221106815504</td><td>11172015</td></tr>
-      </tbody>
-    </table>
+<table>
+  <tbody>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815512</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815538</td><td>11052015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815496</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815504</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815512</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815520</td><td>11122015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815504</td><td>11082015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815512</td><td>11082015</td></tr>
+  <tr><td>WMC</td><td>21221019655684</td><td>31221106815504</td><td>11172015</td></tr>
+  </tbody>
+</table>
 ```
 A new feature in -m to allow arbitrary characters to be inserted. For data like this:
 
@@ -265,15 +267,15 @@ E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^
 Try
 ```
 bash-3.2$  cat s.lst | pipe.pl -W"\^" -o“c0,c3” -m“c0:_####/##/## ##:##:##_,c3:_____###” -T“HTML”
-    <table>
-      <tbody>
-      <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
-      <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
-      <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
-      <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
-      <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
-      </tbody>
-    </table>
+<table>
+  <tbody>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
+  <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
+  <tr><td>2014/11/08 12:38:19</td><td>RIV</td></tr>
+  </tbody>
+</table>
 ```
 
 Formatting Unix tool outputs like **ls -la**, and a handy hack with masks

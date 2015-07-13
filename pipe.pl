@@ -121,6 +121,7 @@ my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0; # Does the user want to output to a table.
+my $WIDTHS_COLUMNS    = {};
 
 #
 # Message about this program and how to use it.
@@ -474,6 +475,7 @@ sub width( $$)
 			$width_min_ref->{ "c$colIndex" } = 0;
 		}
 	}
+	$WIDTHS_COLUMNS->{$LINE_NUMBER} = @line;
 }
 
 # Average the non-empty values of specified columns. 
@@ -1407,6 +1409,24 @@ if ( $opt{'w'} )
 		{
 			printf STDERR " %2s: min: %2d at line -, max: %2d at line -, mid: %2.1f\n",
 			'c'.$column, 0, 0, 0;
+		}
+	}
+	if ( %{$WIDTHS_COLUMNS} )
+	{
+		my @keys   = sort( keys %{$WIDTHS_COLUMNS} );
+		my $metric = shift @keys;
+		my $min    = $metric;
+		unshift @keys, $metric;
+		$metric = pop @keys;
+		# push @keys, $metric; # if you need to reuse the array of number of columns.
+		if ( $WIDTHS_COLUMNS->{ $min } == $WIDTHS_COLUMNS->{ $metric } )
+		{
+			printf STDERR " number of columns: %d \n", $WIDTHS_COLUMNS->{ $metric };
+		}
+		else
+		{
+			printf STDERR " number of columns min: %d at line: %3d, ", $WIDTHS_COLUMNS->{ $min }, $min;
+			printf STDERR "max: %d at line: %3d\n", $WIDTHS_COLUMNS->{ $metric }, $metric;
 		}
 	}
 }
