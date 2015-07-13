@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.10.2_01 - Added reporting min/max number of columns and lines.
 #          0.10.2 - Added line numbers to -w.
 #          0.10.1 - Added min stat to -w.
 #          0.10 - Report maximum and minimum width of specified columns.
@@ -92,7 +93,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.10.2};
+my $VERSION    = qq{0.10.2_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -210,7 +211,8 @@ All column references are 0 based.
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
- -w[c0,c1,...cn]: Report min and max number of characters in specified columns.
+ -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
+                  the minimum and maximum number of columns by line.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
