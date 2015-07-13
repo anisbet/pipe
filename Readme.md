@@ -560,7 +560,8 @@ Flags
                  if any of the columns used as a key, combined, produce a non-numeric value
                  during the comparison.
 -v[c0,c1,...cn]: Average over non-empty values in specified columns.
--w[c0,c1,...cn]: Report min and max number of characters in specified columns.
+-w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
+                 the minimum and maximum number of columns by line.
 -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
 -x             : This (help) message.
 -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
