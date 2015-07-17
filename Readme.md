@@ -498,6 +498,77 @@ cat t1.lst | ./pipe.pl -L'17-'
 20
 ```
 
+Conditional test columns:
+-------------------------
+```
+cat t02.lst
+0 123.1
+1 123.22
+2 123.9
+3 123.9
+4 123.9
+5 123.6
+6 123.9
+7 123.9
+8 123.987888
+9 123.0345
+10 123.11
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c0:lt6'
+0|123.1
+1|123.22
+2|123.9
+3|123.9
+4|123.9
+5|123.6
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c0:le6'
+0|123.1
+1|123.22
+2|123.9
+3|123.9
+4|123.9
+5|123.6
+6|123.9
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c0:gt6'
+7|123.9
+8|123.987888
+9|123.0345
+10|123.11
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c0:ge6'
+6|123.9
+7|123.9
+8|123.987888
+9|123.0345
+10|123.11
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c0:eq6'
+6|123.9
+ cat t02.lst | ./pipe.pl -W'\s+' -C'c1:gt123.6'
+2|123.9
+3|123.9
+4|123.9
+6|123.9
+7|123.9
+8|123.987888
+```
+Also works on non-numeric field data
+```
+ cat alpha2.lst
+metrically
+atypic
+chorizo
+clarity
+unmystic
+retirer
+dinkier
+sligo
+horopter
+ cat alpha2.lst | ./pipe.pl -C'c0:gef'
+metrically
+unmystic
+retirer
+sligo
+horopter
+```
+
 The script is a stand alone Perl script, and requires no special libraries.
 Flags
 -----
