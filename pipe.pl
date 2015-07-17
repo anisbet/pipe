@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.11 - Fixed usage().
 #          0.11 - Added -C to compare by gt|lt|eq|ge|le.
 #          0.10.2_02 - Fixed min max reporting of row widths.
 #          0.10.2_01 - Added reporting min/max number of columns and lines.
@@ -95,7 +96,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.11};
+my $VERSION    = qq{0.11.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -233,6 +234,7 @@ The order of operations is as follows:
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
   -c - Count numeric values in specified columns.
   -u - Encode specified columns into URL-safe strings.
+  -C - Conditionally test column values.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
