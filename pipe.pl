@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.11 - Added -C to compare by gt|lt|eq|ge|le.
 #          0.10.2_02 - Fixed min max reporting of row widths.
 #          0.10.2_01 - Added reporting min/max number of columns and lines.
 #          0.10.2 - Added line numbers to -w.
@@ -94,18 +95,19 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.10.2_02};
+my $VERSION    = qq{0.11};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
-my @COUNT_COLUMNS     = (); my $count_ref = {};
-my @SUM_COLUMNS       = (); my $sum_ref   = {};
+my @COUNT_COLUMNS     = (); my $count_ref    = {};
+my @SUM_COLUMNS       = (); my $sum_ref      = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
-my @AVG_COLUMNS       = (); my $avg_ref   = {}; my $avg_count = {};
-my @DDUP_COLUMNS      = (); my $ddup_ref  = {};
+my @AVG_COLUMNS       = (); my $avg_ref      = {}; my $avg_count = {};
+my @DDUP_COLUMNS      = (); my $ddup_ref     = {};
+my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref = {};
 my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
@@ -138,6 +140,7 @@ sub usage()
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
+       [-C<cn:[gt|lt|eq|ge|le]exp,...>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -165,6 +168,11 @@ All column references are 0 based.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally. 
+ -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
+                  is greater than (gt), less than (lt), equal to (eq), greater than
+                  or equal to (ge), or less than or equal to (le) the value that follows.
+                  The following value can be numeric, but if it isn't the value's
+                  comparison is made lexically.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -910,6 +918,78 @@ sub pad_line( $ )
 	return join '|', @newLine;
 }
 
+# Tests the values in a given field using lt, gt, eq, le, ge.
+# param:  String of line data - pipe-delimited.
+# return: line if the specified condition was met and nothing if it didn't.
+sub test_condition( $ )
+{
+	my @line = split '\|', shift;
+	foreach my $colIndex ( @COND_CMP_COLUMNS )
+	{
+		if ( defined $line[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
+		{
+			printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$colIndex} if ( $opt{'D'} );
+			my $exp = $cond_cmp_ref->{$colIndex};
+			# The first 2 characters determine the type of comparison.
+			$exp =~ m/^[lge][tqe]/;
+			if ( ! $& )
+			{
+				printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
+				usage();
+			}
+			my $cmpValue    = $';
+			my $cmpOperator = $&;
+			if ( $line[ $colIndex ] =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
+			{
+				if ( $cmpOperator eq 'eq' )
+				{
+					return 1 if ( $line[ $colIndex ] == $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'lt' )
+				{
+					return 1 if ( $line[ $colIndex ] < $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'gt' )
+				{
+					return 1 if ( $line[ $colIndex ] > $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'le' )
+				{
+					return 1 if ( $line[ $colIndex ] <= $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'ge' )
+				{
+					return 1 if ( $line[ $colIndex ] >= $cmpValue );
+				}
+			}
+			else
+			{
+				if ( $cmpOperator eq 'eq' )
+				{
+					return 1 if ( $line[ $colIndex ] eq $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'lt' )
+				{
+					return 1 if ( $line[ $colIndex ] lt $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'gt' )
+				{
+					return 1 if ( $line[ $colIndex ] gt $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'le' )
+				{
+					return 1 if ( $line[ $colIndex ] le $cmpValue );
+				}
+				elsif ( $cmpOperator eq 'ge' )
+				{
+					return 1 if ( $line[ $colIndex ] ge $cmpValue );
+				}
+			}
+		}
+	} 
+	return 0;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -930,6 +1010,10 @@ sub process_line( $ )
 		return '';
 	}
 	elsif ( $opt{'G'} and ! is_not_match( $line ) )
+	{
+		return '';
+	}
+	if ( $opt{'C'} and ! test_condition( $line ) )
 	{
 		return '';
 	}
@@ -1180,7 +1264,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1191,6 +1275,7 @@ sub init
 		build_encoding_table();
 		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'u'} );
 	}
+	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );

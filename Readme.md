@@ -39,6 +39,7 @@ The order of operations is as follows:
 -A - Displays line numbers or summary of duplicates if '-D' is selected.
 -c - Count numeric values in specified columns.
 -u - Encode specified columns into URL-safe strings.
+-C - Conditionally test column values.
 -G - Inverse grep specified columns.
 -g - Grep values in specified columns.
 -m - Mask specified column values.
