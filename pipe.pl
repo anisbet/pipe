@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-#          0.11 - Fixed usage().
+#          0.11.02 - Fixed -z to test empty strings more rigorously.
+#          0.11.01 - Fixed usage().
 #          0.11 - Added -C to compare by gt|lt|eq|ge|le.
 #          0.10.2_02 - Fixed min max reporting of row widths.
 #          0.10.2_01 - Added reporting min/max number of columns and lines.
@@ -96,7 +97,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.11.01};
+my $VERSION    = qq{0.11.02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -803,7 +804,7 @@ sub is_empty( $ )
 	{
 		return 1 if ( ! defined $line[ $colIndex ] );
 		printf STDERR "'%s', ", $line[ $colIndex ] if ( $opt{'D'} );
-		return 1 if ( $line[ $colIndex ] =~ m/^\s{1,}?$/ );
+		return 1 if ( trim( $line[ $colIndex ] ) =~ m/^$/ );
 	}
 	printf STDERR "\n" if ( $opt{'D'} );
 	return 0;
