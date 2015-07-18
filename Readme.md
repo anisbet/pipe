@@ -56,6 +56,7 @@ The order of operations is as follows:
 -z - Suppress line output if column(s) test empty.
 -w - Output minimum an maximum width of column data.
 -T - Output in table form.
+-K - Output everything as a single column.
 ```
 Ordering, sorting, and splitting on non-pipe character
 ------------------------------------------------------
@@ -600,6 +601,7 @@ Flags
 -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                  return true if match on column 1, and column 2 not match.
 -I             : Ignore case on operations (-d and -s) dedup and sort.
+-K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
 -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                  Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
