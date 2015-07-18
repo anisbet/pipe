@@ -27,6 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
+#          0.12 - Add -K to use line breaks instead of pipes between column output.
 #          0.11.02 - Fixed -z to test empty strings more rigorously.
 #          0.11.01 - Fixed usage().
 #          0.11 - Added -C to compare by gt|lt|eq|ge|le.
@@ -97,7 +98,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.11.02};
+my $VERSION    = qq{0.12};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -186,6 +187,7 @@ All column references are 0 based.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
+ -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
@@ -252,6 +254,7 @@ The order of operations is as follows:
   -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
   -T - Output in table form.
+  -K - Output everything as a single column.
 
 Version: $VERSION
 EOF
@@ -1045,6 +1048,7 @@ sub process_line( $ )
 	{
 		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
 	}
+	$line =~ s/\|/\n/g if ( $opt{'K'} );
 	return $line . "\n";
 }
 
@@ -1267,7 +1271,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IKL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
