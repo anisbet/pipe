@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#####################################################################################
+###########################################################################
 #
 # Perl source file for project pipe 
 # Purpose:
@@ -27,9 +27,9 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-#          0.12 - Add -K to use line breaks instead of pipes between column output.
+# 0.12 - Add -K to use line breaks instead of pipes between column output.
 #
-####################################################################################
+###########################################################################
 
 use strict;
 use warnings;
