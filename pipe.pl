@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-########################################################################
+#####################################################################################
 #
 # Perl source file for project pipe 
 # Purpose:
@@ -28,70 +28,8 @@
 # 
 # Rev: 
 #          0.12 - Add -K to use line breaks instead of pipes between column output.
-#          0.11.02 - Fixed -z to test empty strings more rigorously.
-#          0.11.01 - Fixed usage().
-#          0.11 - Added -C to compare by gt|lt|eq|ge|le.
-#          0.10.2_02 - Fixed min max reporting of row widths.
-#          0.10.2_01 - Added reporting min/max number of columns and lines.
-#          0.10.2 - Added line numbers to -w.
-#          0.10.1 - Added min stat to -w.
-#          0.10 - Report maximum and minimum width of specified columns.
-#          0.9 - Add -p to pad fields.
-#          0.8 - Add -b, -B to compare fields are same or different.
-#          0.7 - Changed -e to -u, use -e to suppress on empty field.
-#                Count only if none empty value in selected field.
-#          0.6.3 - Add -E to suppress empty lines on output.
-#          0.6.2 - Extend -m to continue outputting mask if not '#' or '_' after line consumed.
-#          0.6.1_02 - Bug fix in average display.
-#          0.6.1_01 - Documentation update.
-#          0.6.1 - Fixed bug in avg function.
-#          0.6.0_02 - Added more error reporting with invalid use of -L.
-#          0.6.0_01 - Cleaned up usage().
-#          0.6 - Pipe changes use of '#'<=>'@', and '_'<=>'-' for easier use in system calls.
-#          0.5.18_03 - Fix URL encoding of '0'.
-#          0.5.18_02 - Standardized function-naming conventions.
-#          0.5.18_01 - Fixed: missing characters in URL encoding.
-#          0.5.18 - Added -e URL encode a specific column.
-#          0.5.17_01 - Added -G to invert the regex used with -g on a specific column.
-#          0.5.17 - Added -g to grep a regex on a specific column.
-#          0.5.16_06a - Fixed -m to allow all escaped '-' and '@' characters to be output.
-#          0.5.16_06 - Fixed -m to allow all non-'@|-' characters to be output.
-#          0.5.16_05 - Fix bug in -L tail function.
-#          0.5.16_04 - Modified mask function to allow insert of arbitrary characters.
-#          0.5.16_03 - Added -P to add a trailing delimiter before each end of line character.
-#          0.5.16_02 - Output line numbers, but if -d is selected outputs duplicate counts instead.
-#          0.5.16_01 - Fix bug that was ordering before dedup operation causing confusing output.
-#          0.5.16 - Implemented averages. Beefed-up number detection for sum and average.
-#          0.5.15_01 - Allow -A On dedup. Outputs like uniq -c. 
-#          0.5.15 - Allow -U to sort numerically. 
-#          0.5.14_02 - Fix so -m allow all other fields to output unmolested. 
-#          0.5.14_01 - Fix usage(). 
-#          0.5.14 - Add -m mask on columns. Format -m"c0:--@@@@@@-,c3:@@--@", 
-#                  where '-' means suppress and '@' means output.
-#          0.5.13_01 - Bug fix for -W.
-#          0.5.13 - Introduced new flag function for -W to allow an arbitrary delimiter.
-#          0.5.12_01 - Fixed bug that output table headers and footers for invalid table types.
-#          0.5.12 - Output tables -T"HTML|WIKI".
-#          0.5.11 - Bug fix for -L.
-#          0.5.10 - Add -L, line number [+n] head, [n] exact, [-n] tail [n-m] range.
-#          0.5.9 - Columns can be designated with [C|c], warning emitted if incorrect.
-#          0.5.8 - Make output of summaries better.
-#          0.5.7 - Add -W to work on white space instead of just pipes.
-#          0.5.6 - Fix bug in summation.
-#          0.5.5 - Fix so sort always occurs last.
-#          0.5.4 - Fix sum to work on fields with digits only.
-#          0.5.3 - Clarified -r usage messaging.
-#          0.5.2 - Fix formatting, flag error in usage.
-#          0.5.1 - Fix spelling mistakes. 
-#          0.5 - Normalize modifier options to UCase, add -r randomize flag. 
-#          0.4 - Implemented dedup with normalization option. 
-#          0.3.1 - Implemented reverse sort. 
-#          0.3 - Implemented sort. 
-#          0.2 - Implemented trim, order, sum, and count. 
-#          0.1 - Implemented trim, order, sum, and count. 
-#          0.0 - Dev. 
 #
-#######################################################################
+####################################################################################
 
 use strict;
 use warnings;
