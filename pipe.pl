@@ -1405,8 +1405,8 @@ if ( $FULL_READ )
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
-print_summary( "count", $count_ref, \@COUNT_COLUMNS )    if ( $opt{'c'} );
-print_summary( "sum", $sum_ref, \@SUM_COLUMNS)           if ( $opt{'a'} );
+print_summary( "count", $count_ref, \@COUNT_COLUMNS ) if ( $opt{'c'} );
+print_summary( "sum", $sum_ref, \@SUM_COLUMNS)        if ( $opt{'a'} );
 if ( $opt{'v'} )
 {
 	# compute average for each column.
