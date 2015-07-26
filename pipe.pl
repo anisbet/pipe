@@ -319,7 +319,7 @@ sub print_summary( $$$ )
 	my $title    = shift;
 	my $hash_ref = shift;
 	my $columns  = shift;
-	printf STDERR "== %7s\n", $title if ( $title );
+	printf STDERR "== %9s\n", $title if ( $title );
 	foreach my $column ( sort @{$columns} )
 	{
 		if ( defined $hash_ref->{ 'c'.$column } )
@@ -343,7 +343,7 @@ sub print_float_summary( $$$ )
 	my $title    = shift;
 	my $hash_ref = shift;
 	my $columns  = shift;
-	printf STDERR "== %7s\n", $title;
+	printf STDERR "== %9s\n", $title;
 	foreach my $column ( sort @{$columns} )
 	{
 		if ( defined $hash_ref->{ 'c'.$column } and keys( %{$hash_ref} ) > 0 )
