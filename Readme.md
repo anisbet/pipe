@@ -180,7 +180,7 @@ Grepping a specific field value, and counting the results
 You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
 
 ```
-cat test.lst | ./pipe.pl -W' '  -c“c0”
+cat test.lst | ./pipe.pl -W' '  -cc3 -ac3 -vc3
 Catkey|1456824|has|114|T024's
 Catkey|1458347|has|136|T024's
 Catkey|1458804|has|284|T024's
@@ -213,7 +213,11 @@ Catkey|1480485|has|168|T024's
 Catkey|1481038|has|246|T024's
 Catkey|1481241|has|134|T024's
 == count
-c0:      31
+ c3:      31
+==   sum
+ c3:    5641
+== average
+ c3:  181.97
 cat t.lst | ./pipe.pl -W' ' -G'c3:^1..' -c“c0”
 Catkey|1458804|has|284|T024's
 Catkey|1465466|has|206|T024's
