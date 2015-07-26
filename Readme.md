@@ -482,12 +482,18 @@ Padding example
 ---------------
 Padding allows you to pad a field to a maximum of 'n' fill characters. If the string you are padding is longer than the requested pad field width, the field will be output unaffected. A negative number denotes that the padding should be added to the end of the field, a '+', or no modifier, denotes padding on the front of the string. If you don't specify a padding character a single white space is used.
 ```
-echo 21221012345678 | pipe.pl -p'c0:-17.'
-21221012345678...
-echo 21221012345678 | pipe.pl -p'c0:17.'
-...21221012345678
-echo 21221012345678 | pipe.pl -p'c0:+17.'
-...21221012345678
+cat pad.lst | ./pipe.pl -pc0:5.
+....1
+...12
+..123
+.1234
+12345
+cat pad.lst | ./pipe.pl -pc0:-5.
+1....
+12...
+123..
+1234.
+12345
 ```
 Multiple characters may be used, but each string counts as a single padding sequence as shown in the next example.
 ```
