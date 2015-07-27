@@ -19,6 +19,7 @@ Things pipe.pl can do
 13. Compare columns for differences.
 14. Flexibly pad output fields.
 15. Report maximum and minimum width of column data.
+16. Output sub strings of values in columns by specific index or range of indices.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -90,6 +91,9 @@ Complete list of flags
                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
 -R             : Reverse sort (-d and -s).
 -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
+ -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
+                  Use '.' to separate discontinuous indexes, and '-' to specify ranges.
+                  Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
 -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
 -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
 -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
@@ -119,6 +123,7 @@ The order of operations is as follows:
 -G - Inverse grep specified columns.
 -g - Grep values in specified columns.
 -m - Mask specified column values.
+-S - Sub string column values.
 -n - Remove white space and upper case specified columns.
 -o - Order selected columns.
 -t - Trim selected columns.
@@ -661,4 +666,26 @@ retirer
 sligo
 horopter
 ```
-
+Use of '-S', sub strings
+------------------------
+You can use -S to output a sub string of the value in the specified column(s). The 
+'.', dot character is a single index delimiter and the '-' works as a range specifier
+as expected. Here are some examples.
+```
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:24'
+6
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:-11'
+121107s2011
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'15-'
+caua   j 6    000 1 eng d
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:1'
+2
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:15.16.17.18'
+caua
+```
+Which is the same as:
+```
+echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:15-19'
+caua
+```
+because the last index specified in a range is not included in the selection.

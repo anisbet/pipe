@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.12_01 - July 26, 2015.
+# 0.13 - July 27, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.12_01};
+my $VERSION    = qq{0.13};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -54,6 +54,7 @@ my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
 my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
+my @SUBS_COLUMNS      = (); my $subs_ref  = {}; # Stores the sub string indexes by column number.
 my @PAD_COLUMNS       = (); my $pad_ref   = {}; # Stores the pad instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
@@ -155,6 +156,9 @@ All column references are 0 based.
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
  -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
+ -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
+                  Use '.' to separate discontinuous indexes, and '-' to specify ranges.
+                  Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
  -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
@@ -179,6 +183,7 @@ The order of operations is as follows:
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
+  -S - Sub string column values.
   -n - Remove white space and upper case specified columns.
   -o - Order selected columns.
   -t - Trim selected columns.
@@ -700,6 +705,106 @@ sub mask_line( $ )
 	return join '|', @newLine;
 }
 
+# Outputs sub strings of column data as per specification. See usage().
+# param:  String of line data - pipe-delimited.
+# return: string with table formatting.
+sub sub_string_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( exists $subs_ref->{ $colIndex } )
+		{
+			push @newLine, sub_string( $field, $subs_ref->{ $colIndex } );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
+}
+
+# Outputs sub strings of column data as per specification. See usage().
+# param:  String of line data - pipe-delimited.
+# return: string with table formatting.
+sub sub_string( $ )
+{
+	my @field       = split '', shift;
+	my $instruction = shift;
+	my @newField    = ();
+	my @indexes     = ();
+	printf "SUBS: '%s'.\n", $instruction if ( $opt{'D'} );
+	# We will save all the indexes of characters we need. To do that we need to 
+	# convert '-' to ranges.
+	my @subInstructions = split '\.', $instruction;
+	while ( @subInstructions )
+	{
+		my $sub_instruction = shift @subInstructions;
+		if ( $sub_instruction =~ m/^\s?\d+\s?$/ )
+		{
+			push @indexes, $& ;
+			next;
+		}
+		printf "got subinstr '%s' .\n", $sub_instruction if ( $opt{'D'} );
+		if ( $sub_instruction =~ m/\-/ )
+		{
+			my $start = $`,
+			my $end   = $';
+			printf "got value '%s' and '%s'.\n", $start, $end if ( $opt{'D'} );
+			if ( $start =~ m/\d+/ )
+			{
+				$start = $&; # strips out just the number.
+			}
+			elsif ( $start eq '' ) # If the '-' was the leading character. This will have precedence of selecting the entire start of string.
+			{
+				$start = 0;
+			}
+			else
+			{
+				printf "*** error invalid start of range specification at '%s'.\n", $start;
+				usage();
+			}
+			printf "got start value '%s'.\n", $start if ( $opt{'D'} );
+			if ( $end =~ m/\d+/ )
+			{
+				$end   = $&; # strips out just the number.
+			}
+			elsif ( $end eq '' ) # If the '-' was the trailing character. This will have precedence to select the rest of the string.
+			{
+				$end = scalar @field;
+			}
+			else
+			{
+				printf "*** error invalid end of range specification at '%s'.\n", $end;
+				usage();
+			}
+			printf "got end value '%s'.\n", $end if ( $opt{'D'} );
+			# now pack the indices onto the array
+			my $i = 0;
+			for ( $i = $start; $i < $end; $i++ )
+			{
+				push @indexes, $i;
+			}
+		}
+		else # not expected format.
+		{
+			printf "*** error invalid range specification at '%s'.\n", $sub_instruction;
+			usage();
+		}
+	}
+	while ( @indexes )
+	{
+		my $index = shift @indexes;
+		push @newField, $field[$index] if ( defined $field[$index] );
+	}
+	return join '', @newField;
+}
+
 # Greps specific columns for a given Perl pattern. See usage().
 # param:  String of line data - pipe-delimited.
 # return: line if the pattern matched and nothing if it didn't.
@@ -966,6 +1071,7 @@ sub process_line( $ )
 	average( $line )   if ( $opt{'v'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
+	$line = sub_string_line( $line )    if ( $opt{'S'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
 	$line = order_line( $line )         if ( $opt{'o'} );
 	$line = trim_line( $line )          if ( $opt{'t'} );
@@ -1209,7 +1315,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IKL:Nn:m:o:p:PRr:s:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1224,6 +1330,7 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
+	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref ) if ( $opt{'S'} );
 	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} ) if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} ) if ( $opt{'B'} );
