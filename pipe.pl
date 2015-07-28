@@ -159,7 +159,7 @@ All column references are 0 based.
  -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
-                  Note that you can reverse a string by reversing your selection like so: '12345' -S'c0:4-1' => '543', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                  Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
