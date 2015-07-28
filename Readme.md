@@ -91,9 +91,11 @@ Complete list of flags
                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
 -R             : Reverse sort (-d and -s).
 -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
- -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
-                  Use '.' to separate discontinuous indexes, and '-' to specify ranges.
-                  Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+-S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
+                 Use '.' to separate discontinuous indexes, and '-' to specify ranges.
+                 Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                 Note that you can reverse a string by reversing your selection like so: '12345' -S'c0:4-1' => '543', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                 '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
 -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
 -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
 -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
@@ -689,3 +691,9 @@ echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:15-19'
 caua
 ```
 because the last index specified in a range is not included in the selection.
+
+Here is another example that shows how you can reverse a string.
+```
+echo 12345 | ./pipe.pl -Sc0:4-0
+54321
+```
