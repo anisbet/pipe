@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.13 - July 27, 2015.
+# 0.13_01 - July 28, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.13};
+my $VERSION    = qq{0.13_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -159,6 +159,8 @@ All column references are 0 based.
  -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                  Note that you can reverse a string by reversing your selection like so: '12345' -S'c0:4-1' => '543', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
  -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
@@ -747,7 +749,7 @@ sub sub_string( $ )
 		my $sub_instruction = shift @subInstructions;
 		if ( $sub_instruction =~ m/^\s?\d+\s?$/ )
 		{
-			push @indexes, $& ;
+			push @indexes, $&;
 			next;
 		}
 		printf "got subinstr '%s' .\n", $sub_instruction if ( $opt{'D'} );
@@ -786,9 +788,19 @@ sub sub_string( $ )
 			printf "got end value '%s'.\n", $end if ( $opt{'D'} );
 			# now pack the indices onto the array
 			my $i = 0;
-			for ( $i = $start; $i < $end; $i++ )
+			if ( $start > $end )
 			{
-				push @indexes, $i;
+				for ( $i = $start; $i >= $end; $i-- ) # >= so we can specify the 0th element.
+				{
+					push @indexes, $i;
+				}
+			}
+			else
+			{
+				for ( $i = $start; $i < $end; $i++ )
+				{
+					push @indexes, $i;
+				}
 			}
 		}
 		else # not expected format.
