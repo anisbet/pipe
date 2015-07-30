@@ -67,7 +67,7 @@ Complete list of flags
                  Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                  is suppressed if the entered value is greater than lines read on STDIN.
--m[c0:<-|\#[*]>]: Mask specified column with the mask defined after a ':', and where '-' 
+-m[c0:*[_|#]*]:  Mask specified column with the mask defined after a ':', and where '-' 
                  means suppress, '#' means output character, any other character at that 
                  position will be inserted. If the mask is shorter than the target string, 
                  the last character of the mask will control the remainder of the output.
