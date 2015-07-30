@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.13_01 - July 28, 2015.
+# 0.13_02 - July 30, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.13_01};
+my $VERSION    = qq{0.13_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -122,7 +122,9 @@ All column references are 0 based.
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
-                  is the column definition delimiter. See also '-m' mask.
+                  is the column definition delimiter. Selecting multiple fields acts
+                  like an AND function, all fields must match their corresponding regex
+                  for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -819,18 +821,20 @@ sub sub_string( $ )
 
 # Greps specific columns for a given Perl pattern. See usage().
 # param:  String of line data - pipe-delimited.
-# return: line if the pattern matched and nothing if it didn't.
+# return: line if the patterns match on all fields and nothing if it didn't.
 sub is_match( $ )
 {
 	my @line = split '\|', shift;
+	my $matchCount = 0;
 	foreach my $colIndex ( @MATCH_COLUMNS )
 	{
 		if ( defined $line[ $colIndex ] and exists $match_ref->{ $colIndex } )
 		{
 			printf STDERR "regex: '%s' \n", $match_ref->{$colIndex} if ( $opt{'D'} );
-			return 1 if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
+			$matchCount++ if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
 		}
 	} 
+	return 1 if ( $matchCount == scalar @MATCH_COLUMNS ); # Count of matches should match count of column match requests.
 	return 0;
 }
 

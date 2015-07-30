@@ -45,18 +45,20 @@ Complete list of flags
                  if a value for a specified column is empty or doesn't exist,
                  don't count otherwise add 1 to the column tally.
 -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
-                  is greater than (gt), less than (lt), equal to (eq), greater than
-                  or equal to (ge), or less than or equal to (le) the value that follows.
-                  The following value can be numeric, but if it isn't the value's
-                  comparison is made lexically.
+                 is greater than (gt), less than (lt), equal to (eq), greater than
+                 or equal to (ge), or less than or equal to (le) the value that follows.
+                 The following value can be numeric, but if it isn't the value's
+                 comparison is made lexically.
 -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                  which is then over written with lines that produce
                  the same key, thus keeping the most recent match. Respects (-r).
 -D             : Debug switch.
 -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
-                 Example data: 1481241, -g“c0:241$” produces '1481241'. Use 
+                 Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                  escaped commas specify a ',' in a regular expression because comma
-                 is the column definition delimiter. See also '-m' mask.
+                 is the column definition delimiter. Selecting multiple fields acts
+                 like an AND function, all fields must match their corresponding regex
+                 for the line to be output.
 -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                  return true if match on column 1, and column 2 not match.
 -I             : Ignore case on operations (-d and -s) dedup and sort.
