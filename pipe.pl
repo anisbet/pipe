@@ -83,6 +83,7 @@ sub usage()
        [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
        [-C<cn:[gt|lt|eq|ge|le]exp,...>]
+       [-S<cn:[range],...>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
