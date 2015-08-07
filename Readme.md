@@ -699,3 +699,33 @@ Here is another example that shows how you can reverse a string.
 echo 12345 | ./pipe.pl -Sc0:4-0
 54321
 ```
+
+Using '-f' to flip a character
+------------------------------
+Sometimes it's helpful to change a value at a specific site within a string. You can 
+accomplish this with the replace function (TODO), or with '-f' as follows.
+Example: Change the 24th character to a '1'.
+```
+echo '000000000000000000000000000000000' | pipe.pl -f'c0:23.1'
+000000000000000000000001000000000
+```
+Change the 24th character, but only if it tests positive as '0'
+```
+echo '000000000000000000000000000000000' | pipe.pl -f'c0:23?0.1'
+000000000000000000000001000000000
+```
+Change the 24th character, but only if it tests positive as '0', 
+if that fails change it to 7.
+```
+echo '000000000000000000000001000000000' | pipe.pl -f'c0:23?0.1.7'
+000000000000000000000007000000000
+```
+
+Changing case with '-e'
+-----------------------
+You can change the case of data in a column with '-e' as in this example:
+```
+echo 'upper case|mIX cASE|LOWER CASE' | pipe.pl -e'c0:uc,c1:mc,c2:lc' 
+UPPER CASE|Mix Case|lower case
+```
+

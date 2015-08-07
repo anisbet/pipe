@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.13_02 - July 30, 2015.
+# 0.14 - August 7, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.13_02};
+my $VERSION    = qq{0.14};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -48,7 +48,8 @@ my @SUM_COLUMNS       = (); my $sum_ref      = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
 my @AVG_COLUMNS       = (); my $avg_ref      = {}; my $avg_count = {};
 my @DDUP_COLUMNS      = (); my $ddup_ref     = {};
-my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref = {};
+my @CASE_COLUMNS      = (); my $case_ref     = {};
+my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref = {}; # case switching expressions like uc,lc,mc.
 my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
@@ -126,6 +127,8 @@ All column references are 0 based.
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
+ -e[c0:[uc|lc|mc],...]: Change the case of a value in a column to upper case (uc), 
+                  lower case (lc), or mixed case (mc).
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -185,6 +188,7 @@ The order of operations is as follows:
   -c - Count numeric values in specified columns.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
+  -e - Change case of string in column.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
@@ -1056,6 +1060,63 @@ sub test_condition( $ )
 	return 0;
 }
 
+# Switches casing based on values supplied.
+# param:  String field to be modified.
+# param:  casing string expression. Must be one of [mc|lc|uc].
+# return: New string with changes if any.
+sub apply_casing( $$ )
+{
+  my $field       = shift;
+  my $instruction = shift;
+  if ( $instruction eq "uc" )
+  {
+    $field = uc $field;
+  }
+  if ( $instruction eq "lc" )
+  {
+    $field = lc $field;
+  }
+  if ( $instruction eq "mc" )
+  {
+    $field =~ s/([\w']+)/\u\L$1/g;
+  }
+  return $field;
+}
+
+# Modifies the case of a string.
+# param:  line from file.
+# return: Modified line.
+sub modify_case_line( $ )
+{
+  my @line = split '\|', shift;
+  my @newLine = ();
+  my $colIndex= 0;
+  while ( @line )
+  {
+    my $field = shift @line;
+    if ( defined $CASE_COLUMNS[ $colIndex ] and exists $case_ref->{ $colIndex } )
+    {
+      printf STDERR "case specifier: '%s' \n", $case_ref->{$colIndex} if ( $opt{'D'} );
+      my $exp = $case_ref->{$colIndex};
+      # The first 2 characters determine the type of casing.
+      $exp =~ m/^[uUlLmM][cC]/;
+      if ( ! $& )
+      {
+        printf STDERR "*** error case specifier. Expected [uc|lc|mc] (ignoring case) but got '%s'.\n", $case_ref->{$colIndex};
+        usage();
+      }
+      $exp = lc $exp;
+      push @newLine, apply_casing( $field, $exp );
+    }
+    else
+    {
+      push @newLine, $field;
+    }
+    $colIndex++;
+  }
+  return join '|', @newLine;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -1086,6 +1147,7 @@ sub process_line( $ )
 	sum( $line )       if ( $opt{'a'} );
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
+  $line = modify_case_line( $line )   if ( $opt{'e'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );
@@ -1332,18 +1394,19 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:Dg:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
-	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
+  @COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
 	if ( $opt{'u'} )
 	{
 		build_encoding_table();
 		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'u'} );
 	}
-	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
+  @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
+	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref ) if ( $opt{'e'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
