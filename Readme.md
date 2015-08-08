@@ -704,20 +704,25 @@ Using '-f' to flip a character
 ------------------------------
 Sometimes it's helpful to change a value at a specific site within a string. You can 
 accomplish this with the replace function (TODO), or with '-f' as follows.
-Example: Change the character at index 3 to 'A'.
+Change the character at index 3 to 'A'.
 ```
 echo '0000000' | pipe.pl -f'c0:3.A'
 000A000
 ```
-Example: Change the character at index 3 to 'A', only if the character at index 3 is '0'.
+Change the character at index 3 to 'A', only if the character at index 3 is '0'.
 ```
 echo '0000000' | pipe.pl -f'c0:3?0.A'
 000A000
 ```
-Example: If the character at index 3 is '1' change it to 'A', else change it to 'B'.
+If the character at index 3 is '1' change it to 'A', else change it to 'B'.
 ```
 echo '0000000' | pipe.pl -f'c0:3?1.A.B'
 000B000
+```
+If the character at index 3 is '1' change it to 'This', else change it to 'That'.
+```
+echo '0000000' | ./pipe.pl -f'c0:3?1.This.That'
+000That000
 ```
 
 Changing case with '-e'
