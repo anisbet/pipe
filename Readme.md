@@ -740,6 +740,14 @@ If the character at index 3 is '1' change it to 'This', else change it to 'That'
 echo '0000000' | ./pipe.pl -f'c0:3?1.This.That'
 000That000
 ```
+Use a '\' as an escape character if you want to test for the delimiter character '.'
+or use it as replacement character.
+If the character at index 3 is '.' change it to '.', else change it to '.'.
+```
+echo '000.000' | ./pipe.pl -f'c0:3?\..\..\.'
+000.000
+```
+Use the escape for ',' and '?' as well.
 
 Changing case with '-e'
 -----------------------

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.15 - August 7, 2015.
+# 0.15_01 - August 8, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.15};
+my $VERSION    = qq{0.15_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -46,7 +46,7 @@ my @ALL_LINES  = ();
 my @COUNT_COLUMNS     = (); my $count_ref    = {};
 my @SUM_COLUMNS       = (); my $sum_ref      = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
-my @AVG_COLUMNS       = (); my $avg_ref      = {}; my $avg_count = {};
+my @AVG_COLUMNS       = (); my $avg_ref      = {};  my $avg_count = {};
 my @DDUP_COLUMNS      = (); my $ddup_ref     = {};
 my @CASE_COLUMNS      = (); my $case_ref     = {};
 my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref = {}; # case switching expressions like uc,lc,mc.
@@ -1153,6 +1153,9 @@ sub flip_char_line( $ )
       {
         $target = $`;
         ( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
+        $condition   =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
+        $replacement =~ s/\\//g;
+        $on_else     =~ s/\\//g;
       }
       else # simple case of n.p
       {
