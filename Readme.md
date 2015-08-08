@@ -725,6 +725,11 @@ Change the character at index 3 to 'A', only if the character at index 3 is '0'.
 echo '0000000' | pipe.pl -f'c0:3?0.A'
 000A000
 ```
+Change the character at index 3 to 'A' only if the character at index 3 is '1'.
+```
+echo '0000000' | pipe.pl -f'c0:3?1.A'
+0000000
+```
 If the character at index 3 is '1' change it to 'A', else change it to 'B'.
 ```
 echo '0000000' | pipe.pl -f'c0:3?1.A.B'
