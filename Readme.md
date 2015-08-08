@@ -33,83 +33,90 @@ cat file | pipe.pl -t“c0” | pipe.pl -o“c1,c0”
 Complete list of flags
 ----------------------
 ```
--a[c0,c1,...cn]: Sum the non-empty values in given column(s).
--A             : Modifier that outputs the number of key matches from dedup.
-                 The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
-                 for a line that was duplicated 4 times on a given key. If 
-                 -d is not selected, each line of output is numbered sequentially
-                 prior to output. 
--b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
--B[c0,c1,...cn]: Compare fields and output if columns differ.
--c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
-                 if a value for a specified column is empty or doesn't exist,
-                 don't count otherwise add 1 to the column tally.
--C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
-                 is greater than (gt), less than (lt), equal to (eq), greater than
-                 or equal to (ge), or less than or equal to (le) the value that follows.
-                 The following value can be numeric, but if it isn't the value's
-                 comparison is made lexically.
--d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
-                 which is then over written with lines that produce
-                 the same key, thus keeping the most recent match. Respects (-r).
--D             : Debug switch.
--g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
-                 Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
-                 escaped commas specify a ',' in a regular expression because comma
-                 is the column definition delimiter. Selecting multiple fields acts
-                 like an AND function, all fields must match their corresponding regex
-                 for the line to be output.
--G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
-                 return true if match on column 1, and column 2 not match.
--I             : Ignore case on operations (-d and -s) dedup and sort.
--K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
--L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
-                 Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
-                 '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
-                 is suppressed if the entered value is greater than lines read on STDIN.
--m[c0:*[_|#]*]:  Mask specified column with the mask defined after a ':', and where '-' 
-                 means suppress, '#' means output character, any other character at that 
-                 position will be inserted. If the mask is shorter than the target string, 
-                 the last character of the mask will control the remainder of the output.
-                 If the last character is neither '_' or '#', then it will be repeated for 
-                 the number of characters left in the line. 
-                 Characters '_', '#' and ',' are reserved and cannot be inserted within a mask.
-                 Example data: 1481241, -m“c0:__#” produces '81241'. -m“c0:__#_”
-                 produces '8' and suppress the rest of the field.
-                 Example data: E201501051855331663R,  -m“c0:_####/##/## ##:##:##_”
-                 produces '2015/01/05 18:55:33'.
-                 Example: 'ls *.txt | pipe.pl -m“c0:/foo/bar/#”' produces '/foo/bar/README.txt'.
-                 Use '\' to escape either '_', ',' or '#'. 
--n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
--N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
-                 Makes the keys upper case and remove white space before comparison.
-                 Output is not normalized. For that see (-n).
-                 See also (-I) for case insensitive comparisons.
--o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
--p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
-                 maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
--P             : Output a trailing pipe before new line on output.
--r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
-                 order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
--R             : Reverse sort (-d and -s).
--s[c0,c1,...cn]: Sort on the specified columns in the specified order.
--S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
-                 Use '.' to separate discontinuous indexes, and '-' to specify ranges.
-                 Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
-                 Note that you can reverse a string by reversing your selection like so: '12345' -S'c0:4-1' => '543', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
-                 '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
--t[c0,c1,...cn]: Trim the specified columns of white space front and back.
--T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
--u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
--U             : Sort numerically. Multiple fields may be selected, but an warning is issued
-                 if any of the columns used as a key, combined, produce a non-numeric value
-                 during the comparison.
--v[c0,c1,...cn]: Average over non-empty values in specified columns.
--w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
-                 the minimum and maximum number of columns by line.
--W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
--x             : This (help) message.
--z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
+ -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
+ -A             : Modifier that outputs the number of key matches from dedup.
+                  The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
+                  for a line that was duplicated 4 times on a given key. If 
+                  -d is not selected, each line of output is numbered sequentially
+                  prior to output. 
+ -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
+ -B[c0,c1,...cn]: Compare fields and output if columns differ.
+ -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
+                  if a value for a specified column is empty or doesn't exist,
+                  don't count otherwise add 1 to the column tally. 
+ -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
+                  is greater than (gt), less than (lt), equal to (eq), greater than
+                  or equal to (ge), or less than or equal to (le) the value that follows.
+                  The following value can be numeric, but if it isn't the value's
+                  comparison is made lexically.
+ -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
+                  which is then over written with lines that produce
+                  the same key, thus keeping the most recent match. Respects (-r).
+ -D             : Debug switch.
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
+                  escaped commas specify a ',' in a regular expression because comma
+                  is the column definition delimiter. Selecting multiple fields acts
+                  like an AND function, all fields must match their corresponding regex
+                  for the line to be output.
+ -e[c0:[uc|lc|mc],...]: Change the case of a value in a column to upper case (uc), 
+                  lower case (lc), or mixed case (mc).
+ -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
+                  where 'n' is the 0-based index of the target character. A '?' means
+                  test the character equals p before changing it to q, and optionally change 
+                  to r if the test fails. Works like an if statement.
+                  Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+                  '0001' -f'c0:3.B?0.c' => '000c'.
+ -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
+                  return true if match on column 1, and column 2 not match. 
+ -I             : Ignore case on operations (-d and -s) dedup and sort.
+ -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
+ -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
+                  Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
+                  is suppressed if the entered value is greater than lines read on STDIN.
+ -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_' 
+                  means suppress, '#' means output character, any other character at that 
+                  position will be inserted.
+                  If the last character is either '_' or '#', then it will be repeated until 
+                  the input line is exhausted. 
+                  Characters '_', '#' and ',' can be output by escaping them with a back slash.
+                  Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
+                  produces '8' and suppress the rest of the field.
+                  Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
+                  produces '2015/01/05 18:55:33'.
+                  Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
+                  Use '\' to escape either '_', ',' or '#'. 
+ -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
+ -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+                  Makes the keys upper case and remove white space before comparison.
+                  Output is not normalized. For that see (-n).
+                  See also (-I) for case insensitive comparisons.
+ -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
+                  maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
+ -P             : Output a trailing pipe before new line on output.
+ -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
+                  order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
+ -R             : Reverse sort (-d and -s).
+ -s[c0,c1,...cn]: Sort on the specified columns in the specified order.
+ -S[c0:range]   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
+                  Use '.' to separate discontinuous indexes, and '-' to specify ranges.
+                  Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
+                  Note that you can reverse a string by reversing your selection like so:
+                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
+ -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
+ -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
+                  if any of the columns used as a key, combined, produce a non-numeric value
+                  during the comparison.
+ -v[c0,c1,...cn]: Average over non-empty values in specified columns.
+ -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
+                  the minimum and maximum number of columns by line.
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
+ -x             : This (help) message.
+ -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
 ```
 
 **Note**: I recommend that you put your command line flags in alphabetical order as in the example below.

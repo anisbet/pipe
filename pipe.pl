@@ -130,7 +130,7 @@ All column references are 0 based.
                   for the line to be output.
  -e[c0:[uc|lc|mc],...]: Change the case of a value in a column to upper case (uc), 
                   lower case (lc), or mixed case (mc).
- -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character Conditionally, 
+ -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
                   where 'n' is the 0-based index of the target character. A '?' means
                   test the character equals p before changing it to q, and optionally change 
                   to r if the test fails. Works like an if statement.
