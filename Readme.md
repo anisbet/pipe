@@ -704,28 +704,27 @@ Using '-f' to flip a character
 ------------------------------
 Sometimes it's helpful to change a value at a specific site within a string. You can 
 accomplish this with the replace function (TODO), or with '-f' as follows.
-Example: Change the 24th character to a '1'.
+Example: Change the character at index 3 to 'A'.
 ```
-echo '000000000000000000000000000000000' | pipe.pl -f'c0:23.1'
-000000000000000000000001000000000
+echo '0000000' | pipe.pl -f'c0:3.A'
+000A000
 ```
-Change the 24th character, but only if it tests positive as '0'
+Example: Change the character at index 3 to 'A', only if the character at index 3 is '0'.
 ```
-echo '000000000000000000000000000000000' | pipe.pl -f'c0:23?0.1'
-000000000000000000000001000000000
+echo '0000000' | pipe.pl -f'c0:3?0.A'
+000A000
 ```
-Change the 24th character, but only if it tests positive as '0', 
-if that fails change it to 7.
+Example: If the character at index 3 is '1' change it to 'A', else change it to 'B'.
 ```
-echo '000000000000000000000001000000000' | pipe.pl -f'c0:23?0.1.7'
-000000000000000000000007000000000
+echo '0000000' | pipe.pl -f'c0:3?1.A.B'
+000B000
 ```
 
 Changing case with '-e'
 -----------------------
 You can change the case of data in a column with '-e' as in this example:
 ```
-echo 'upper case|mIX cASE|LOWER CASE' | pipe.pl -e'c0:uc,c1:mc,c2:lc' 
-UPPER CASE|Mix Case|lower case
+echo 'upper case|mIX cASE|LOWER CASE|12345678' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC' 
+UPPER CASE|Mix Case|lower case|12345678
 ```
 

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.14 - August 7, 2015.
+# 0.15 - August 7, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.14};
+my $VERSION    = qq{0.15};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -57,6 +57,7 @@ my @SORT_COLUMNS      = ();
 my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
 my @SUBS_COLUMNS      = (); my $subs_ref  = {}; # Stores the sub string indexes by column number.
 my @PAD_COLUMNS       = (); my $pad_ref   = {}; # Stores the pad instructions by column number.
+my @FLIP_COLUMNS      = (); my $flip_ref   = {};# Stores the flip instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
@@ -129,6 +130,12 @@ All column references are 0 based.
                   for the line to be output.
  -e[c0:[uc|lc|mc],...]: Change the case of a value in a column to upper case (uc), 
                   lower case (lc), or mixed case (mc).
+ -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character Conditionally, 
+                  where 'n' is the 0-based index of the target character. A '?' means
+                  test the character equals p before changing it to q, and optionally change 
+                  to r if the test fails. Works like an if statement.
+                  Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+                  '0001' -f'c0:3.B?0.c' => '000c'.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -189,6 +196,7 @@ The order of operations is as follows:
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
+  -f - Modify character in string based on 0-based index.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
@@ -1117,6 +1125,114 @@ sub modify_case_line( $ )
   return join '|', @newLine;
 }
 
+# Flips Flips an arbitrary but specific character Conditionally, 
+# where 'n' is the 0-based index of the target character. A '?' means
+# test the character equals p before changing it to q, and optionally change 
+# to r if the test fails. Works like an if statement.
+# Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+# '0001' -f'c0:3.B?0.c' => '000c'.
+# param:  line from file.
+# return: Modified line.
+sub flip_char_line( $ )
+{
+  my @line = split '\|', shift;
+  my @newLine = ();
+  my $colIndex= 0;
+  while ( @line )
+  {
+    my $field = shift @line;
+    if ( defined $FLIP_COLUMNS[ $colIndex ] and exists $flip_ref->{ $colIndex } )
+    {
+      printf STDERR "flip expression: '%s' \n", $flip_ref->{$colIndex} if ( $opt{'D'} );
+      my $exp = $flip_ref->{$colIndex};
+      my $target;
+      my $replacement;
+      my $condition;
+      my $on_else;
+      if ( $exp =~ m/\?/ )
+      {
+        $target = $`;
+        ( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
+      }
+      else # simple case of n.p
+      {
+        ( $target, $replacement ) = split '\.', $exp;
+      }
+      if ( ! defined $target or ! defined $replacement )
+      {
+        printf STDERR "*** syntax error in -f, expected 'index.replacement' but got '%s'\n", $exp;
+        usage();
+      }
+      if ( $opt{'D'} )
+      {
+        if ( defined $target )
+        {
+          printf STDERR " index='%s'", $target;
+          if ( defined $condition )
+          {
+            printf STDERR " c='%s'", $condition;
+            if ( defined $replacement )
+            {
+              printf STDERR " r='%s'", $replacement;
+              printf STDERR " else='%s'", $on_else if ( defined $on_else );
+            }
+          }
+          elsif ( defined $replacement ) # just an index and a replacement character.
+          {
+            printf STDERR " r='%s'", $replacement;
+          }
+        }
+        printf STDERR "\n";
+      }
+      push @newLine, apply_flip( $field, $target, $replacement, $condition, $on_else );
+    }
+    else
+    {
+      push @newLine, $field;
+    }
+    $colIndex++;
+  }
+  return join '|', @newLine;
+}
+
+# Flips the specified character to the provided alternate character.
+# param:  String containing the site of the target character.
+# param:  target integer of index into the string of the replacement site.
+# param:  replacement character.
+# param:  character condition to be met before replacing.
+# param:  character replacement if condition not met.
+# return: String with the specified modifications.
+sub apply_flip
+{
+  my ( $field, $location, $replacement, $condition, $on_else ) = @_;
+  # field, location and replacement must be defined, condition and on_else may not be.
+  if ( $location !~ m/^\d{1,}$/ )
+  {
+    printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $location;
+    usage();
+  }
+  my @f = split //, $field;
+  return $field if ( $location >= @f ); # if the location site is past the end of the field just return it untouched.
+  my $site = $f[ $location ];
+  if ( defined $condition )
+  {
+    if ( $condition eq $site )
+    {
+      $f[ $location ] = $replacement;
+    }
+    elsif ( defined $on_else )
+    {
+      $f[ $location ] = $on_else;
+    }
+  }
+  else # Unconditionally change the site's character.
+  {
+    $f[ $location ] = $replacement;
+  }
+  printf STDERR "* '%s', '%s', '%s'\n", $location, $f[ $location ], $replacement if ( $opt{'D'} );
+  return join '', @f;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -1148,6 +1264,7 @@ sub process_line( $ )
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
   $line = modify_case_line( $line )   if ( $opt{'e'} );
+  $line = flip_char_line( $line )     if ( $opt{'f'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );
@@ -1394,7 +1511,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:f:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1411,7 +1528,8 @@ sub init
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref ) if ( $opt{'S'} );
-	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
+  @PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
+	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref ) if ( $opt{'f'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} ) if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} ) if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} ) if ( $opt{'n'} );
