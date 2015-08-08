@@ -20,6 +20,8 @@ Things pipe.pl can do
 14. Flexibly pad output fields.
 15. Report maximum and minimum width of column data.
 16. Output sub strings of values in columns by specific index or range of indices.
+17. Change case of fields.
+18. Flip character value conditionally.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
