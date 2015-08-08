@@ -124,31 +124,33 @@ Order of operations
 -------------------
 The order of operations is as follows:
 ```
--x - Usage message, then exits.
--L - Output only specified lines, or range of lines.
--a - Sum of numeric values in specific columns.
--A - Displays line numbers or summary of duplicates if '-D' is selected.
--c - Count numeric values in specified columns.
--u - Encode specified columns into URL-safe strings.
--C - Conditionally test column values.
--G - Inverse grep specified columns.
--g - Grep values in specified columns.
--m - Mask specified column values.
--S - Sub string column values.
--n - Remove white space and upper case specified columns.
--o - Order selected columns.
--t - Trim selected columns.
--v - Average numerical values in selected columns.
--I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
--d - De-duplicate selected columns.
--r - Randomize line output.
--s - Sort columns.
--b - Suppress line output if columns' values differ.
--B - Only show lines where columns are different.
--z - Suppress line output if column(s) test empty.
--w - Output minimum an maximum width of column data.
--T - Output in table form.
--K - Output everything as a single column.
+  -x - Usage message, then exits.
+  -L - Output only specified lines, or range of lines.
+  -a - Sum of numeric values in specific columns.
+  -A - Displays line numbers or summary of duplicates if '-D' is selected.
+  -c - Count numeric values in specified columns.
+  -u - Encode specified columns into URL-safe strings.
+  -C - Conditionally test column values.
+  -e - Change case of string in column.
+  -f - Modify character in string based on 0-based index.
+  -G - Inverse grep specified columns.
+  -g - Grep values in specified columns.
+  -m - Mask specified column values.
+  -S - Sub string column values.
+  -n - Remove white space and upper case specified columns.
+  -o - Order selected columns.
+  -t - Trim selected columns.
+  -v - Average numerical values in selected columns.
+  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
+  -d - De-duplicate selected columns.
+  -r - Randomize line output.
+  -s - Sort columns.
+  -b - Suppress line output if columns' values differ.
+  -B - Only show lines where columns are different.
+  -z - Suppress line output if column(s) test empty.
+  -w - Output minimum an maximum width of column data.
+  -T - Output in table form.
+  -K - Output everything as a single column.
 ```
 Ordering, sorting, and splitting on non-pipe character
 ------------------------------------------------------
