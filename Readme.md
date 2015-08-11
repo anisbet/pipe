@@ -765,7 +765,7 @@ Changing case with '-e'
 -----------------------
 You can change the case of data in a column with '-e' as in this example:
 ```
-echo 'upper case|mIX cASE|LOWER CASE|12345678|hello_world' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC,c4:us' 
+echo 'upper case|mIX cASE|LOWER CASE|12345678|hello world' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC,c4:us' 
 UPPER CASE|Mix Case|lower case|12345678|hello_world
 ```
 
