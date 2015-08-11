@@ -112,7 +112,8 @@ Complete list of flags
  -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
-                  during the comparison.
+                  during the comparison.With -C, non-numeric value tests always fail, that is
+                  '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
  -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
                   the minimum and maximum number of columns by line.
@@ -681,6 +682,17 @@ retirer
 sligo
 horopter
 ```
+Using -U with -C for comparisons forces comparisons to be numeric to succeed.
+```
+echo '12345a' | ./pipe.pl -C'c0:ge12345'
+12345a
+echo '12345a' | ./pipe.pl -C'c0:ge12345' -U
+<nil>
+echo '12345a' | ./pipe.pl -C'c0:ge12345' -U -D
+columns requested: '0'
+regex: 'ge12345'
+* comparison fails on non-numeric value: '12345a'
+```
 Use of '-S', sub strings
 ------------------------
 You can use -S to output a sub string of the value in the specified column(s). The 
@@ -753,7 +765,7 @@ Changing case with '-e'
 -----------------------
 You can change the case of data in a column with '-e' as in this example:
 ```
-echo 'upper case|mIX cASE|LOWER CASE|12345678' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC' 
-UPPER CASE|Mix Case|lower case|12345678
+echo 'upper case|mIX cASE|LOWER CASE|12345678|hello_world' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC,c4:us' 
+UPPER CASE|Mix Case|lower case|12345678|hello_world
 ```
 

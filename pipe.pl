@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.15_01 - August 8, 2015.
+# 0.15_02 - August 11, 2015.
 #
 ###########################################################################
 
@@ -36,7 +36,7 @@ use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
 ### Globals
-my $VERSION    = qq{0.15_01};
+my $VERSION    = qq{0.15_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -80,7 +80,9 @@ sub usage()
 
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
        [-bBcnotuvwz<c0,c1,...,cn>] 
-       [-ds[-IRN]<c0,c1,...,cn>] 
+       [-ds[-IRN]<c0,c1,...,cn>]
+       [-e[c0:[uc|lc|mc|us],...]]
+       [-f[c0:n.p[?p.q[.r]],...]]
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
@@ -128,8 +130,8 @@ All column references are 0 based.
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
- -e[c0:[uc|lc|mc],...]: Change the case of a value in a column to upper case (uc), 
-                  lower case (lc), or mixed case (mc).
+ -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc), 
+                  lower case (lc), mixed case (mc), or underscore (us).
  -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
                   where 'n' is the 0-based index of the target character. A '?' means
                   test the character equals p before changing it to q, and optionally change 
@@ -179,7 +181,8 @@ All column references are 0 based.
  -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
-                  during the comparison.
+                  during the comparison. With -C, non-numeric value tests always fail, that is
+                  '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
  -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
                   the minimum and maximum number of columns by line.
@@ -1042,6 +1045,11 @@ sub test_condition( $ )
 			}
 			else
 			{
+				if ( $opt{'U'} ) # request comparison on numbers 'U' only so ignore this one.
+				{
+					printf STDERR "* comparison fails on non-numeric value: '%s' \n", $line[ $colIndex ] if ( $opt{'D'} );
+					return 0;
+				}
 				if ( $cmpOperator eq 'eq' )
 				{
 					return 1 if ( $line[ $colIndex ] eq $cmpValue );
@@ -1088,6 +1096,10 @@ sub apply_casing( $$ )
   {
     $field =~ s/([\w']+)/\u\L$1/g;
   }
+  if ( $instruction eq "us" )
+  {
+    $field =~ s/\s/_/g;
+  }
   return $field;
 }
 
@@ -1107,10 +1119,10 @@ sub modify_case_line( $ )
       printf STDERR "case specifier: '%s' \n", $case_ref->{$colIndex} if ( $opt{'D'} );
       my $exp = $case_ref->{$colIndex};
       # The first 2 characters determine the type of casing.
-      $exp =~ m/^[uUlLmM][cC]/;
+      $exp =~ m/^[uUlLmM][cCsS]/;
       if ( ! $& )
       {
-        printf STDERR "*** error case specifier. Expected [uc|lc|mc] (ignoring case) but got '%s'.\n", $case_ref->{$colIndex};
+        printf STDERR "*** error case specifier. Expected [uc|lc|mc|us] (ignoring case) but got '%s'.\n", $case_ref->{$colIndex};
         usage();
       }
       $exp = lc $exp;
