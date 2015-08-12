@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.16_01 - August 12, 2015.
+# 0.16_02 - August 12, 2015.
 #
 ###########################################################################
 
@@ -35,9 +35,9 @@ use strict;
 use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
-use open ':std', ':encoding(UTF-8)';
+
 ### Globals
-my $VERSION    = qq{0.16_01};
+my $VERSION    = qq{0.16_02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
