@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.15_02 - August 11, 2015.
+# 0.16 - August 12, 2015.
 #
 ###########################################################################
 
@@ -35,30 +35,32 @@ use strict;
 use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
+use open ':std', ':encoding(UTF-8)';
 ### Globals
-my $VERSION    = qq{0.15_02};
+my $VERSION    = qq{0.16};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
-my @COUNT_COLUMNS     = (); my $count_ref    = {};
-my @SUM_COLUMNS       = (); my $sum_ref      = {};
+my @COUNT_COLUMNS     = (); my $count_ref     = {};
+my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
-my @AVG_COLUMNS       = (); my $avg_ref      = {};  my $avg_count = {};
-my @DDUP_COLUMNS      = (); my $ddup_ref     = {};
-my @CASE_COLUMNS      = (); my $case_ref     = {};
-my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref = {}; # case switching expressions like uc,lc,mc.
+my @AVG_COLUMNS       = (); my $avg_ref       = {}; my $avg_count = {};
+my @DDUP_COLUMNS      = (); my $ddup_ref      = {};
+my @CASE_COLUMNS      = (); my $case_ref      = {};
+my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref  = {}; # case switching expressions like uc,lc,mc.
 my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
-my @MASK_COLUMNS      = (); my $mask_ref  = {}; # Stores the masks by column number.
-my @SUBS_COLUMNS      = (); my $subs_ref  = {}; # Stores the sub string indexes by column number.
-my @PAD_COLUMNS       = (); my $pad_ref   = {}; # Stores the pad instructions by column number.
-my @FLIP_COLUMNS      = (); my $flip_ref   = {};# Stores the flip instructions by column number.
-my @MATCH_COLUMNS     = (); my $match_ref = {}; # Stores regular expressions.
+my @MASK_COLUMNS      = (); my $mask_ref      = {}; # Stores the masks by column number.
+my @SUBS_COLUMNS      = (); my $subs_ref      = {}; # Stores the sub string indexes by column number.
+my @PAD_COLUMNS       = (); my $pad_ref       = {}; # Stores the pad instructions by column number.
+my @FLIP_COLUMNS      = (); my $flip_ref      = {}; # Stores the flip instructions by column number.
+my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the flip instructions by column number.
+my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
@@ -83,6 +85,7 @@ sub usage()
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
+       [-F[c0:[x|b|d],...]]
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
@@ -138,6 +141,7 @@ All column references are 0 based.
                   to r if the test fails. Works like an if statement.
                   Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
                   '0001' -f'c0:3.B?0.c' => '000c'.
+ -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -200,6 +204,7 @@ The order of operations is as follows:
   -C - Conditionally test column values.
   -e - Change case of string in column.
   -f - Modify character in string based on 0-based index.
+  -F - Format column value into bin, hex, or dec.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -m - Mask specified column values.
@@ -1248,6 +1253,66 @@ sub apply_flip
   return join '', @f;
 }
 
+# Applies format to requested string.
+# param:  String for conversion.
+# param:  Conversion type 'b', 'h', 'd'.
+# return: String with the specified modifications.
+sub convert_format( $$ )
+{
+	my ( $field, $format ) = @_;
+	my @characters = ();
+	my @newString  = ();
+	@characters = split //, $field;
+	while ( @characters )
+	{
+		my $c = shift @characters;
+		if ( $format eq 'b' )
+		{
+			push @newString, sprintf( "%0.8b ", ord( $c ) );
+		}
+		elsif ( $format eq 'h' )
+		{
+			push @newString, sprintf( "%0.2x ", ord( $c ) );
+		}
+		elsif ( $format eq 'd' )
+		{
+			push @newString, sprintf( "%d ", ord( $c ) );
+		}
+		else
+		{
+			printf STDERR "** error unsupported option: '%s' \n", $format;
+			usage();
+		}
+	}
+	chomp @newString;
+	return join '', @newString;
+}
+
+# Formats the specified column to the desired base type.
+# param:  Original line input.
+# return: Line with the specified column formatted as requested.
+sub format_char_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( defined $FORMAT_COLUMNS[ $colIndex ] and exists $format_ref->{ $colIndex } )
+		{
+			printf STDERR "format expression: '%s' \n", $flip_ref->{$colIndex} if ( $opt{'D'} );
+			push @newLine, convert_format( $field, lc ( $format_ref->{ $colIndex } ) );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -1278,8 +1343,9 @@ sub process_line( $ )
 	sum( $line )       if ( $opt{'a'} );
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
-  $line = modify_case_line( $line )   if ( $opt{'e'} );
-  $line = flip_char_line( $line )     if ( $opt{'f'} );
+	$line = modify_case_line( $line )   if ( $opt{'e'} );
+	$line = flip_char_line( $line )     if ( $opt{'f'} );
+	$line = format_char_line( $line )   if ( $opt{'F'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );
@@ -1526,25 +1592,26 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:f:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
-  @COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
+	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
 	if ( $opt{'u'} )
 	{
 		build_encoding_table();
 		@U_ENCODE_COLUMNS  = read_requested_columns( $opt{'u'} );
 	}
-  @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
+	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
 	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref ) if ( $opt{'e'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref ) if ( $opt{'S'} );
-  @PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
+	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
 	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref ) if ( $opt{'f'} );
+	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref ) if ( $opt{'F'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} ) if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} ) if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} ) if ( $opt{'n'} );
