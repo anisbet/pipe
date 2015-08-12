@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.16 - August 12, 2015.
+# 0.16_01 - August 12, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use open ':std', ':encoding(UTF-8)';
 ### Globals
-my $VERSION    = qq{0.16};
+my $VERSION    = qq{0.16_01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -1260,6 +1260,26 @@ sub apply_flip
 sub convert_format( $$ )
 {
 	my ( $field, $format ) = @_;
+	if ( $field =~ m/^\d+$/ )
+	{
+		if ( $format eq 'b' )
+		{
+			return sprintf( "%0.8b ", $field );
+		}
+		elsif ( $format eq 'h' )
+		{
+			return sprintf( "%0.2x ", $field );
+		}
+		elsif ( $format eq 'd' )
+		{
+			return sprintf( "%d ", $field );
+		}
+		else
+		{
+			printf STDERR "** error unsupported option: '%s' \n", $format;
+			usage();
+		}
+	}
 	my @characters = ();
 	my @newString  = ();
 	@characters = split //, $field;
@@ -1291,7 +1311,7 @@ sub convert_format( $$ )
 # Formats the specified column to the desired base type.
 # param:  Original line input.
 # return: Line with the specified column formatted as requested.
-sub format_char_line( $ )
+sub format_radix( $ )
 {
 	my @line = split '\|', shift;
 	my @newLine = ();
@@ -1345,7 +1365,7 @@ sub process_line( $ )
 	average( $line )   if ( $opt{'v'} );
 	$line = modify_case_line( $line )   if ( $opt{'e'} );
 	$line = flip_char_line( $line )     if ( $opt{'f'} );
-	$line = format_char_line( $line )   if ( $opt{'F'} );
+	$line = format_radix( $line )   if ( $opt{'F'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );

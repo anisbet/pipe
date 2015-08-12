@@ -22,6 +22,7 @@ Things pipe.pl can do
 16. Output sub strings of values in columns by specific index or range of indices.
 17. Change case of fields.
 18. Flip character value conditionally.
+19. Output characters in different bases.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -69,6 +70,7 @@ Complete list of flags
                   to r if the test fails. Works like an if statement.
                   Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
                   '0001' -f'c0:3.B?0.c' => '000c'.
+ -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -768,4 +770,25 @@ You can change the case of data in a column with '-e' as in this example:
 echo 'upper case|mIX cASE|LOWER CASE|12345678|hello world' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC,c4:us' 
 UPPER CASE|Mix Case|lower case|12345678|hello_world
 ```
-
+Using -F for conversions.
+-------------------------
+Binary:
+```
+echo 'hello' | ./pipe.pl -F'c0:b'
+01101000 01100101 01101100 01101100 01101111
+```
+but numbers are handled as expected, not as characters.
+```
+echo '123' | ./pipe.pl -F'c0:b'
+01111011
+```
+Hex:
+```
+echo 'hello' | ./pipe.pl -F'c0:h'
+68 65 6c 6c 6f
+```
+Decimal:
+```
+echo 'hello' | ./pipe.pl -F'c0:d'
+104 101 108 108 111
+```
