@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.16_02 - August 12, 2015.
+# 0.17 - August 13, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.16_02};
+my $VERSION    = qq{0.17};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -64,6 +64,7 @@ my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
+my @SHOW_EMPTY_COLUMNS= (); # Show empty column number checks.
 my @COMPARE_COLUMNS   = (); # Compare all collected columns and report if equal.
 my @NO_COMPARE_COLUMNS= (); # ! Compare all collected columns and report if equal.
 my $LINE_NUMBER       = 0;
@@ -81,7 +82,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
-       [-bBcnotuvwz<c0,c1,...,cn>] 
+       [-bBcnotuvwzZ<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
@@ -193,6 +194,7 @@ All column references are 0 based.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
+ -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
  
 The order of operations is as follows:
   -x - Usage message, then exits.
@@ -219,6 +221,7 @@ The order of operations is as follows:
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
+  -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
   -T - Output in table form.
@@ -893,6 +896,23 @@ sub is_empty( $ )
 	return 0;
 }
 
+# Tests if a line is empty of content. Empty includes column doesn't exist and or is empty.
+# param:  string (line) to test.
+# return: 1 if there is a empty field, and 0 otherwise.
+sub is_not_empty( $ )
+{
+	my @line = split '\|', shift;
+	printf STDERR "SHOW_EMPTY_LINE: " if ( $opt{'D'} );
+	foreach my $colIndex ( @SHOW_EMPTY_COLUMNS )
+	{
+		return 0 if ( ! defined $line[ $colIndex ] );
+		printf STDERR "'%s', ", $line[ $colIndex ] if ( $opt{'D'} );
+		return 0 if ( trim( $line[ $colIndex ] ) =~ m/^$/ );
+	}
+	# printf STDERR "\n" if ( $opt{'D'} );
+	return 1;
+}
+
 # Compares requested fields and returns line if they match.
 # param:  string, pipe delimited line.
 # param:  list of column indexes to compare on.
@@ -1376,7 +1396,8 @@ sub process_line( $ )
 	# Stop processing lines if the requested column(s) test empty.
 	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
 	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
-	return '' if ( $opt{'z'} and is_empty( $line ));
+	return '' if ( $opt{'z'} and is_empty( $line ) );
+	return '' if ( $opt{'Z'} and is_not_empty( $line ) );
 	width( $line, $LINE_NUMBER )   if ( $opt{'w'} );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
@@ -1612,12 +1633,13 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
+	@SHOW_EMPTY_COLUMNS= read_requested_columns( $opt{'Z'} ) if ( $opt{'Z'} );
 	if ( $opt{'u'} )
 	{
 		build_encoding_table();

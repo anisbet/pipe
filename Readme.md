@@ -122,6 +122,7 @@ Complete list of flags
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
+ -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 ```
 
 **Note**: I recommend that you put your command line flags in alphabetical order as in the example below.
@@ -152,6 +153,7 @@ The order of operations is as follows:
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
+  -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
   -T - Output in table form.
