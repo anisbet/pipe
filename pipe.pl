@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.17 - August 13, 2015.
+# 0.17.01 - September 3, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.17};
+my $VERSION    = qq{0.17.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -59,7 +59,7 @@ my @MASK_COLUMNS      = (); my $mask_ref      = {}; # Stores the masks by column
 my @SUBS_COLUMNS      = (); my $subs_ref      = {}; # Stores the sub string indexes by column number.
 my @PAD_COLUMNS       = (); my $pad_ref       = {}; # Stores the pad instructions by column number.
 my @FLIP_COLUMNS      = (); my $flip_ref      = {}; # Stores the flip instructions by column number.
-my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the flip instructions by column number.
+my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
@@ -136,12 +136,13 @@ All column references are 0 based.
                   for the line to be output.
  -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc), 
                   lower case (lc), mixed case (mc), or underscore (us).
- -f[c0:n.p[?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
+ -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
                   where 'n' is the 0-based index of the target character. A '?' means
                   test the character equals p before changing it to q, and optionally change 
                   to r if the test fails. Works like an if statement.
-                  Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
-                  '0001' -f'c0:3.B?0.c' => '000c'.
+                  Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+                  '0001' -f'c0:3.B?0.c' => '000c', finally 
+                  echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
@@ -1178,7 +1179,7 @@ sub flip_char_line( $ )
   while ( @line )
   {
     my $field = shift @line;
-    if ( defined $FLIP_COLUMNS[ $colIndex ] and exists $flip_ref->{ $colIndex } )
+    if ( exists $flip_ref->{ $colIndex } )
     {
       printf STDERR "flip expression: '%s' \n", $flip_ref->{$colIndex} if ( $opt{'D'} );
       my $exp = $flip_ref->{$colIndex};
@@ -1385,7 +1386,7 @@ sub process_line( $ )
 	average( $line )   if ( $opt{'v'} );
 	$line = modify_case_line( $line )   if ( $opt{'e'} );
 	$line = flip_char_line( $line )     if ( $opt{'f'} );
-	$line = format_radix( $line )   if ( $opt{'F'} );
+	$line = format_radix( $line )       if ( $opt{'F'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );
