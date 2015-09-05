@@ -1145,7 +1145,8 @@ sub apply_casing( $$ )
 # return: Modified line.
 sub modify_case_line( $ )
 {
-	my @line = split '\|', shift;
+	my $original_line = shift;
+	my @line = split '\|', $original_line;
 	my @newLine = ();
 	my $colIndex= 0;
 	while ( @line )
@@ -1171,7 +1172,8 @@ sub modify_case_line( $ )
 		}
 		$colIndex++;
 	}
-	return join '|', @newLine;
+	my $modified_line = join '|', @newLine;
+	return validate( $original_line, $modified_line );
 }
 
 # Flips Flips an arbitrary but specific character Conditionally, 
@@ -1184,7 +1186,8 @@ sub modify_case_line( $ )
 # return: Modified line.
 sub flip_char_line( $ )
 {
-	my @line = split '\|', shift;
+	my $original_line = shift;
+	my @line = split '\|', $original_line;
 	my @newLine = ();
 	my $colIndex= 0;
 	while ( @line )
@@ -1244,7 +1247,8 @@ sub flip_char_line( $ )
 		}
 		$colIndex++;
 	}
-	return join '|', @newLine;
+	my $modified_line = join '|', @newLine;
+	return validate( $original_line, $modified_line );
 }
 
 # Flips the specified character to the provided alternate character.
@@ -1292,7 +1296,6 @@ sub replace_line( $ )
 {
 	my $line = shift;
 	my @line = split '\|', $line;
-	printf STDERR "'%s'\n", $line;
 	my $colIndex= 0;
 	foreach my $field ( @line )
 	{
@@ -1340,7 +1343,32 @@ sub replace_line( $ )
 		}
 		$colIndex++;
 	}
-	return join '|', @line;
+	my $modified_line = join '|', @line;
+	return validate( $line, $modified_line );
+}
+
+# This function fixes lines that have trailing empty pipe columns. If it is not used
+# lines are truncated after the last content-filled column.
+# param:  original line sent to the calling function.
+# param:  line after any modification.
+# return: modified line with additional pipes if required.
+sub validate( $$ )
+{
+	my ( $original, $modified ) = @_;
+	my $count = ( $original =~ tr/\|// );
+	my $final_count = ($modified =~ tr/\|//);
+	printf STDERR "original: %d pipes.\n", $count if ( $opt{'D'} );
+	printf STDERR "modified: %d pipes.\n", $final_count if ( $opt{'D'} );
+	if ( $final_count < $count )
+	{
+		my $iterations = $count - $final_count;
+		my $i = 0;
+		for ( $i = 0; $i < $iterations; $i++ )
+		{
+			$modified .= '|';
+		}
+	}
+	return $modified;
 }
 
 # Replaces a string conditionally.
