@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.17.01 - September 3, 2015.
+# 0.18 - September 5, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.17.01};
+my $VERSION    = qq{0.18};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -50,6 +50,7 @@ my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $
 my @AVG_COLUMNS       = (); my $avg_ref       = {}; my $avg_count = {};
 my @DDUP_COLUMNS      = (); my $ddup_ref      = {};
 my @CASE_COLUMNS      = (); my $case_ref      = {};
+my @REPLACE_COLUMNS   = (); my $replace_ref   = {}; # Replacement columns and content. Handled like -f.
 my @COND_CMP_COLUMNS  = (); my $cond_cmp_ref  = {}; # case switching expressions like uc,lc,mc.
 my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
@@ -85,6 +86,7 @@ sub usage()
        [-bBcnotuvwzZ<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
+       [-E[c0:[r|?c.r[.e]],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
        [-F[c0:[x|b|d],...]]
        [-m'cn:[_|#]*,...']
@@ -128,14 +130,16 @@ All column references are 0 based.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
-                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
-                  escaped commas specify a ',' in a regular expression because comma
-                  is the column definition delimiter. Selecting multiple fields acts
-                  like an AND function, all fields must match their corresponding regex
-                  for the line to be output.
  -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc), 
                   lower case (lc), mixed case (mc), or underscore (us).
+ -E[c0:[r|?c.r[.e]],...]: Replace an entire field conditionally, if desired. Similar
+                  to the -f flag but replaces the entire field instead of a specific
+                  character position. r=replacement string, c=conditional string, the
+                  value the field must have to be replaced by r, and optionally 
+                  e=replacement if the condition failed.
+                  Example: '111|222|333' '-E'c1:nnn' => '111|nnn|333'
+                  '111|222|333' '-E'c1:?222.444'     => '111|444|333'
+                  '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
  -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
                   where 'n' is the 0-based index of the target character. A '?' means
                   test the character equals p before changing it to q, and optionally change 
@@ -144,6 +148,12 @@ All column references are 0 based.
                   '0001' -f'c0:3.B?0.c' => '000c', finally 
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
+                  escaped commas specify a ',' in a regular expression because comma
+                  is the column definition delimiter. Selecting multiple fields acts
+                  like an AND function, all fields must match their corresponding regex
+                  for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
@@ -206,6 +216,7 @@ The order of operations is as follows:
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
+  -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
   -G - Inverse grep specified columns.
@@ -230,7 +241,7 @@ The order of operations is as follows:
 
 Version: $VERSION
 EOF
-    exit;
+	exit;
 }
 
 # Reads the values supplied on the command line and parses them out into the argument list, 
@@ -1108,25 +1119,25 @@ sub test_condition( $ )
 # return: New string with changes if any.
 sub apply_casing( $$ )
 {
-  my $field       = shift;
-  my $instruction = shift;
-  if ( $instruction eq "uc" )
-  {
-    $field = uc $field;
-  }
-  if ( $instruction eq "lc" )
-  {
-    $field = lc $field;
-  }
-  if ( $instruction eq "mc" )
-  {
-    $field =~ s/([\w']+)/\u\L$1/g;
-  }
-  if ( $instruction eq "us" )
-  {
-    $field =~ s/\s/_/g;
-  }
-  return $field;
+	my $field       = shift;
+	my $instruction = shift;
+	if ( $instruction eq "uc" )
+	{
+		$field = uc $field;
+	}
+	if ( $instruction eq "lc" )
+	{
+		$field = lc $field;
+	}
+	if ( $instruction eq "mc" )
+	{
+		$field =~ s/([\w']+)/\u\L$1/g;
+	}
+	if ( $instruction eq "us" )
+	{
+		$field =~ s/\s/_/g;
+	}
+	return $field;
 }
 
 # Modifies the case of a string.
@@ -1134,33 +1145,33 @@ sub apply_casing( $$ )
 # return: Modified line.
 sub modify_case_line( $ )
 {
-  my @line = split '\|', shift;
-  my @newLine = ();
-  my $colIndex= 0;
-  while ( @line )
-  {
-    my $field = shift @line;
-    if ( defined $CASE_COLUMNS[ $colIndex ] and exists $case_ref->{ $colIndex } )
-    {
-      printf STDERR "case specifier: '%s' \n", $case_ref->{$colIndex} if ( $opt{'D'} );
-      my $exp = $case_ref->{$colIndex};
-      # The first 2 characters determine the type of casing.
-      $exp =~ m/^[uUlLmM][cCsS]/;
-      if ( ! $& )
-      {
-        printf STDERR "*** error case specifier. Expected [uc|lc|mc|us] (ignoring case) but got '%s'.\n", $case_ref->{$colIndex};
-        usage();
-      }
-      $exp = lc $exp;
-      push @newLine, apply_casing( $field, $exp );
-    }
-    else
-    {
-      push @newLine, $field;
-    }
-    $colIndex++;
-  }
-  return join '|', @newLine;
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( defined $CASE_COLUMNS[ $colIndex ] and exists $case_ref->{ $colIndex } )
+		{
+			printf STDERR "case specifier: '%s' \n", $case_ref->{$colIndex} if ( $opt{'D'} );
+			my $exp = $case_ref->{$colIndex};
+			# The first 2 characters determine the type of casing.
+			$exp =~ m/^[uUlLmM][cCsS]/;
+			if ( ! $& )
+			{
+				printf STDERR "*** error case specifier. Expected [uc|lc|mc|us] (ignoring case) but got '%s'.\n", $case_ref->{$colIndex};
+				usage();
+			}
+			$exp = lc $exp;
+			push @newLine, apply_casing( $field, $exp );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
 }
 
 # Flips Flips an arbitrary but specific character Conditionally, 
@@ -1173,67 +1184,67 @@ sub modify_case_line( $ )
 # return: Modified line.
 sub flip_char_line( $ )
 {
-  my @line = split '\|', shift;
-  my @newLine = ();
-  my $colIndex= 0;
-  while ( @line )
-  {
-    my $field = shift @line;
-    if ( exists $flip_ref->{ $colIndex } )
-    {
-      printf STDERR "flip expression: '%s' \n", $flip_ref->{$colIndex} if ( $opt{'D'} );
-      my $exp = $flip_ref->{$colIndex};
-      my $target;
-      my $replacement;
-      my $condition;
-      my $on_else;
-      if ( $exp =~ m/\?/ )
-      {
-        $target = $`;
-        ( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
-        $condition   =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
-        $replacement =~ s/\\//g;
-        $on_else     =~ s/\\//g;
-      }
-      else # simple case of n.p
-      {
-        ( $target, $replacement ) = split '\.', $exp;
-      }
-      if ( ! defined $target or ! defined $replacement )
-      {
-        printf STDERR "*** syntax error in -f, expected 'index.replacement' but got '%s'\n", $exp;
-        usage();
-      }
-      if ( $opt{'D'} )
-      {
-        if ( defined $target )
-        {
-          printf STDERR " index='%s'", $target;
-          if ( defined $condition )
-          {
-            printf STDERR " c='%s'", $condition;
-            if ( defined $replacement )
-            {
-              printf STDERR " r='%s'", $replacement;
-              printf STDERR " else='%s'", $on_else if ( defined $on_else );
-            }
-          }
-          elsif ( defined $replacement ) # just an index and a replacement character.
-          {
-            printf STDERR " r='%s'", $replacement;
-          }
-        }
-        printf STDERR "\n";
-      }
-      push @newLine, apply_flip( $field, $target, $replacement, $condition, $on_else );
-    }
-    else
-    {
-      push @newLine, $field;
-    }
-    $colIndex++;
-  }
-  return join '|', @newLine;
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( exists $flip_ref->{ $colIndex } )
+		{
+			printf STDERR "flip expression: '%s' \n", $flip_ref->{$colIndex} if ( $opt{'D'} );
+			my $exp = $flip_ref->{$colIndex};
+			my $target;
+			my $replacement;
+			my $condition;
+			my $on_else;
+			if ( $exp =~ m/\?/ )
+			{
+				$target = $`;
+				( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
+				$condition   =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
+				$replacement =~ s/\\//g;
+				$on_else     =~ s/\\//g if ( defined $on_else );
+			}
+			else # simple case of n.p
+			{
+				( $target, $replacement ) = split '\.', $exp;
+			}
+			if ( ! defined $target or ! defined $replacement )
+			{
+				printf STDERR "*** syntax error in -f, expected 'index.replacement' but got '%s'\n", $exp;
+				usage();
+			}
+			if ( $opt{'D'} )
+			{
+				if ( defined $target )
+				{
+					printf STDERR " index='%s'", $target;
+					if ( defined $condition )
+					{
+						printf STDERR " c='%s'", $condition;
+						if ( defined $replacement )
+						{
+							printf STDERR " r='%s'", $replacement;
+							printf STDERR " else='%s'", $on_else if ( defined $on_else );
+						}
+					}
+					elsif ( defined $replacement ) # just an index and a replacement character.
+					{
+						printf STDERR " r='%s'", $replacement;
+					}
+				}
+				printf STDERR "\n";
+			}
+			push @newLine, apply_flip( $field, $target, $replacement, $condition, $on_else );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
 }
 
 # Flips the specified character to the provided alternate character.
@@ -1245,33 +1256,129 @@ sub flip_char_line( $ )
 # return: String with the specified modifications.
 sub apply_flip
 {
-  my ( $field, $location, $replacement, $condition, $on_else ) = @_;
-  # field, location and replacement must be defined, condition and on_else may not be.
-  if ( $location !~ m/^\d{1,}$/ )
-  {
-    printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $location;
-    usage();
-  }
-  my @f = split //, $field;
-  return $field if ( $location >= @f ); # if the location site is past the end of the field just return it untouched.
-  my $site = $f[ $location ];
-  if ( defined $condition )
-  {
-    if ( $condition eq $site )
-    {
-      $f[ $location ] = $replacement;
-    }
-    elsif ( defined $on_else )
-    {
-      $f[ $location ] = $on_else;
-    }
-  }
-  else # Unconditionally change the site's character.
-  {
-    $f[ $location ] = $replacement;
-  }
-  printf STDERR "* '%s', '%s', '%s'\n", $location, $f[ $location ], $replacement if ( $opt{'D'} );
-  return join '', @f;
+	my ( $field, $location, $replacement, $condition, $on_else ) = @_;
+	# field, location and replacement must be defined, condition and on_else may not be.
+	if ( $location !~ m/^\d{1,}$/ )
+	{
+		printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $location;
+		usage();
+	}
+	my @f = split //, $field;
+	return $field if ( $location >= @f ); # if the location site is past the end of the field just return it untouched.
+	my $site = $f[ $location ];
+	if ( defined $condition )
+	{
+		if ( $condition eq $site )
+		{
+			$f[ $location ] = $replacement;
+		}
+		elsif ( defined $on_else )
+		{
+			$f[ $location ] = $on_else;
+		}
+	}
+	else # Unconditionally change the site's character.
+	{
+		$f[ $location ] = $replacement;
+	}
+	printf STDERR "* '%s', '%s', '%s'\n", $location, $f[ $location ], $replacement if ( $opt{'D'} );
+	return join '', @f;
+}
+
+# Replaces one string for another based.
+# 
+# 
+sub replace_line( $ )
+{
+	my @line = split '\|', shift;
+	my @newLine = ();
+	my $colIndex= 0;
+	while ( @line )
+	{
+		my $field = shift @line;
+		if ( exists $replace_ref->{ $colIndex } )
+		{
+			printf STDERR "replace expression: '%s' \n", $replace_ref->{ $colIndex } if ( $opt{'D'} );
+			my $exp = $replace_ref->{$colIndex};
+			# my $target;
+			my $replacement;
+			my $condition;
+			my $on_else;
+			if ( $exp =~ m/\?/ )
+			{
+				# $target = $`;
+				( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
+				$condition	 =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
+				$replacement =~ s/\\//g;
+				$on_else     =~ s/\\//g if ( defined $on_else );
+			}
+			else # simple case of n.p
+			{
+				$replacement = $exp;
+			}
+			if ( ! defined $replacement )
+			{
+				printf STDERR "*** syntax error in -E, expected replacement string but got '%s'\n", $exp;
+				usage();
+			}
+			if ( $opt{'D'} )
+			{
+		if ( defined $condition )
+		{
+			printf STDERR " condition='%s'", $condition;
+			if ( defined $replacement )
+			{
+				printf STDERR " replacement='%s'", $replacement;
+				printf STDERR " else='%s'", $on_else if ( defined $on_else );
+			}
+		}
+		elsif ( defined $replacement ) # just an index and a replacement character.
+		{
+			printf STDERR " replacement='%s'", $replacement;
+		}
+				printf STDERR "\n";
+			}
+			push @newLine, replace( $field, $replacement, $condition, $on_else );
+		}
+		else
+		{
+			push @newLine, $field;
+		}
+		$colIndex++;
+	}
+	return join '|', @newLine;
+}
+
+# Replaces a string conditionally.
+# param:  target string of the replacement.
+# param:  String to replace the target.
+# param:  condition to test target string.
+# param:  replacement string on failure of conditional testing.
+# return: resultant string.
+sub replace( $$$$ )
+{
+	my ( $field, $replacement, $condition, $on_else ) = @_;
+	if ( defined $condition )
+	{
+		if ( $condition eq $field )
+		{
+		printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
+			return $replacement;
+		}
+		elsif ( defined $on_else )
+		{
+		printf STDERR "* '%s'\n", $on_else if ( $opt{'D'} );
+			return $on_else;
+		}
+	else
+	{
+		printf STDERR "* '%s'\n", $field if ( $opt{'D'} );
+		return $field;
+	}
+	}
+	# Unconditionally change the site's character.
+	printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
+	return $replacement;
 }
 
 # Applies format to requested string.
@@ -1385,6 +1492,7 @@ sub process_line( $ )
 	count( $line )     if ( $opt{'c'} );
 	average( $line )   if ( $opt{'v'} );
 	$line = modify_case_line( $line )   if ( $opt{'e'} );
+	$line = replace_line( $line )       if ( $opt{'E'} );
 	$line = flip_char_line( $line )     if ( $opt{'f'} );
 	$line = format_radix( $line )       if ( $opt{'F'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
@@ -1634,7 +1742,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1648,6 +1756,7 @@ sub init
 	}
 	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref ) if ( $opt{'C'} );
 	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref ) if ( $opt{'e'} );
+	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref ) if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
