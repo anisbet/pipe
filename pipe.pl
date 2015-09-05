@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.18 - September 5, 2015.
+# 0.18.02 - September 5, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.18};
+my $VERSION    = qq{0.18.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -1151,7 +1151,7 @@ sub modify_case_line( $ )
 	while ( @line )
 	{
 		my $field = shift @line;
-		if ( defined $CASE_COLUMNS[ $colIndex ] and exists $case_ref->{ $colIndex } )
+		if ( exists $case_ref->{ $colIndex } )
 		{
 			printf STDERR "case specifier: '%s' \n", $case_ref->{$colIndex} if ( $opt{'D'} );
 			my $exp = $case_ref->{$colIndex};
@@ -1285,28 +1285,26 @@ sub apply_flip
 	return join '', @f;
 }
 
-# Replaces one string for another based.
-# 
-# 
+# Replaces one string for another.
+# param:  line from file.
+# return: modified line.
 sub replace_line( $ )
 {
-	my @line = split '\|', shift;
-	my @newLine = ();
+	my $line = shift;
+	my @line = split '\|', $line;
+	printf STDERR "'%s'\n", $line;
 	my $colIndex= 0;
-	while ( @line )
+	foreach my $field ( @line )
 	{
-		my $field = shift @line;
 		if ( exists $replace_ref->{ $colIndex } )
 		{
 			printf STDERR "replace expression: '%s' \n", $replace_ref->{ $colIndex } if ( $opt{'D'} );
 			my $exp = $replace_ref->{$colIndex};
-			# my $target;
 			my $replacement;
 			my $condition;
 			my $on_else;
 			if ( $exp =~ m/\?/ )
 			{
-				# $target = $`;
 				( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
 				$condition	 =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
 				$replacement =~ s/\\//g;
@@ -1323,30 +1321,26 @@ sub replace_line( $ )
 			}
 			if ( $opt{'D'} )
 			{
-		if ( defined $condition )
-		{
-			printf STDERR " condition='%s'", $condition;
-			if ( defined $replacement )
-			{
-				printf STDERR " replacement='%s'", $replacement;
-				printf STDERR " else='%s'", $on_else if ( defined $on_else );
-			}
-		}
-		elsif ( defined $replacement ) # just an index and a replacement character.
-		{
-			printf STDERR " replacement='%s'", $replacement;
-		}
+				if ( defined $condition )
+				{
+					printf STDERR " condition='%s'", $condition;
+					if ( defined $replacement )
+					{
+						printf STDERR " replacement='%s'", $replacement;
+						printf STDERR " else='%s'", $on_else if ( defined $on_else );
+					}
+				}
+				elsif ( defined $replacement ) # just an index and a replacement character.
+				{
+					printf STDERR " replacement='%s'", $replacement;
+				}
 				printf STDERR "\n";
 			}
-			push @newLine, replace( $field, $replacement, $condition, $on_else );
-		}
-		else
-		{
-			push @newLine, $field;
+			$line[ $colIndex ] = replace( $field, $replacement, $condition, $on_else );
 		}
 		$colIndex++;
 	}
-	return join '|', @newLine;
+	return join '|', @line;
 }
 
 # Replaces a string conditionally.
