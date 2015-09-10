@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.18.03 - September 10, 2015.
+# 0.18.04 - September 10, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.18.03};
+my $VERSION    = qq{0.18.04};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -613,7 +613,16 @@ sub sort_list( $ )
 		my $key = get_key( $line, $wantedColumns );
 		$key = normalize( $key ) if ( $opt{'N'} );
 		# Make the value.00000001 to make each key unique. If value is a number, sort numeric works.
-		$all_list_ref->{ $key . '.' . sprintf( "%.8d", $count ) } = $line;
+		# Where this breaks is if the values you want to sort are floats. In that case we should just
+		# add more least significant digits.
+		if ( trim( $key ) =~ m/^\d+\.\d+$/ )
+		{
+			$all_list_ref->{ $key . sprintf( "%.8d", $count ) } = $line;
+		}
+		else
+		{
+			$all_list_ref->{ $key . '.' . sprintf( "%.8d", $count ) } = $line;
+		}
 		$count++;
 	}
 	my @sortedKeysArray = ();
