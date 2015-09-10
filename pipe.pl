@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.18.02 - September 5, 2015.
+# 0.18.03 - September 10, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.18.02};
+my $VERSION    = qq{0.18.03};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -603,20 +603,21 @@ sub is_between_zero_and_hundred( $ )
 # return: <none> - reorders the ALL_LINES list.
 sub sort_list( $ )
 {
-	my @tempArray     = ();
+	my $all_list_ref  = {};
 	my $wantedColumns = shift;
-	my @tempKeys      = ();
+	my $count         = 1;
 	while( @ALL_LINES )
 	{
 		my $line = shift @ALL_LINES;
 		chomp $line;
 		my $key = get_key( $line, $wantedColumns );
 		$key = normalize( $key ) if ( $opt{'N'} );
-		# The key will now always be the first value in the pipe delimited line.
-		push @tempArray, $key . '|' . $line;
-		push @tempKeys, $key;
+		# Make the value.00000001 to make each key unique. If value is a number, sort numeric works.
+		$all_list_ref->{ $key . '.' . sprintf( "%.8d", $count ) } = $line;
+		$count++;
 	}
 	my @sortedKeysArray = ();
+	my @tempKeys        = ( keys %$all_list_ref );
 	# reverse sort?
 	if ( $opt{'R'} )
 	{
@@ -640,32 +641,13 @@ sub sort_list( $ )
 			@sortedKeysArray = sort @tempKeys;
 		}
 	}
-	@tempKeys = ();
 	# now remove the key from the start of the entry for each line in the array.
 	while ( @sortedKeysArray )
 	{
 		my $key = shift @sortedKeysArray;
-		# Grep the key from the arrays of lines, it is the first element on each line.
-		# The next line gets the indexes of all the matches, but just need the first.
-		# All subsequent key matches will match on remainder of elements on the next
-		# iteration. If you try and process all the indexes now you end up with a 
-		# complicated index value computation when trying to splice the array.
-		# http://stackoverflow.com/questions/174292/what-is-the-best-way-to-delete-a-value-from-an-array-in-perl
-		my @indexes = grep { $tempArray[ $_ ] =~ m/^($key)\|/ } 0..$#tempArray;
 		print STDERR "\$key=$key\n" if ( $opt{'D'} );
-		# chop off the first key and push back to @ALL_LINES
-		if ( defined $indexes[ 0 ] )
-		{
-			my @line = split '\|', $tempArray[ $indexes[ 0 ] ];
-			# Toss away the key.
-			shift @line;
-			my $ln = join '|', @line;
-			print STDERR "::\$ln=$ln\n" if ( $opt{'D'} );
-			push @ALL_LINES, $ln;
-			splice( @tempArray, $indexes[ 0 ], 1 );
-		}
+		push @ALL_LINES, $all_list_ref->{ $key };
 	}
-	@tempArray = ();
 }
 
 # Outputs data from argument line as either HTML or WIKI.
