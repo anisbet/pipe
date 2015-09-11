@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.18.04 - September 10, 2015.
+# 0.18.05 - September 10, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.18.04};
+my $VERSION    = qq{0.18.05};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -182,7 +182,8 @@ All column references are 0 based.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
- -P             : Output a trailing pipe before new line on output.
+ -P             : Output a trailing pipe before new line on output, if one there isn't 1 already.
+                  Places a pipe between counts (-A on dedup) and the rest of the row.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -1525,7 +1526,7 @@ sub process_line( $ )
 	if ( $opt{'P'} )
 	{
 		chomp $line;
-		$line .= "|";
+		$line .= "|" if ( trim( $line ) !~ m/\|$/ );
 	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( $opt{'A'} and ! $opt{'d'} )
@@ -1585,7 +1586,15 @@ sub dedup_list( $ )
 		my $key = shift @tmp;
 		if ( $opt{ 'A' } )
 		{
-			my $summary = sprintf " %3d ", $count->{ $key };
+			my $summary = '';
+			if ( $opt{'P'} )
+			{
+				$summary = sprintf "%d|", $count->{ $key };
+			}
+			else
+			{
+				$summary = sprintf " %3d ", $count->{ $key };
+			}
 			push @ALL_LINES, $summary . $ddup_ref->{ $key };
 		}
 		else
