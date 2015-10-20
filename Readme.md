@@ -222,7 +222,7 @@ Grepping a specific field value, and counting the results
 You can specify a regular expression that will be applied to the contents of specific columns. This flag has precedence over other flags, and if the column specified matches the regex, the line is output for other operators.
 
 ```
-cat test.lst | ./pipe.pl -W' '  -cc3 -ac3 -vc3
+cat test.lst | pipe.pl -W' '  -cc3 -ac3 -vc3
 Catkey|1456824|has|114|T024's
 Catkey|1458347|has|136|T024's
 Catkey|1458804|has|284|T024's
@@ -260,7 +260,7 @@ Catkey|1481241|has|134|T024's
  c3:    5641
 == average
  c3:  181.97
-cat t.lst | ./pipe.pl -W' ' -G'c3:^1..' -c“c0”
+cat t.lst | pipe.pl -W' ' -G'c3:^1..' -c“c0”
 Catkey|1458804|has|284|T024's
 Catkey|1465466|has|206|T024's
 Catkey|1474423|has|301|T024's
@@ -270,14 +270,14 @@ Catkey|1478687|has|624|T024's
 Catkey|1481038|has|246|T024's
 == count
 c0:       7
-cat t.lst | ./pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c“c0”
+cat t.lst | pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c“c0”
 Catkey|1480485|has|168|T024's
 Catkey|1481241|has|134|T024's
 == count
  c0:       2
 ```
 ```
-cat t.lst | ./pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
+cat t.lst | pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
 Catkey|1465466|has|206|T024's
 Catkey|1478591|has|207|T024's
 == count
@@ -288,19 +288,19 @@ Using masks
 Masks work using two special characters '\#' to print a character, and '\_' to suppress a character. Any other character is output as-is, in order, until both the mask and the input string are exhausted. The special characters can also be output as literals if they are escaped with a back slash '\\'.
 If the last character of the mask is a special character '\#' or '\_', the default behavior is to output, or suppress, the rest of the contents of the field.
 ```
-echo “abcd” | ./pipe.pl -m“c0:#”
+echo “abcd” | pipe.pl -m“c0:#”
 abcd
-echo “abcd” | ./pipe.pl -m“c0:#_”
+echo “abcd” | pipe.pl -m“c0:#_”
 a
-echo “abcd” | ./pipe.pl -m“c0:#_#”
+echo “abcd” | pipe.pl -m“c0:#_#”
 acd
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\_”
+echo “abcd” | pipe.pl -m“c0:/foo/bar/#\_”
 /foo/bar/a_
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/________________.List”
+echo “abcd” | pipe.pl -m“c0:/foo/bar/________________.List”
 /foo/bar/.List
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/\_\_\_\_\_\_.List”
+echo “abcd” | pipe.pl -m“c0:/foo/bar/\_\_\_\_\_\_.List”
 /foo/bar/______.List
-echo “abcd” | ./pipe.pl -m“c0:/foo/bar/#\#”
+echo “abcd” | pipe.pl -m“c0:/foo/bar/#\#”
 /foo/bar/a#
 echo “Balzac Billy, 21221012345678” | pipe.pl -W',' -m'c0:####_...,c1:___________#'
 Balz...|5678
@@ -484,7 +484,7 @@ Width reporting
 ---------------
 Pipe can report the shortest and longest field of selected fields.
 ```
-cat test.lst | ./pipe.pl -w'c8,c1,c6' -W'\s+' -L'+10' -A
+cat test.lst | pipe.pl -w'c8,c1,c6' -W'\s+' -L'+10' -A
   1 total|0
   2 drwxr-xr-x@|41|anisbet|staff|1394|25|Jun|21:53|.
   3 drwx------@|30|anisbet|staff|1020|29|Jun|23:03|..
@@ -505,7 +505,7 @@ cat test.lst | ./pipe.pl -w'c8,c1,c6' -W'\s+' -L'+10' -A
 Another example
 
 ```
- cat test.lst | ./pipe.pl -W'\s+' -w"c6,c1,c8" -A -L'10-13'
+ cat test.lst | pipe.pl -W'\s+' -w"c6,c1,c8" -A -L'10-13'
  10 drwxr-xr-x@|43|anisbet|staff|1462|1|May|21:39|MeCard
  11 drwxr-xr-x@|10|anisbet|staff|340|1|May|21:36|MetroGUI
  12 drwxr-xr-x@|9|anisbet|staff|306|1|May|21:40|NewFolder
@@ -534,13 +534,13 @@ cat pad.lst
 123
 1234
 12345
-cat pad.lst | ./pipe.pl -pc0:5.
+cat pad.lst | pipe.pl -pc0:5.
 ....1
 ...12
 ..123
 .1234
 12345
-cat pad.lst | ./pipe.pl -pc0:-5.
+cat pad.lst | pipe.pl -pc0:-5.
 1....
 12...
 123..
@@ -576,16 +576,16 @@ cat t1.lst
 18
 19
 20
-cat t1.lst | ./pipe.pl -r'10'
+cat t1.lst | pipe.pl -r'10'
 19
 20
-cat t1.lst | ./pipe.pl -r'10'
+cat t1.lst | pipe.pl -r'10'
 9
 13
-cat t1.lst | ./pipe.pl -r'10'
+cat t1.lst | pipe.pl -r'10'
 3
 16
-cat t1.lst | ./pipe.pl -r'10'
+cat t1.lst | pipe.pl -r'10'
 10
 3
 ```
@@ -593,13 +593,13 @@ Selection by line number or range of lines
 ------------------------------------------
 Using the same data and the '-L' we can output specific lines or ranges of lines.
 ```
-cat t1.lst | ./pipe.pl -L'10'
+cat t1.lst | pipe.pl -L'10'
 10
 
 ```
 The '+' produces output from the head of the file.
 ```
-cat t1.lst | ./pipe.pl -L'+5'
+cat t1.lst | pipe.pl -L'+5'
 1
 2
 3
@@ -608,7 +608,7 @@ cat t1.lst | ./pipe.pl -L'+5'
 ```
 The '-' produces output from the tail of the file.
 ```
-cat t1.lst | ./pipe.pl -L'-5'
+cat t1.lst | pipe.pl -L'-5'
 16
 17
 18
@@ -617,7 +617,7 @@ cat t1.lst | ./pipe.pl -L'-5'
 ```
 A range can be specified as follows:
 ```
-cat t1.lst | ./pipe.pl -L'11-15'
+cat t1.lst | pipe.pl -L'11-15'
 11
 12
 13
@@ -626,7 +626,7 @@ cat t1.lst | ./pipe.pl -L'11-15'
 ```
 You can specify the output from a specific line onward to the end of the file.
 ```
-cat t1.lst | ./pipe.pl -L'17-'
+cat t1.lst | pipe.pl -L'17-'
 17
 18
 19
@@ -648,14 +648,14 @@ cat t02.lst
 8 123.987888
 9 123.0345
 10 123.11
- cat t02.lst | ./pipe.pl -W'\s+' -C'c0:lt6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c0:lt6'
 0|123.1
 1|123.22
 2|123.9
 3|123.9
 4|123.9
 5|123.6
- cat t02.lst | ./pipe.pl -W'\s+' -C'c0:le6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c0:le6'
 0|123.1
 1|123.22
 2|123.9
@@ -663,20 +663,20 @@ cat t02.lst
 4|123.9
 5|123.6
 6|123.9
- cat t02.lst | ./pipe.pl -W'\s+' -C'c0:gt6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c0:gt6'
 7|123.9
 8|123.987888
 9|123.0345
 10|123.11
- cat t02.lst | ./pipe.pl -W'\s+' -C'c0:ge6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c0:ge6'
 6|123.9
 7|123.9
 8|123.987888
 9|123.0345
 10|123.11
- cat t02.lst | ./pipe.pl -W'\s+' -C'c0:eq6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c0:eq6'
 6|123.9
- cat t02.lst | ./pipe.pl -W'\s+' -C'c1:gt123.6'
+ cat t02.lst | pipe.pl -W'\s+' -C'c1:gt123.6'
 2|123.9
 3|123.9
 4|123.9
@@ -696,7 +696,7 @@ retirer
 dinkier
 sligo
 horopter
- cat alpha2.lst | ./pipe.pl -C'c0:gef'
+ cat alpha2.lst | pipe.pl -C'c0:gef'
 metrically
 unmystic
 retirer
@@ -705,11 +705,11 @@ horopter
 ```
 Using -U with -C for comparisons forces comparisons to be numeric to succeed.
 ```
-echo '12345a' | ./pipe.pl -C'c0:ge12345'
+echo '12345a' | pipe.pl -C'c0:ge12345'
 12345a
-echo '12345a' | ./pipe.pl -C'c0:ge12345' -U
+echo '12345a' | pipe.pl -C'c0:ge12345' -U
 <nil>
-echo '12345a' | ./pipe.pl -C'c0:ge12345' -U -D
+echo '12345a' | pipe.pl -C'c0:ge12345' -U -D
 columns requested: '0'
 regex: 'ge12345'
 * comparison fails on non-numeric value: '12345a'
@@ -720,27 +720,27 @@ You can use -S to output a sub string of the value in the specified column(s). T
 '.', dot character is a single index delimiter and the '-' works as a range specifier
 as expected. Here are some examples.
 ```
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:24'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'c0:24'
 6
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:-11'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'c0:-11'
 121107s2011
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'15-'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'15-'
 caua   j 6    000 1 eng d
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:1'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'c0:1'
 2
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:15.16.17.18'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'c0:15.16.17.18'
 caua
 ```
 Which is the same as:
 ```
-echo '121107s2011    caua   j 6    000 1 eng d|' | ./pipe.pl -S'c0:15-19'
+echo '121107s2011    caua   j 6    000 1 eng d|' | pipe.pl -S'c0:15-19'
 caua
 ```
 because the last index specified in a range is not included in the selection.
 
 Here is another example that shows how you can reverse a string.
 ```
-echo 12345 | ./pipe.pl -Sc0:4-0
+echo 12345 | pipe.pl -Sc0:4-0
 54321
 ```
 
@@ -770,14 +770,14 @@ echo '0000000' | pipe.pl -f'c0:3?1.A.B'
 ```
 If the character at index 3 is '1' change it to 'This', else change it to 'That'.
 ```
-echo '0000000' | ./pipe.pl -f'c0:3?1.This.That'
+echo '0000000' | pipe.pl -f'c0:3?1.This.That'
 000That000
 ```
 Use a '\' as an escape character if you want to test for the delimiter character '.'
 or use it as replacement character.
 If the character at index 3 is '.' change it to '.', else change it to '.'.
 ```
-echo '000.000' | ./pipe.pl -f'c0:3?\..\..\.'
+echo '000.000' | pipe.pl -f'c0:3?\..\..\.'
 000.000
 ```
 Use the escape for ',' and '?' as well.
@@ -795,15 +795,15 @@ Like the -f flag that replaces specific characters in a field, this function rep
 field. The operation can also include a conditional test that behaves like an if statement.
 Here are some examples.
 ```
-echo '111|222|333' | ./pipe.pl -E'c2:nnn'
+echo '111|222|333' | pipe.pl -E'c2:nnn'
 111|222|nnn
-echo '111|222|333' | ./pipe.pl -E'c1:nnn'
+echo '111|222|333' | pipe.pl -E'c1:nnn'
 111|nnn|333
-echo '111|222|333' | ./pipe.pl -E'c1:?222.444'
+echo '111|222|333' | pipe.pl -E'c1:?222.444'
 111|444|333
-echo '111|222|333' | ./pipe.pl -E'c1:?aaa.444.bbb'
+echo '111|222|333' | pipe.pl -E'c1:?aaa.444.bbb'
 111|bbb|333
-echo '1|2|3' | ./pipe.pl -E'c1:?aaa.444.bbb'
+echo '1|2|3' | pipe.pl -E'c1:?aaa.444.bbb'
 1|bbb|3
 ```
 
@@ -811,22 +811,22 @@ Using -F for conversions.
 -------------------------
 Binary:
 ```
-echo 'hello' | ./pipe.pl -F'c0:b'
+echo 'hello' | pipe.pl -F'c0:b'
 01101000 01100101 01101100 01101100 01101111
 ```
 but numbers are handled as expected, not as characters.
 ```
-echo '123' | ./pipe.pl -F'c0:b'
+echo '123' | pipe.pl -F'c0:b'
 01111011
 ```
 Hex:
 ```
-echo 'hello' | ./pipe.pl -F'c0:h'
+echo 'hello' | pipe.pl -F'c0:h'
 68 65 6c 6c 6f
 ```
 Decimal:
 ```
-echo 'hello' | ./pipe.pl -F'c0:d'
+echo 'hello' | pipe.pl -F'c0:d'
 104 101 108 108 111
 ```
 Using -l to translate values in columns.
@@ -834,11 +834,17 @@ Using -l to translate values in columns.
 Sometimes it's useful to replace character sequences within a targeted column.
 The '-l' switch does this. Here are some examples.
 ```
-echo "Catkey 1456824 has 114 T024's" | ./pipe.pl -W'\s+' -l"c4:\'. "
+echo "Catkey 1456824 has 114 T024's" | pipe.pl -W'\s+' -l"c4:\'. "
 Catkey|1456824|has|114|T024s
 ```
 Replace all the '8's within a column.
 ```
-echo "Catkey 1481241 has 134 T024's" | ./pipe.pl -W'\s+' -l'c1:1.8'
+echo "Catkey 1481241 has 134 T024's" | pipe.pl -W'\s+' -l'c1:1.8'
 Catkey|8488248|has|134|T024's
 ```
+An entry that has no value in 'c0', you can add a default value with:
+```
+echo "|Catkey|8488248|has|134|T024's" | pipe.pl -l'c0:^$.NA'
+NA|Catkey|8488248|has|134|T024's
+```
+
