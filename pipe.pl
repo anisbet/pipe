@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.18.05 - September 10, 2015.
+# 0.19.00 - October 20, 2015.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.18.05};
+my $VERSION    = qq{0.19};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -56,6 +56,7 @@ my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
+my @TRANSLATE_COLUMNS = (); my $trans_ref     = {}; # Translation values.
 my @MASK_COLUMNS      = (); my $mask_ref      = {}; # Stores the masks by column number.
 my @SUBS_COLUMNS      = (); my $subs_ref      = {}; # Stores the sub string indexes by column number.
 my @PAD_COLUMNS       = (); my $pad_ref       = {}; # Stores the pad instructions by column number.
@@ -82,18 +83,20 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADxLTUW<delimiter>] 
+    usage: cat file | pipe.pl [-ADxLtUW<delimiter>] 
        [-bBcnotuvwzZ<c0,c1,...,cn>] 
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
        [-F[c0:[x|b|d],...]]
+       [-l[c0:n.p,...]]
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-gG<cn:regex,...>]
        [-C<cn:[gt|lt|eq|ge|le]exp,...>]
        [-S<cn:[range],...>]
+       [-T<HTML|WIKI>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -158,6 +161,8 @@ All column references are 0 based.
                   return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
  -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
+ -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+                  produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
@@ -224,6 +229,7 @@ The order of operations is as follows:
   -g - Grep values in specified columns.
   -m - Mask specified column values.
   -S - Sub string column values.
+  -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -o - Order selected columns.
   -t - Trim selected columns.
@@ -342,7 +348,6 @@ sub normalize( $ )
 	return $line;
 }
 
-#
 # Trim function to remove white space from the start and end of the string.
 # This version also will normalize the string if '-n' flag is selected.
 # param:  string to trim.
@@ -1339,6 +1344,29 @@ sub replace_line( $ )
 	return validate( $line, $modified_line );
 }
 
+# Applies a translation to specified column(s).
+# param:  line of pipe delimited columns.
+# return: line with any requested modifications.
+sub translate_line( $ )
+{
+	my $line = shift;
+	my @line = split '\|', $line;
+	my $colIndex= 0;
+	foreach my $field ( @line )
+	{
+		if ( exists $trans_ref->{ $colIndex } )
+		{
+			printf STDERR "translate expression: '%s' \n", $trans_ref->{ $colIndex } if ( $opt{'D'} );
+			my $exp = $trans_ref->{$colIndex};
+			my ($token, $replacement) = split( m/(?<!\\)\./, $exp );
+			$line[ $colIndex ] =~ s/($token)/$replacement/g;
+		}
+		$colIndex++;
+	}
+	my $modified_line = join '|', @line;
+	return validate( $line, $modified_line );
+}
+
 # This function fixes lines that have trailing empty pipe columns. If it is not used
 # lines are truncated after the last content-filled column.
 # param:  original line sent to the calling function.
@@ -1376,19 +1404,19 @@ sub replace( $$$$ )
 	{
 		if ( $condition eq $field )
 		{
-		printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
+			printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
 			return $replacement;
 		}
 		elsif ( defined $on_else )
 		{
-		printf STDERR "* '%s'\n", $on_else if ( $opt{'D'} );
+			printf STDERR "* '%s'\n", $on_else if ( $opt{'D'} );
 			return $on_else;
 		}
-	else
-	{
-		printf STDERR "* '%s'\n", $field if ( $opt{'D'} );
-		return $field;
-	}
+		else
+		{
+			printf STDERR "* '%s'\n", $field if ( $opt{'D'} );
+			return $field;
+		}
 	}
 	# Unconditionally change the site's character.
 	printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
@@ -1510,6 +1538,7 @@ sub process_line( $ )
 	$line = flip_char_line( $line )     if ( $opt{'f'} );
 	$line = format_radix( $line )       if ( $opt{'F'} );
 	$line = url_encode_line( $line )    if ( $opt{'u'} );
+	$line = translate_line( $line )     if ( $opt{'l'} );
 	$line = mask_line( $line )          if ( $opt{'m'} );
 	$line = sub_string_line( $line )    if ( $opt{'S'} );
 	$line = normalize_line( $line )     if ( $opt{'n'} );
@@ -1764,7 +1793,7 @@ sub build_encoding_table()
 # return: 
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:IKL:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:IKl:L:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1783,6 +1812,7 @@ sub init
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref ) if ( $opt{'S'} );
+	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref ) if ( $opt{'l'} );
 	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref ) if ( $opt{'p'} );
 	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref ) if ( $opt{'f'} );
 	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref ) if ( $opt{'F'} );

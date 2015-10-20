@@ -1,4 +1,4 @@
-Usage notes for /s/sirsi/Unicorn/Bincustom/pipe.pl. This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number of non-empty values in the specified columns. Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). Those operations will be done first then just before output the remaining operations are performed.
+Usage notes for pipe.pl. This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number of non-empty values in the specified columns. Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). Those operations will be done first then just before output the remaining operations are performed.
 Example:
 cat file.lst | pipe.pl -c“c0”
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
@@ -24,6 +24,7 @@ Things pipe.pl can do
 18. Flip character value conditionally.
 19. Output characters in different bases.
 20. Replace values in columns conditionally.
+21. Translate values within columns.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -40,67 +41,69 @@ Complete list of flags
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
-                  for a line that was duplicated 4 times on a given key. If
+                  for a line that was duplicated 4 times on a given key. If 
                   -d is not selected, each line of output is numbered sequentially
-                  prior to output.
+                  prior to output. 
  -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
  -B[c0,c1,...cn]: Compare fields and output if columns differ.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
-                  don't count otherwise add 1 to the column tally.
+                  don't count otherwise add 1 to the column tally. 
  -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically.
- -d[c0,c1,...cn]: Dedups file by creating a key from specified column values
+ -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc),
+ -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc), 
                   lower case (lc), mixed case (mc), or underscore (us).
  -E[c0:[r|?c.r[.e]],...]: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
-                  value the field must have to be replaced by r, and optionally
+                  value the field must have to be replaced by r, and optionally 
                   e=replacement if the condition failed.
                   Example: '111|222|333' '-E'c1:nnn' => '111|nnn|333'
                   '111|222|333' '-E'c1:?222.444'     => '111|444|333'
                   '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
- -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally,
+ -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
                   where 'n' is the 0-based index of the target character. A '?' means
-                  test the character equals p before changing it to q, and optionally change
+                  test the character equals p before changing it to q, and optionally change 
                   to r if the test fails. Works like an if statement.
-                  Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
-                  '0001' -f'c0:3.B?0.c' => '000c', finally
+                  Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+                  '0001' -f'c0:3.B?0.c' => '000c', finally 
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
-                  Example data: 1481241, -g"c0:241  produces '1481241'. Use
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
-                  return true if match on column 1, and column 2 not match.
+                  return true if match on column 1, and column 2 not match. 
  -I             : Ignore case on operations (-d and -s) dedup and sort.
  -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
+ -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+                  produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_'
-                  means suppress, '#' means output character, any other character at that
+ -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_' 
+                  means suppress, '#' means output character, any other character at that 
                   position will be inserted.
-                  If the last character is either '_' or '#', then it will be repeated until
-                  the input line is exhausted.
+                  If the last character is either '_' or '#', then it will be repeated until 
+                  the input line is exhausted. 
                   Characters '_', '#' and ',' can be output by escaping them with a back slash.
                   Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
                   produces '8' and suppress the rest of the field.
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '' to escape either '_', ',' or '#'.
+                  Use '\' to escape either '_', ',' or '#'. 
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -128,9 +131,9 @@ Complete list of flags
                   during the comparison. With -C, non-numeric value tests always fail, that is
                   '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
- -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports
+ -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
                   the minimum and maximum number of columns by line.
- -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
@@ -156,6 +159,7 @@ The order of operations is as follows:
   -g - Grep values in specified columns.
   -m - Mask specified column values.
   -S - Sub string column values.
+  -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -o - Order selected columns.
   -t - Trim selected columns.
@@ -824,4 +828,17 @@ Decimal:
 ```
 echo 'hello' | ./pipe.pl -F'c0:d'
 104 101 108 108 111
+```
+Using -l to translate values in columns.
+-------------------------
+Sometimes it's useful to replace character sequences within a targeted column.
+The '-l' switch does this. Here are some examples.
+```
+echo "Catkey 1456824 has 114 T024's" | ./pipe.pl -W'\s+' -l"c4:\'. "
+Catkey|1456824|has|114|T024s
+```
+Replace all the '8's within a column.
+```
+echo "Catkey 1481241 has 134 T024's" | ./pipe.pl -W'\s+' -l'c1:1.8'
+Catkey|8488248|has|134|T024's
 ```
