@@ -146,9 +146,7 @@ The order of operations is as follows:
 ```
   -x - Usage message, then exits.
   -L - Output only specified lines, or range of lines.
-  -a - Sum of numeric values in specific columns.
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
-  -c - Count numeric values in specified columns.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
@@ -163,7 +161,6 @@ The order of operations is as follows:
   -n - Remove white space and upper case specified columns.
   -o - Order selected columns.
   -t - Trim selected columns.
-  -v - Average numerical values in selected columns.
   -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
@@ -173,6 +170,9 @@ The order of operations is as follows:
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
+  -a - Sum of numeric values in specific columns.
+  -c - Count numeric values in specified columns.
+  -v - Average numerical values in selected columns.
   -T - Output in table form.
   -K - Output everything as a single column.
 ```
