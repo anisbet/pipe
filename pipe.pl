@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.19.01 - November 5, 2015 flag -I to work on -g and -G.
+# 0.19.02 - November 5, 2015 Fix so average, sum, and count happen after line selection operations.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.19.01};
+my $VERSION    = qq{0.19.02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -216,9 +216,7 @@ All column references are 0 based.
 The order of operations is as follows:
   -x - Usage message, then exits.
   -L - Output only specified lines, or range of lines.
-  -a - Sum of numeric values in specific columns.
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
-  -c - Count numeric values in specified columns.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
@@ -233,7 +231,6 @@ The order of operations is as follows:
   -n - Remove white space and upper case specified columns.
   -o - Order selected columns.
   -t - Trim selected columns.
-  -v - Average numerical values in selected columns.
   -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
@@ -243,6 +240,9 @@ The order of operations is as follows:
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
+  -a - Sum of numeric values in specific columns.
+  -c - Count numeric values in specified columns.
+  -v - Average numerical values in selected columns.
   -T - Output in table form.
   -K - Output everything as a single column.
 
@@ -1544,9 +1544,6 @@ sub process_line( $ )
 	{
 		return '';
 	}
-	sum( $line )       if ( $opt{'a'} );
-	count( $line )     if ( $opt{'c'} );
-	average( $line )   if ( $opt{'v'} );
 	$line = modify_case_line( $line )   if ( $opt{'e'} );
 	$line = replace_line( $line )       if ( $opt{'E'} );
 	$line = flip_char_line( $line )     if ( $opt{'f'} );
@@ -1564,7 +1561,10 @@ sub process_line( $ )
 	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
 	return '' if ( $opt{'z'} and is_empty( $line ) );
 	return '' if ( $opt{'Z'} and is_not_empty( $line ) );
-	width( $line, $LINE_NUMBER )   if ( $opt{'w'} );
+	width( $line, $LINE_NUMBER ) if ( $opt{'w'} );
+	sum( $line )                 if ( $opt{'a'} );
+	count( $line )               if ( $opt{'c'} );
+	average( $line )             if ( $opt{'v'} );
 	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
 	if ( $opt{'P'} )
 	{
