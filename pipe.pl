@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 # 
 # Rev: 
-# 0.19.00 - October 20, 2015.
+# 0.19.01 - November 5, 2015 flag -I to work on -g and -G.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.19};
+my $VERSION    = qq{0.19.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -159,7 +159,7 @@ All column references are 0 based.
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
- -I             : Ignore case on operations (-d and -s) dedup and sort.
+ -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
  -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'.
@@ -234,7 +234,7 @@ The order of operations is as follows:
   -o - Order selected columns.
   -t - Trim selected columns.
   -v - Average numerical values in selected columns.
-  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
+  -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
@@ -864,7 +864,14 @@ sub is_match( $ )
 		if ( defined $line[ $colIndex ] and exists $match_ref->{ $colIndex } )
 		{
 			printf STDERR "regex: '%s' \n", $match_ref->{$colIndex} if ( $opt{'D'} );
-			$matchCount++ if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
+			if ( $opt{'I'} ) # Ignore case on search
+			{
+				$matchCount++ if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/i );
+			}
+			else
+			{
+				$matchCount++ if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
+			}
 		}
 	} 
 	return 1 if ( $matchCount == scalar @MATCH_COLUMNS ); # Count of matches should match count of column match requests.
@@ -882,7 +889,14 @@ sub is_not_match( $ )
 		if ( defined $line[ $colIndex ] and exists $not_match_ref->{ $colIndex } )
 		{
 			printf STDERR "regex: '%s' \n", $not_match_ref->{$colIndex} if ( $opt{'D'} );
-			return 0 if ( $line[ $colIndex ] =~ m/($not_match_ref->{$colIndex})/ );
+			if ( $opt{'I'} ) # Ignore case on search
+			{
+				return 0 if ( $line[ $colIndex ] =~ m/($not_match_ref->{$colIndex})/i );
+			}
+			else
+			{
+				return 0 if ( $line[ $colIndex ] =~ m/($not_match_ref->{$colIndex})/ );
+			}
 		}
 	} 
 	return 1;

@@ -84,7 +84,7 @@ Complete list of flags
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. 
- -I             : Ignore case on operations (-d and -s) dedup and sort.
+ -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
  -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'.
@@ -164,7 +164,7 @@ The order of operations is as follows:
   -o - Order selected columns.
   -t - Trim selected columns.
   -v - Average numerical values in selected columns.
-  -I - Ingnore case on sort and dedup. See '-d', '-s', and '-n'.
+  -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
