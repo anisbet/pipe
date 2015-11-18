@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 ###########################################################################
 #
-# Perl source file for project pipe 
+# Perl source file for project pipe EXPERIMENTAL version.
 # Purpose:
 # Method:
 #
@@ -12,12 +12,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -25,9 +25,9 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Mon May 25 15:12:15 MDT 2015
-# 
-# Rev: 
-# 0.19.02 - November 5, 2015 Fix so average, sum, and count happen after line selection operations.
+#
+# Rev:
+# 0.20.XX - November 10, 2015 Add scripting for adding columns.
 #
 ###########################################################################
 
@@ -37,13 +37,17 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.19.02};
+my $VERSION    = qq{0.20.00};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
+##### Scripting
+my $PIPE              = "./pipe.pl";
+my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
+#####
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
 my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
@@ -83,8 +87,9 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADxLtUW<delimiter>] 
-       [-bBcnotuvwzZ<c0,c1,...,cn>] 
+    usage: cat file | pipe.pl [-ADxLtUW<delimiter>]
+       [-bBcnotuvwzZ<c0,c1,...,cn>]
+       [-kcn:(expr_n[(expr_n-1[(...)])])]
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
@@ -100,10 +105,10 @@ sub usage()
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
-functions work similarly. Stacked functions are operated on in alphabetical 
-order by flag letter, that is, if you elect to order columns and trim columns, 
+functions work similarly. Stacked functions are operated on in alphabetical
+order by flag letter, that is, if you elect to order columns and trim columns,
 the columns are first ordered, then the columns are trimmed, because -o comes
-before -t. The exceptions to this rule are those commands that require the 
+before -t. The exceptions to this rule are those commands that require the
 entire file to be read before operations can proceed (-d dedup, -r random, and
 -s sort). Those operations will be done first then just before output the
 remaining operations are performed.
@@ -116,50 +121,58 @@ All column references are 0 based.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
-                  for a line that was duplicated 4 times on a given key. If 
+                  for a line that was duplicated 4 times on a given key. If
                   -d is not selected, each line of output is numbered sequentially
-                  prior to output. 
+                  prior to output.
  -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
  -B[c0,c1,...cn]: Compare fields and output if columns differ.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
-                  don't count otherwise add 1 to the column tally. 
+                  don't count otherwise add 1 to the column tally.
  -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically.
- -d[c0,c1,...cn]: Dedups file by creating a key from specified column values 
+ -d[c0,c1,...cn]: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc), 
+ -e[c0:[uc|lc|mc|us],...]: Change the case of a value in a column to upper case (uc),
                   lower case (lc), mixed case (mc), or underscore (us).
  -E[c0:[r|?c.r[.e]],...]: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
-                  value the field must have to be replaced by r, and optionally 
+                  value the field must have to be replaced by r, and optionally
                   e=replacement if the condition failed.
                   Example: '111|222|333' '-E'c1:nnn' => '111|nnn|333'
                   '111|222|333' '-E'c1:?222.444'     => '111|444|333'
                   '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
- -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally, 
+ -f[c0:n[.p|?p.q[.r]],...]: Flips an arbitrary but specific character conditionally,
                   where 'n' is the 0-based index of the target character. A '?' means
-                  test the character equals p before changing it to q, and optionally change 
+                  test the character equals p before changing it to q, and optionally change
                   to r if the test fails. Works like an if statement.
-                  Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
-                  '0001' -f'c0:3.B?0.c' => '000c', finally 
+                  Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
+                  '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.  
-                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use 
+ -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
-                  return true if match on column 1, and column 2 not match. 
+                  return true if match on column 1, and column 2 not match.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
+ -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
+                  where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
+                  and the result would be put in field c1, clobbering any value there. To
+                  preserve the results, place it at the end of the expected output with a very
+                  large column number.
+                  '20151110|Andrew' -k"c100:(-f'c0:3?5.6.4'),c0:(-S'c1:0-3')" => 'Andr|20161110'
+                  '20151110' -k"c100:(-Sc0:0-4(-fc0:3?5.6.4)) => '20151110|2016'
+                  '20151110' -k'c0:(-tc0(-pc0:20 ))' => '20151110', pad upto 20 chars left, then trim.
  -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
  -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'.
@@ -167,18 +180,18 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
                   is suppressed if the entered value is greater than lines read on STDIN.
- -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_' 
-                  means suppress, '#' means output character, any other character at that 
+ -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_'
+                  means suppress, '#' means output character, any other character at that
                   position will be inserted.
-                  If the last character is either '_' or '#', then it will be repeated until 
-                  the input line is exhausted. 
+                  If the last character is either '_' or '#', then it will be repeated until
+                  the input line is exhausted.
                   Characters '_', '#' and ',' can be output by escaping them with a back slash.
                   Example data: 1481241, -m"c0:__#" produces '81241'. -m"c0:__#_"
                   produces '8' and suppress the rest of the field.
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '_', ',' or '#'. 
+                  Use '\' to escape either '_', ',' or '#'.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -206,15 +219,16 @@ All column references are 0 based.
                   during the comparison. With -C, non-numeric value tests always fail, that is
                   '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
- -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports 
+ -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
- 
+
 The order of operations is as follows:
   -x - Usage message, then exits.
+  -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
   -u - Encode specified columns into URL-safe strings.
@@ -229,7 +243,6 @@ The order of operations is as follows:
   -S - Sub string column values.
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
-  -o - Order selected columns.
   -t - Trim selected columns.
   -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
@@ -245,13 +258,14 @@ The order of operations is as follows:
   -v - Average numerical values in selected columns.
   -T - Output in table form.
   -K - Output everything as a single column.
+  -o - Order selected columns.
 
 Version: $VERSION
 EOF
 	exit;
 }
 
-# Reads the values supplied on the command line and parses them out into the argument list, 
+# Reads the values supplied on the command line and parses them out into the argument list,
 # and populates the appropriate hash reference of column qualifiers hash-reference.
 # param:  command line string of requested columns.
 # param:  hash reference of column names and qualifiers.
@@ -264,11 +278,11 @@ sub read_requested_qualified_columns( $$ )
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
 	# To accommodate expressions that include a ',' as part of the mask split on non-escaped ','s
-	# we use a negative look behind. 
+	# we use a negative look behind.
 	my @cols = split( m/(?<!\\),/, $line );
 	foreach my $colNum ( @cols )
 	{
-		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
+		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing
 		# '0' as a legitimate column number.
 		if ( $colNum =~ m/[C|c]\d{1,}/ )
 		{
@@ -315,7 +329,7 @@ sub read_requested_columns( $ )
 	my @cols = split( ',', $line );
 	foreach my $colNum ( @cols )
 	{
-		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing 
+		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing
 		# '0' as a legitimate column number.
 		if ( $colNum =~ m/[C|c]\d{1,}/ )
 		{
@@ -408,7 +422,7 @@ sub print_float_summary( $$$ )
 	}
 }
 
-# Counts the non-empty values of specified columns. 
+# Counts the non-empty values of specified columns.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub count( $ )
@@ -424,7 +438,7 @@ sub count( $ )
 	}
 }
 
-# Sums the non-empty values of specified columns. 
+# Sums the non-empty values of specified columns.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub sum( $ )
@@ -440,7 +454,7 @@ sub sum( $ )
 	}
 }
 
-# Computes the maximum and minimum width of all the data in the column. 
+# Computes the maximum and minimum width of all the data in the column.
 # param:  line to pull out columns from.
 # param:  line number.
 # return: string line with requested columns removed.
@@ -484,7 +498,7 @@ sub width( $$)
 	$WIDTHS_COLUMNS->{ @line } = $LINE_NUMBER;
 }
 
-# Average the non-empty values of specified columns. 
+# Average the non-empty values of specified columns.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub average( $ )
@@ -502,7 +516,7 @@ sub average( $ )
 	}
 }
 
-# Removes the white space from of specified columns. 
+# Removes the white space from of specified columns.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub trim_line( $ )
@@ -520,7 +534,7 @@ sub trim_line( $ )
 }
 
 # Normalizes of specified columns, removing white space
-# and changing lower case letters to upper case. 
+# and changing lower case letters to upper case.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub normalize_line( $ )
@@ -537,7 +551,7 @@ sub normalize_line( $ )
 	return join '|', @line;
 }
 
-# Places specified columns in a different order. 
+# Places specified columns in a different order.
 # param:  line to pull out columns from.
 # return: string line with requested columns removed.
 sub order_line( $ )
@@ -564,7 +578,7 @@ sub get_key( $$ )
 	my $wantedColumns = shift;
 	my $key           = "";
 	my @columns = split( '\|', $line );
-	# If the line only has one column that is couldn't be split then return the entire line as 
+	# If the line only has one column that is couldn't be split then return the entire line as
 	# key. Duplicate lines will be removed only if they match entirely.
 	if ( scalar( @columns ) < 2 )
 	{
@@ -715,7 +729,7 @@ sub apply_mask( $$ )
 		}
 	}
 	push @word, @chars if ( @chars and $mask_char eq '#' );
-	return join '', @word; 
+	return join '', @word;
 }
 
 # Outputs masked column data as per specification. See usage().
@@ -776,7 +790,7 @@ sub sub_string( $ )
 	my @newField    = ();
 	my @indexes     = ();
 	printf "SUBS: '%s'.\n", $instruction if ( $opt{'D'} );
-	# We will save all the indexes of characters we need. To do that we need to 
+	# We will save all the indexes of characters we need. To do that we need to
 	# convert '-' to ranges.
 	my @subInstructions = split '\.', $instruction;
 	while ( @subInstructions )
@@ -873,7 +887,7 @@ sub is_match( $ )
 				$matchCount++ if ( $line[ $colIndex ] =~ m/($match_ref->{$colIndex})/ );
 			}
 		}
-	} 
+	}
 	return 1 if ( $matchCount == scalar @MATCH_COLUMNS ); # Count of matches should match count of column match requests.
 	return 0;
 }
@@ -898,7 +912,7 @@ sub is_not_match( $ )
 				return 0 if ( $line[ $colIndex ] =~ m/($not_match_ref->{$colIndex})/ );
 			}
 		}
-	} 
+	}
 	return 1;
 }
 
@@ -1022,7 +1036,7 @@ sub apply_padding( $$ )
 }
 
 # Outputs padded column data as per specification. See usage().
-# Syntax: n.c, where n is an integer (either + for leading, or - for trailing), '.' and character(s) to 
+# Syntax: n.c, where n is an integer (either + for leading, or - for trailing), '.' and character(s) to
 # be used as padding.
 # param:  String of line data - pipe-delimited.
 # return: string with padded formatting.
@@ -1120,7 +1134,7 @@ sub test_condition( $ )
 				}
 			}
 		}
-	} 
+	}
 	return 0;
 }
 
@@ -1187,11 +1201,11 @@ sub modify_case_line( $ )
 	return validate( $original_line, $modified_line );
 }
 
-# Flips Flips an arbitrary but specific character Conditionally, 
+# Flips Flips an arbitrary but specific character Conditionally,
 # where 'n' is the 0-based index of the target character. A '?' means
-# test the character equals p before changing it to q, and optionally change 
+# test the character equals p before changing it to q, and optionally change
 # to r if the test fails. Works like an if statement.
-# Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00', 
+# Example: '0000' -f'c0:2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
 # '0001' -f'c0:3.B?0.c' => '000c'.
 # param:  line from file.
 # return: Modified line.
@@ -1517,67 +1531,111 @@ sub format_radix( $ )
 	return join '|', @newLine;
 }
 
-# This function abstracts all line operations for line by line operations.
-# param:  line from file.
-# return: Modified line.
-sub process_line( $ )
+# Executes a command in the format '(expression)'.
+# param:  input line.
+# param:  expression.
+# return: modified input line.
+# TODO: the first call operates on the entire line but returns only the modified field which is then passed in again as the entire line,
+# so indexes get thrown out of whack.
+sub parse_cmd( $$ )
 {
-	my $line = shift;
-	chomp $line;
-	# This function allows the line by line operations to work with operations
-	# that require the entire file to be read before working (like sort and dedup).
-	# Each operation specified by a different flag.
-	# Grep comes first because it assumes that non-matching lines don't require additional operations.
-	if ( $opt{'g'} and $opt{'G'} )
+	my $line_in     = shift;
+	my $expression  = shift;
+	my @cmd_string  = split '', $expression;
+	my $token       = '';
+	my $token_count = 0;
+	while ( @cmd_string )
 	{
-		return '' if ( ! ( is_match( $line ) and is_not_match( $line ) ) );
+		my $char = shift @cmd_string;
+		if ( $char eq ')' )
+		{
+			push @CMD_STACK, $token if ( $token );
+			$token = '';
+			$token_count--;
+			next;
+		}
+		if ( $char eq '(' )
+		{
+			push @CMD_STACK, $token if ( $token );
+			$token = '';
+			$token_count++;
+			next;
+		}
+		$token .= $char;
 	}
-	elsif ( $opt{'g'} and ! is_match( $line ) )
+	if ( $token_count )
 	{
-		return '';
+		printf STDERR "*** syntax error parse_cmd(): '%s'.\n", $expression;
+		usage();
 	}
-	elsif ( $opt{'G'} and ! is_not_match( $line ) )
+	# Push the last command that was parsed, because there are no parens around the outer command.
+	push @CMD_STACK, $token if ( $token );
+	# Do each of the commands but return only the column value from the computation, that is,
+	# Don't return the entire line, just the part that changed. It will be incorporated into
+	# the final resultant line later by execute_script_line().
+	# We save the field because nested calls must necessarily operate on the same field.
+    # The inner most column is the one used for all the nested commands.
+	my $field = '';
+	while ( @CMD_STACK )
 	{
-		return '';
+		my $cmd = pop @CMD_STACK;
+		printf STDERR "expression='%s'::", $cmd if ( $opt{'D'} );
+		if ( ! $field )
+		{
+            if ( ! $field and $cmd =~ m/(c|C)\d{1,}/ )
+            {
+                $field = $&;
+            }
+            else
+            {
+                printf STDERR "*** syntax error: couldn't find the requested field to edit in expression '%s'\n", $cmd;
+                usage();
+            }
+            printf STDERR "=> echo '%s' | %s %s -o'%s'\n", $line_in, $PIPE, $cmd, $field if ( $opt{'D'} );
+            $line_in = `echo "$line_in" | $PIPE $cmd -o"$field"`;
+            $field = "c0"; # reset the field for all additional nested calls, they all will operate on the first columnn after the initial computation.
+        }
+        else
+        {
+            $cmd =~ s/(c|C)\d{1,}/c0/;
+            printf STDERR "=> echo '%s' | %s %s -o'%s'\n", $line_in, $PIPE, $cmd, $field if ( $opt{'D'} );
+            $line_in = `echo "$line_in" | $PIPE $cmd -o"$field"`;
+            # Stop recursive calls to the script from adding additional end of line chars.
+        }
+		chomp $line_in ;
+		printf STDERR "==> '%s'\n", $line_in if ( $opt{'D'} );
 	}
-	if ( $opt{'C'} and ! test_condition( $line ) )
+	return $line_in;
+}
+
+# Executes script listed in '-k'.
+# param:  line input.
+# return: line modified by scripting instructions.
+# throws: exits on syntax error.
+sub execute_script_line( $ )
+{
+	my $original_line = shift;
+	my @lines         = split '\|', $original_line;
+	my $result_ref    = {};
+	my $index         = 0;
+	# Process the requested fields, save the results.
+	foreach my $key ( keys %$script_ref )
 	{
-		return '';
+        # Increment the index for each additional change to ensure the correct field gets replaced with splice().
+        $result_ref->{ $key } = parse_cmd( $original_line, $script_ref->{ $key } );
+        printf STDERR "--> key '%s' = '%s'\n", $key, $result_ref->{ $key } if ( $opt{'D'} );
+        $key += $index++;
 	}
-	$line = modify_case_line( $line )   if ( $opt{'e'} );
-	$line = replace_line( $line )       if ( $opt{'E'} );
-	$line = flip_char_line( $line )     if ( $opt{'f'} );
-	$line = format_radix( $line )       if ( $opt{'F'} );
-	$line = url_encode_line( $line )    if ( $opt{'u'} );
-	$line = translate_line( $line )     if ( $opt{'l'} );
-	$line = mask_line( $line )          if ( $opt{'m'} );
-	$line = sub_string_line( $line )    if ( $opt{'S'} );
-	$line = normalize_line( $line )     if ( $opt{'n'} );
-	$line = order_line( $line )         if ( $opt{'o'} );
-	$line = trim_line( $line )          if ( $opt{'t'} );
-	$line = pad_line( $line )           if ( $opt{'p'} );
-	# Stop processing lines if the requested column(s) test empty.
-	return '' if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
-	return '' if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
-	return '' if ( $opt{'z'} and is_empty( $line ) );
-	return '' if ( $opt{'Z'} and is_not_empty( $line ) );
-	width( $line, $LINE_NUMBER ) if ( $opt{'w'} );
-	sum( $line )                 if ( $opt{'a'} );
-	count( $line )               if ( $opt{'c'} );
-	average( $line )             if ( $opt{'v'} );
-	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
-	if ( $opt{'P'} )
+	# Put the results back in context.
+	foreach my $key ( keys %$result_ref )
 	{
-		chomp $line;
-		$line .= "|" if ( trim( $line ) !~ m/\|$/ );
+        my $index = $key;
+        # Prevent message of out of range index on array.
+        $index = scalar @lines if ( $key > scalar @lines );
+        splice @lines, $index, 1, $result_ref->{ $key };
 	}
-	# Output line numbering, but if -d selected, output dedup'ed counts instead.
-	if ( $opt{'A'} and ! $opt{'d'} )
-	{
-		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
-	}
-	$line =~ s/\|/\n/g if ( $opt{'K'} );
-	return $line . "\n";
+	my $modified_line = join '|', @lines;
+	return validate( $original_line, $modified_line );
 }
 
 # Dedups the ALL_LINES array using (O)1 space.
@@ -1624,7 +1682,7 @@ sub dedup_list( $ )
 			@tmp = sort { $a cmp $b } keys %{$ddup_ref};
 		}
 	}
-	while ( @tmp ) 
+	while ( @tmp )
 	{
 		my $key = shift @tmp;
 		if ( $opt{ 'A' } )
@@ -1668,7 +1726,7 @@ sub randomize_list()
 	}
 	my @row_selection = keys %$randomHash;
 	my @new_array = ();
-	# Grab the values stored on the ALL_LINES array, but don't splice because 
+	# Grab the values stored on the ALL_LINES array, but don't splice because
 	# that will change the size and indexes will miss.
 	while ( @row_selection )
 	{
@@ -1802,12 +1860,106 @@ sub build_encoding_table()
 	$url_characters->{ord '^'} = '%5E'; $url_characters->{ord '_'} = '%5F';  $url_characters->{ord '`'} = '%60';
 }
 
+# Outputs table header or footer, depending on argument string.
+# param:  String of either 'HEAD' or 'FOOT'.
+# return: <none>
+sub table_output( $ )
+{
+	my $placement = shift;
+	if ( $TABLE_OUTPUT =~ m/HTML/ )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			print "<table>\n  <tbody>\n";
+		}
+		else
+		{
+			print "  </tbody>\n</table>\n";
+		}
+	}
+	if ( $TABLE_OUTPUT =~ m/WIKI/ )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			print "{| class='wikitable'\n";
+		}
+		else
+		{
+			print "|-\n|}\n";
+		}
+	}
+}
+
+# This function abstracts all line operations for line by line operations.
+# param:  line from file.
+# return: Modified line.
+sub process_line( $ )
+{
+	my $line = shift;
+	chomp $line;
+	# This function allows the line by line operations to work with operations
+	# that require the entire file to be read before working (like sort and dedup).
+	# Each operation specified by a different flag.
+	# Grep comes first because it assumes that non-matching lines don't require additional operations.
+	if ( $opt{'g'} and $opt{'G'} )
+	{
+		return '' if ( ! ( is_match( $line ) and is_not_match( $line ) ) );
+	}
+	elsif ( $opt{'g'} and ! is_match( $line ) )
+	{
+		return '';
+	}
+	elsif ( $opt{'G'} and ! is_not_match( $line ) )
+	{
+		return '';
+	}
+	if ( $opt{'C'} and ! test_condition( $line ) )
+	{
+		return '';
+	}
+	$line = execute_script_line( $line )if ( $opt{'k'} );
+	$line = modify_case_line( $line )   if ( $opt{'e'} );
+	$line = replace_line( $line )       if ( $opt{'E'} );
+	$line = flip_char_line( $line )     if ( $opt{'f'} );
+	$line = format_radix( $line )       if ( $opt{'F'} );
+	$line = url_encode_line( $line )    if ( $opt{'u'} );
+	$line = translate_line( $line )     if ( $opt{'l'} );
+	$line = mask_line( $line )          if ( $opt{'m'} );
+	$line = sub_string_line( $line )    if ( $opt{'S'} );
+	$line = normalize_line( $line )     if ( $opt{'n'} );
+	$line = trim_line( $line )          if ( $opt{'t'} );
+	$line = pad_line( $line )           if ( $opt{'p'} );
+	# Stop processing lines if the requested column(s) test empty.
+	return ''                           if ( $opt{'b'} and ! contain_same_value( $line, \@COMPARE_COLUMNS ) );
+	return ''                           if ( $opt{'B'} and   contain_same_value( $line, \@NO_COMPARE_COLUMNS ) );
+	return ''                           if ( $opt{'z'} and is_empty( $line ) );
+	return ''                           if ( $opt{'Z'} and is_not_empty( $line ) );
+	width( $line, $LINE_NUMBER )        if ( $opt{'w'} );
+	sum( $line )                        if ( $opt{'a'} );
+	count( $line )                      if ( $opt{'c'} );
+	average( $line )                    if ( $opt{'v'} );
+	$line = order_line( $line )         if ( $opt{'o'} );
+	$line = prepare_table_data( $line ) if ( $TABLE_OUTPUT );
+	if ( $opt{'P'} )
+	{
+		chomp $line;
+		$line .= "|" if ( trim( $line ) !~ m/\|$/ );
+	}
+	# Output line numbering, but if -d selected, output dedup'ed counts instead.
+	if ( $opt{'A'} and ! $opt{'d'} )
+	{
+		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
+	}
+	$line =~ s/\|/\n/g if ( $opt{'K'} );
+	return $line . "\n";
+}
+
 # Kicks off the setting of various switches.
-# param:  
-# return: 
+# param:
+# return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:IKl:L:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:Ik:Kl:L:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -1824,6 +1976,7 @@ sub init
 	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref ) if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref ) if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref ) if ( $opt{'g'} );
+	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref ) if ( $opt{'k'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref ) if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref ) if ( $opt{'S'} );
 	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref ) if ( $opt{'l'} );
@@ -1846,7 +1999,7 @@ sub init
 		$FULL_READ = 1;
 	}
 	# Output specific lines.
-	if ( $opt{'L'} ) 
+	if ( $opt{'L'} )
 	{
 		# Line requests can look like this '+n', '-n', 'n-m', or 'n'.
 		# Case '+n'
@@ -1942,55 +2095,28 @@ sub init
 	}
 }
 
-# Outputs table header or footer, depending on argument string.
-# param:  String of either 'HEAD' or 'FOOT'.
-# return: <none>
-sub table_output( $ )
-{
-	my $placement = shift;
-	if ( $TABLE_OUTPUT =~ m/HTML/ )
-	{
-		if ( $placement =~ m/HEAD/ )
-		{
-			print "<table>\n  <tbody>\n";
-		}
-		else
-		{
-			print "  </tbody>\n</table>\n";
-		}
-	}
-	if ( $TABLE_OUTPUT =~ m/WIKI/ )
-	{
-		if ( $placement =~ m/HEAD/ )
-		{
-			print "{| class='wikitable'\n";
-		}
-		else
-		{
-			print "|-\n|}\n";
-		}
-	}
-}
-
 init();
 table_output("HEAD") if ( $TABLE_OUTPUT );
 # Only takes input on STDIN. All output is to STDOUT with the exception of errors.
 while (<>)
 {
 	my $line = $_;
-	if ( $opt{'W'} )
-	{
-		$line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
-		# Replace delimiter selection with '|' pipe.
-		$line =~ s/($opt{'W'})/\|/g;
-	}
-	if ( $FULL_READ )
-	{
-		push @ALL_LINES, $line;
-		next;
-	}
 	$LINE_NUMBER++;
-	print process_line( $line ) if ( is_printable_range() );
+	if ( is_printable_range() )
+	{
+        if ( $opt{'W'} )
+        {
+            $line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
+            # Replace delimiter selection with '|' pipe.
+            $line =~ s/($opt{'W'})/\|/g;
+        }
+        if ( $FULL_READ )
+        {
+            push @ALL_LINES, $line;
+            next;
+        }
+        print process_line( $line ) ;
+    }
 }
 
 # Print out all results now we have fully read the entire input file and processed it.
@@ -2035,10 +2161,10 @@ if ( $opt{'w'} )
 	{
 		if ( defined $width_max_ref->{ 'c'.$column } )
 		{
-			printf STDERR " %2s: min: %2d at line %d, max: %2d at line %d, mid: %2.1f\n", 
-			'c'.$column, 
-			$width_min_ref->{ 'c'.$column }, 
-			$width_line_min_ref->{ 'c'.$column }, 
+			printf STDERR " %2s: min: %2d at line %d, max: %2d at line %d, mid: %2.1f\n",
+			'c'.$column,
+			$width_min_ref->{ 'c'.$column },
+			$width_line_min_ref->{ 'c'.$column },
 			$width_max_ref->{ 'c'.$column },
 			$width_line_max_ref->{ 'c'.$column },
 			($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
