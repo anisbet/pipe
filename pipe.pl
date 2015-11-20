@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.20.XX - November 10, 2015 Add scripting for adding columns.
+# 0.20.01 - November 10, 2015 Add scripting for adding columns.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.20.00};
+my $VERSION    = qq{0.20.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -45,7 +45,7 @@ my @ALL_LINES  = ();
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
-my $PIPE              = "./pipe.pl";
+my $PIPE              = "pipe.pl";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
