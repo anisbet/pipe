@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.20.01 - November 10, 2015 Add scripting for adding columns.
+# 0.20.02 - November 21, 2015 Add scripting for adding columns.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.20.01};
+my $VERSION    = qq{0.20.02};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -46,6 +46,7 @@ my @ALL_LINES  = ();
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
 my $PIPE              = "pipe.pl";
+# my $PIPE              = "./p.exp.pl";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
@@ -87,19 +88,19 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADxLtUW<delimiter>]
+    usage: cat file | pipe.pl [-ADHLtUW<delimiter>x]
        [-bBcnotuvwzZ<c0,c1,...,cn>]
-       [-kcn:(expr_n[(expr_n-1[(...)])])]
+       [-C<cn:[gt|lt|eq|ge|le]exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
        [-F[c0:[x|b|d],...]]
+       [-gG<cn:regex,...>]
+       [-kcn:(expr_n[(expr_n-1[(...)])])]
        [-l[c0:n.p,...]]
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
-       [-gG<cn:regex,...>]
-       [-C<cn:[gt|lt|eq|ge|le]exp,...>]
        [-S<cn:[range],...>]
        [-T<HTML|WIKI>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
@@ -164,6 +165,7 @@ All column references are 0 based.
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match.
+ -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
@@ -259,6 +261,7 @@ The order of operations is as follows:
   -T - Output in table form.
   -K - Output everything as a single column.
   -o - Order selected columns.
+  -H - Suppress new line on output.
 
 Version: $VERSION
 EOF
@@ -946,7 +949,7 @@ sub is_not_empty( $ )
 		printf STDERR "'%s', ", $line[ $colIndex ] if ( $opt{'D'} );
 		return 0 if ( trim( $line[ $colIndex ] ) =~ m/^$/ );
 	}
-	# printf STDERR "\n" if ( $opt{'D'} );
+	printf STDERR "\n" if ( $opt{'D'} );
 	return 1;
 }
 
@@ -1951,6 +1954,7 @@ sub process_line( $ )
 		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
 	}
 	$line =~ s/\|/\n/g if ( $opt{'K'} );
+	return $line if ( $opt{'H'} );
 	return $line . "\n";
 }
 
@@ -1959,7 +1963,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:Ik:Kl:L:Nn:m:o:p:PRr:s:S:t:T:Uu:v:w:W:xz:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:HIk:Kl:L:m:Nn:o:p:Pr:Rs:S:t:T:Uu:v:w:W:xz:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
@@ -2115,7 +2119,7 @@ while (<>)
             push @ALL_LINES, $line;
             next;
         }
-        print process_line( $line ) ;
+        print process_line( $line );
     }
 }
 
