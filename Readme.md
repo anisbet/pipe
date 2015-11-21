@@ -85,6 +85,7 @@ Complete list of flags
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match.
+ -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
@@ -169,7 +170,6 @@ The order of operations is as follows:
   -S - Sub string column values.
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
-  -o - Order selected columns.
   -t - Trim selected columns.
   -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
@@ -185,6 +185,8 @@ The order of operations is as follows:
   -v - Average numerical values in selected columns.
   -T - Output in table form.
   -K - Output everything as a single column.
+  -o - Order selected columns.
+  -H - Suppress new line on output.
 ```
 Ordering, sorting, and splitting on non-pipe character
 ------------------------------------------------------
@@ -886,3 +888,22 @@ echo 'abcdefg|12345678|xyz|987' | pipe.pl -k"c0:-Sc1:2-4,c1:-Sc0:0-2,c2:-Sc3:0-9
 34|ab|987|zyx
 ```
 The examples use ```-S```, but any pipe switch can be used, although some switches make no sense.
+
+Suppress new line on output
+---------------------------
+You can make all your output appear on one line with '-H'
+```
+cat p.lst
+1|2|3
+1|2|4|
+1|2|4|
+1|2|3
+cat p.lst | pipe.pl -H
+1|2|31|2|4|1|2|4|1|2|3
+```
+And with -P you can ensure that all fields are separated with a single pipe '|'.
+```
+cat p.lst | pipe.pl -H -P
+1|2|3|1|2|4|1|2|4|1|2|3|
+```
+
