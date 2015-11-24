@@ -78,13 +78,14 @@ Complete list of flags
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
-                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
+                  Example data: 1481241, -g"c0:241  produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match.
+ -h             : Change delimiter from the default '|'.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
@@ -113,7 +114,7 @@ Complete list of flags
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '_', ',' or '#'.
+                  Use '' to escape either '_', ',' or '#'.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -122,8 +123,8 @@ Complete list of flags
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
- -P             : Output a trailing pipe before new line on output, if one there isn't 1 already.
-                  Places a pipe between counts (-A on dedup) and the rest of the row.
+ -P             : Output a trailing delimiter before new line on output (default '|'). If one there
+                  isn't 1 already. Places a delimiter between counts (-A on dedup) and the rest of the row.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -141,9 +142,10 @@ Complete list of flags
                   during the comparison. With -C, non-numeric value tests always fail, that is
                   '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
  -v[c0,c1,...cn]: Average over non-empty values in specified columns.
+ -V             : Validate that the output has the same number of columns as the input.
  -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
  -x             : This (help) message.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
@@ -184,9 +186,12 @@ The order of operations is as follows:
   -c - Count numeric values in specified columns.
   -v - Average numerical values in selected columns.
   -T - Output in table form.
+  -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
   -o - Order selected columns.
+  -P - Add additional delimiter if required.
   -H - Suppress new line on output.
+  -h - Replace default delimiter.
 ```
 Ordering, sorting, and splitting on non-pipe character
 ------------------------------------------------------
@@ -905,5 +910,45 @@ And with -P you can ensure that all fields are separated with a single pipe '|'.
 ```
 cat p.lst | pipe.pl -H -P
 1|2|3|1|2|4|1|2|4|1|2|3|
+```
+
+Change output delimiter with -h
+-------------------------------
+Long requested; here now. 
+```
+cat p.lst
+1|2|3
+1|2|4|
+1|2|4|
+1|2|3
+
+cat p.lst | ./p.exp.pl -d'c2' -A  -h'^'
+   2 1^2^3
+   2 1^2^4
+
+cat p.lst | ./p.exp.pl -d'c2' -A -P -h'^'
+2^1^2^3^
+2^1^2^4^
+```
+-W and -h work independantly.
+```
+cat s.lst
+E201411051046470005R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815538^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
+
+cat s.lst | ./p.exp.pl -W'\^' -h'#'
+E201411051046470005R #S01JZFFBIBLIOCOMM#FcNONE#FEEPLCPL#UO21221019966206#Uf3250#NQ31221106815538#HB11/05/2015#HKTITLE#HOEPLCPL##O00108
+``` 
+
+Ensure output and input have matching delimiter counts
+------------------------------------------------------
+Some functions produce undesirable results if the trailing columns are empty.
+```
+echo '123|||' | pipe.pl -t'c1'
+123
+```
+This is a case when to use -V. It will ensure you get the same number of fields back as were sent in.
+```
+echo '123|||' | pipe.pl -t'c1' -V
+123|||
 ```
 
