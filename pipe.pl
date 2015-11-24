@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.21.00 - November 21, 2015 Refactor line splitting and rejoining. Added -h<delimiter>.
+# 0.21.00_a - November 24, 2015 changed self-reference -k.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.21.00};
+my $VERSION    = qq{0.21.00_a};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $FULL_READ  = 0;
 my @ALL_LINES  = ();
@@ -45,8 +45,8 @@ my @ALL_LINES  = ();
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
-# my $PIPE              = "pipe.pl";
-my $PIPE              = "./p.exp.pl";
+my $PIPE              = "pipe.pl";
+# my $PIPE              = "./p.exp.pl";
 my $DELIMITER         = '|';
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
