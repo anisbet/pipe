@@ -1,6 +1,6 @@
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number of non-empty values in the specified columns. Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). Those operations will be done first then just before output the remaining operations are performed.
 Example:
-cat file.lst | pipe.pl -c“c0”
+cat file.lst | pipe.pl -c'c0'
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 Things pipe.pl can do
 ---------------------
@@ -29,11 +29,11 @@ Things pipe.pl can do
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
-cat file | pipe.pl -o“c1,c0” -t“c1”
+cat file | pipe.pl -o'c1,c0' -t'c1'
 ```
 because -o will first order the row, so the value you want trimmed is now c1. If that is too radical to contemplate then:
 ```
-cat file | pipe.pl -t“c0” | pipe.pl -o“c1,c0”
+cat file | pipe.pl -t'c0' | pipe.pl -o'c1,c0'
 ```
 
 Complete list of flags
@@ -147,6 +147,10 @@ Complete list of flags
                   the minimum and maximum number of columns by line.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
  -x             : This (help) message.
+ -X[c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
+                  start outputting lines, or output '-Y' matches if selected. See '-Y'.
+ -Y[c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
+                  of '-X' (required). See '-X'.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 ```
@@ -157,6 +161,8 @@ Order of operations
 The order of operations is as follows:
 ```
   -x - Usage message, then exits.
+  -X - Grep values in specified columns, start output, or start searches for -Y values.
+  -Y - Grep values in specified columns once greps with -X succeeds.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-D' is selected.
@@ -213,7 +219,7 @@ Catkey 1478591 has 207 T024's
 For all records we are only interested in field 2 (index 1) and field 4 (index 3). We want a count of lines in the file and a summation of index 3, but we don't need the other fields.
 
 ```
-cat file | pipe.pl -a“c3” -c“c0” -o“c1,c3” -s“c0” -W" "
+cat file | pipe.pl -a'c3' -c'c0' -o'c1,c3' -s'c0' -W" "
 1456824|114
 1458347|136
 1458804|284
@@ -277,7 +283,7 @@ Catkey|1481241|has|134|T024's
  c3:    5641
 == average
  c3:  181.97
-cat t.lst | pipe.pl -W' ' -G'c3:^1..' -c“c0”
+cat t.lst | pipe.pl -W' ' -G'c3:^1..' -c'c0'
 Catkey|1458804|has|284|T024's
 Catkey|1465466|has|206|T024's
 Catkey|1474423|has|301|T024's
@@ -287,14 +293,14 @@ Catkey|1478687|has|624|T024's
 Catkey|1481038|has|246|T024's
 == count
 c0:       7
-cat t.lst | pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c“c0”
+cat t.lst | pipe.pl -W' ' -g'c1:^148' -G'c3:2.6' -c'c0'
 Catkey|1480485|has|168|T024's
 Catkey|1481241|has|134|T024's
 == count
  c0:       2
 ```
 ```
-cat t.lst | pipe.pl -W' ' -g“c3:^20.$”  -c“c0”
+cat t.lst | pipe.pl -W' ' -g'c3:^20.$'  -c'c0'
 Catkey|1465466|has|206|T024's
 Catkey|1478591|has|207|T024's
 == count
@@ -305,21 +311,21 @@ Using masks
 Masks work using two special characters '\#' to print a character, and '\_' to suppress a character. Any other character is output as-is, in order, until both the mask and the input string are exhausted. The special characters can also be output as literals if they are escaped with a back slash '\\'.
 If the last character of the mask is a special character '\#' or '\_', the default behavior is to output, or suppress, the rest of the contents of the field.
 ```
-echo “abcd” | pipe.pl -m“c0:#”
+echo 'abcd' | pipe.pl -m'c0:#'
 abcd
-echo “abcd” | pipe.pl -m“c0:#_”
+echo 'abcd' | pipe.pl -m'c0:#_'
 a
-echo “abcd” | pipe.pl -m“c0:#_#”
+echo 'abcd' | pipe.pl -m'c0:#_#'
 acd
-echo “abcd” | pipe.pl -m“c0:/foo/bar/#\_”
+echo 'abcd' | pipe.pl -m'c0:/foo/bar/#\_'
 /foo/bar/a_
-echo “abcd” | pipe.pl -m“c0:/foo/bar/________________.List”
+echo 'abcd' | pipe.pl -m'c0:/foo/bar/________________.List'
 /foo/bar/.List
-echo “abcd” | pipe.pl -m“c0:/foo/bar/\_\_\_\_\_\_.List”
+echo 'abcd' | pipe.pl -m'c0:/foo/bar/\_\_\_\_\_\_.List'
 /foo/bar/______.List
-echo “abcd” | pipe.pl -m“c0:/foo/bar/#\#”
+echo 'abcd' | pipe.pl -m'c0:/foo/bar/#\#'
 /foo/bar/a#
-echo “Balzac Billy, 21221012345678” | pipe.pl -W',' -m'c0:####_...,c1:___________#'
+echo 'Balzac Billy, 21221012345678' | pipe.pl -W',' -m'c0:####_...,c1:___________#'
 Balz...|5678
 ```
 Reading the schedule of printed reports (printlist) is much easier with pipe than rptstat.pl.
@@ -347,7 +353,7 @@ E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^
 
 Output the user IDs and item IDs, the date without '-' and the last 3 characters of the library code.
 ```
-bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o“c3,c4,c6,c7” -m“c3:_____###,c4:__#,c6:__#,c7:__##_##_####”
+bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o'c3,c4,c6,c7' -m'c3:_____###,c4:__#,c6:__#,c7:__##_##_####'
 CPL|21221019966206|31221106815538|11052015
 CPL|21221019966206|31221106815504|11052015
 CPL|21221019966206|31221106815512|11052015
@@ -362,7 +368,7 @@ WMC|21221019655684|31221106815504|11172015
 
 Want to order it by item ID?
 ```
-bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o“c3,c4,c6,c7” -m“c3:_____###,c4:__#,c6:__#,c7:__##_##_####” -s“c2”
+bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o'c3,c4,c6,c7' -m'c3:_____###,c4:__#,c6:__#,c7:__##_##_####' -s'c2'
 LON|21221022260092|31221106815496|11122015
 CPL|21221019966206|31221106815504|11052015
 LON|21221022260092|31221106815504|11122015
@@ -379,7 +385,7 @@ Output as tables
 ----------------
 Pipe supports currently supports output as HTML or MediaWiki table format.
 ```
-bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o“c3,c4,c6,c7” -m“c3:_____###,c4:__#,c6:__#,c7:__##_##_####” -s“c2” -T“HTML”
+bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o'c3,c4,c6,c7' -m'c3:_____###,c4:__#,c6:__#,c7:__##_##_####' -s'c2' -T'HTML'
 <table>
   <tbody>
   <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
@@ -407,7 +413,7 @@ E201411081238191637R ^S02JZFFBIBLIOCOMM^FcNONE^FEEPLRIV^UO21221014186727^Uf8451^
 
 Try
 ```
-bash-3.2$  cat s.lst | pipe.pl -W"\^" -o“c0,c3” -m“c0:_####/##/## ##:##:##_,c3:_____###” -T“HTML”
+bash-3.2$  cat s.lst | pipe.pl -W"\^" -o'c0,c3' -m'c0:_####/##/## ##:##:##_,c3:_____###' -T'HTML'
 <table>
   <tbody>
   <tr><td>2014/11/05 10:46:47</td><td>CPL</td></tr>
@@ -462,7 +468,7 @@ ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])
 To add a path:
 
 ```
-ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])' -o'c8' -m “c8:/s/sirsi/Unicorn/Hist/#”
+ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])' -o'c8' -m 'c8:/s/sirsi/Unicorn/Hist/#'
 /s/sirsi/Unicorn/Hist/201406.hist.Z
 /s/sirsi/Unicorn/Hist/201407.hist.Z
 /s/sirsi/Unicorn/Hist/201408.hist.Z
@@ -537,7 +543,7 @@ Another example
 Encode string in URL safe characters
 ------------------------------------
 ```
-echo “Hello World!” | pipe.pl -u'c0'
+echo 'Hello World!' | pipe.pl -u'c0'
 Hello%20World%21
 ```
 
@@ -950,5 +956,36 @@ This is a case when to use -V. It will ensure you get the same number of fields 
 ```
 echo '123|||' | pipe.pl -t'c1' -V
 123|||
+```
+
+Look ahead searches
+-------------------
+Sometimes you may want to find a value in data, then once found, output likes that match a different set of criteria.
+```
+cat x.lst
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+Search for '5' in column 0, then start outputting lines.
+```
+cat x.lst | pipe.pl -X'c0:5'
+5
+6
+7
+8
+9
+```
+Search for '2' in column 0, then output any line where column 0 matches '6'.
+```
+cat x.lst | pipe.pl -X'c0:2+' -Y'c0:6' 
+2
+6
 ```
 
