@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.01 - December 08, 2015 bug fix for -L -A output of line numbers.
+# 0.23.03 - December 08, 2015 Added fast forward out of file read if possible.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.01};
+my $VERSION    = qq{0.23.03};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -45,6 +45,7 @@ $LINE_RANGES->{'1'} = $MAX_LINE;
 my $READ_FULL   = 0; # Set true to read the entire file before output as with -L'-n'.
 my $KEEP_LINES  = 10; # Number of lines to keep in buffer if -L'-n' is used.
 my @LINE_BUFF   = (); # Buffer of last 'n' lines used with -L'-n'.
+my $FAST_FORWARD= 0;  # 0 means keep reading 1 means stop reading input.
 my @ALL_LINES   = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
@@ -1876,9 +1877,11 @@ sub is_printable_range( $$ )
 {
 	# The key is the start range the value the end of the range.
 	my $line_num = shift;
+	my $max_line_so_far = 0;
 	my $ret_value= 0;
 	foreach my $key ( keys %$LINE_RANGES )
 	{
+		$max_line_so_far = $LINE_RANGES->{ $key } if ( $max_line_so_far <= $LINE_RANGES->{ $key } );
 		# are we talking about the end of the file? If so the the key will be negative and full read set true.
 		if ( $READ_FULL and $key < 0 )
 		{
@@ -1892,6 +1895,7 @@ sub is_printable_range( $$ )
 			$ret_value = 1;
 		}
 	}
+	$FAST_FORWARD = 1 if ( $line_num >= $max_line_so_far );
 	return $ret_value;
 }
 
@@ -2177,13 +2181,9 @@ while (<>)
 		# remove leading trailing white space to avoid initial empty pipe fields.
 		# Also gracefully handles Windows' EOL handling.
 		$line = trim( $line ); 
-		if ( $opt{'W'} )
-		{
-			# Replace delimiter selection with '|' pipe.
-			$line =~ s/($opt{'W'})/\|/g;
-		}
 		push @ALL_LINES, $line;
 	}
+	last if ( $FAST_FORWARD );
 }
 push @ALL_LINES, @LINE_BUFF;
 # Print out all results now we have fully read the entire input file and processed it.
@@ -2193,6 +2193,11 @@ while ( @ALL_LINES )
 {
 	$LINE_NUMBER++;
 	my $line = shift @ALL_LINES;
+	if ( $opt{'W'} )
+	{
+		# Replace delimiter selection with '|' pipe.
+		$line =~ s/($opt{'W'})/\|/g;
+	}
 	print process_line( $line );
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
