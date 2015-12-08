@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.22.00 - November 26, 2015 look forward searches.
+# 0.23.00 - December 06, 2015 bug fix for -L.
 #
 ###########################################################################
 
@@ -37,10 +37,15 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.22.00};
+my $VERSION    = qq{0.23.00};
 # Flag means that the entire file must be read for an operation like sort to work.
-my $FULL_READ  = 0;
-my @ALL_LINES  = ();
+my $LINE_RANGES = {};
+my $MAX_LINE    = 10000000;
+$LINE_RANGES->{'1'} = $MAX_LINE;
+my $READ_FULL   = 0; # Set true to read the entire file before output as with -L'-n'.
+my $KEEP_LINES  = 10; # Number of lines to keep in buffer if -L'-n' is used.
+my @LINE_BUFF   = (); # Buffer of last 'n' lines used with -L'-n'.
+my @ALL_LINES   = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
@@ -187,8 +192,8 @@ All column references are 0 based.
                   produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
-                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
-                  is suppressed if the entered value is greater than lines read on STDIN.
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
+                  requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
  -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
@@ -335,6 +340,71 @@ sub read_requested_qualified_columns( $$ )
 	}
 	print STDERR "columns requested: '@list'\n" if ( $opt{'D'} );
 	return @list;
+}
+
+# Parses the ranges of lines requested by the user.
+# parse the user's instructions and print out the lines selected.
+# n = exactly the 'n'th line.
+# n- = print from line 'n' on.
+# +n = print the first 'n' lines.
+# -n = print the last 'n' lines.
+# n-m = exactly the range of lines from n to m.
+# n,m-p = print n and range n-p (optional).
+# param:  String that lists all of the ranges.
+# return: <none>.
+sub parse_line_ranges( $ )
+{
+	my $range_str     = shift;
+	$range_str =~ s/\s+//g;
+	my @r = split ',', $range_str;
+	my $ranges        = \@r;
+	while ( @{ $ranges } )
+	{
+		my $range = shift @{ $ranges };
+		# Clear the default of all lines, or else all lines will be considered.
+		# Parse the ranges from the input strings.
+		# Set the start (key) and end (value) to a specific value.
+		if ( $range =~ m/^\-\d+$/ ) # parses from line 'n' to the end of the file. 
+		{
+			$READ_FULL = 1; # Set true to read the entire file before output as with -L'-n'.
+			# get rid of the previous rule that outputs all lines.
+			delete $LINE_RANGES->{ '1' } if ( exists $LINE_RANGES->{ '1' } and $LINE_RANGES->{ '1' } == $MAX_LINE );
+			my $num = substr $range, 1;
+			$LINE_RANGES->{ (0 -$num) } = $MAX_LINE;
+			$KEEP_LINES  = $num; # Number of lines to keep in buffer if -L'-n' is used.
+		}
+		elsif ( $range =~ m/^\+\d+$/ ) # parses from beginning of file upto the given range. 
+		{
+			# The rule for line 1 is automatically over written.
+			my $num = substr $range, 1;
+			$LINE_RANGES->{ '1' } = $num;
+		}
+		elsif ( $range =~ m/^\d+\-\d+$/ ) # User has selected a range of lines from n-m.
+		{
+			# Remove the default rule for the entire range.
+			delete $LINE_RANGES->{ '1' } if ( exists $LINE_RANGES->{ '1' } and $LINE_RANGES->{ '1' } == $MAX_LINE );
+			my @v = split '-', $range;
+			$LINE_RANGES->{ $v[ 0 ] } = $v[ 1 ];
+		}
+		elsif ( $range =~ m/^\d+\-$/ ) # Select all lines from 'n' on.
+		{
+			# Remove the default rule for the entire range.
+			delete $LINE_RANGES->{ '1' } if ( exists $LINE_RANGES->{ '1' } and $LINE_RANGES->{ '1' } == $MAX_LINE );
+			my $num = substr $range, 0, length( $range ) -1;
+			$LINE_RANGES->{ $num } = $MAX_LINE;
+		}
+		elsif ( $range =~ m/^\d+$/ ) # Select a specific line number.
+		{
+			# Remove the default rule for the entire range.
+			delete $LINE_RANGES->{ '1' } if ( exists $LINE_RANGES->{ '1' } and $LINE_RANGES->{ '1' } == $MAX_LINE );
+			$LINE_RANGES->{ $range } = $range;
+		}
+		else
+		{
+			printf STDERR "** pipe syntax error in line number range definition: '%s'\n", $range_str;
+			exit 1;
+		}
+	}
 }
 
 # Reads the values supplied on the command line and parses them out into the argument list.
@@ -1796,24 +1866,31 @@ sub finalize_full_read_functions()
 	}
 }
 
-# Tests if a line number is to be output or not.
-# param:  <none>
-# return: 0 if the line is to be output and 1 otherwise.
-sub is_printable_range()
+# Tests if this is a line that the user requested to be output.
+# param:  integer line number.
+# param:  Line read in.
+# return: 1 if this line is requested by the user and 0 otherwise.
+sub is_printable_range( $$ )
 {
-	if ( $opt{'L'} )
+	# The key is the start range the value the end of the range.
+	my $line_num = shift;
+	my $ret_value= 0;
+	foreach my $key ( keys %$LINE_RANGES )
 	{
-		if ( $LINE_NUMBER <= $END_OUTPUT )
+		# are we talking about the end of the file? If so the the key will be negative and full read set true.
+		if ( $READ_FULL and $key < 0 )
 		{
-			if ( $LINE_NUMBER >= $START_OUTPUT )
-			{
-				return 1;
-			}
-			return 0;
+			push @LINE_BUFF, shift;
+			shift @LINE_BUFF if ( scalar @LINE_BUFF > $KEEP_LINES );
+			next;
 		}
-		return 0;
+		# printf STDERR "testing if %d is >= %d and <= %d\n", $line_num, $key, $LINE_RANGES->{ $key };
+		if ( $line_num >= $key and $line_num <= $LINE_RANGES->{ $key } )
+		{
+			$ret_value = 1;
+		}
 	}
-	return 1;
+	return $ret_value;
 }
 
 # Takes a string and encodes it with URL-safe characters.
@@ -2035,81 +2112,28 @@ sub init
 	if ( $opt{'v'} )
 	{
 		@AVG_COLUMNS   = read_requested_columns( $opt{'v'} ) if ( $opt{'v'} );
-		$FULL_READ = 1;
+		$READ_FULL = 1;
 	}
 	if ( $opt{'d'} )
 	{
 		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'} );
-		$FULL_READ = 1;
+		$READ_FULL = 1;
 	}
 	# Output specific lines.
 	if ( $opt{'L'} )
 	{
-		# Line requests can look like this '+n', '-n', 'n-m', or 'n'.
-		# Case '+n'
-		if ( $opt{'L'} =~ m/^\+\d{1,}$/ )
+		parse_line_ranges( $opt{'L'} );
+		if ( $opt{'D'} )
 		{
-			$END_OUTPUT = $opt{'L'};
-			$END_OUTPUT =~ s/^\+//; # equiv of head n lines
-		}
-		# Case 'n'
-		elsif ( $opt{'L'} =~ m/^\d{1,}$/ )
-		{
-			$START_OUTPUT = $opt{'L'};
-			$END_OUTPUT   = $opt{'L'};
-		}
-		# Case '-n'
-		elsif ( $opt{'L'} =~ m/^\-\d{1,}$/ )
-		{
-			$START_OUTPUT = $opt{'L'};
-			$START_OUTPUT =~ s/^\-//; # equiv of tail n lines
-			$FULL_READ    = 1;        # we need to compute when to start output.
-			$TAIL_OUTPUT  = 1;        # Reading from the end of the input.
-		}
-		# Case 'n-m' and 'n-'
-		elsif ( $opt{'L'} =~ m/\-/ )
-		{
-			# The easiest is if it is a range because we can just split on the dash and set start and end.
-			my @testRange = split '-', $opt{'L'};
-			if ( defined $testRange[1] )
+			foreach ( my ( $start, $end ) = each %$LINE_RANGES )
 			{
-				if ( $testRange[1] =~ m/\d{1,}/ )
-				{
-					$END_OUTPUT = $testRange[1];
-				}
-				else
-				{
-					printf STDERR "** error, invalid range value: '%s'\n", $opt{'L'};
-				}
+				printf STDERR "line selection range %d to %d\n", $start, $end;
 			}
-			else
-			{
-				$END_OUTPUT = 100000000;
-			}
-			if ( defined $testRange[0] and $testRange[0] =~ m/\d{1,}/ )
-			{
-				$START_OUTPUT = $testRange[0];
-				$TAIL_OUTPUT = 1 if ( $END_OUTPUT == 0 );
-			}
-			$FULL_READ = 1 if ( $END_OUTPUT == 0 ); # we are going to have find just how many lines there are for 'n-'
 		}
-		else
-		{
-			if ( ! exists $opt{'L'} )
-			{
-				printf STDERR "** error, no range supplied with '-L'\n";
-			}
-			else
-			{
-				printf STDERR "** error, invalid range value: '%s'\n", $opt{'L'};
-			}
-			usage();
-		}
-		print STDERR "\$START_OUTPUT=$START_OUTPUT, \$END_OUTPUT=$END_OUTPUT\n" if ( $opt{'D'} );
 	}
 	if ( $opt{'r'} )
 	{
-		$FULL_READ = 1;
+		$READ_FULL = 1;
 		if ( ! is_between_zero_and_hundred( $opt{'r'} ) )
 		{
 			print STDERR "** error, invalid random percentage selection.\n";
@@ -2119,12 +2143,12 @@ sub init
 	if ( $opt{'s'} )
 	{
 		@SORT_COLUMNS  = read_requested_columns( $opt{'s'} );
-		$FULL_READ = 1;
+		$READ_FULL = 1;
 	}
 	if ( $opt{'w'} )
 	{
 		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'} );
-		$FULL_READ = 1;
+		$READ_FULL = 1;
 	}
 	if ( $opt{'T'} )
 	{
@@ -2146,37 +2170,26 @@ while (<>)
 {
 	my $line = $_;
 	$LINE_NUMBER++;
-	if ( is_printable_range() )
+	if ( is_printable_range( $LINE_NUMBER, $line ) )
 	{
+		# remove leading trailing white space to avoid initial empty pipe fields.
+		# Also gracefully handles Windows' EOL handling.
+		$line = trim( $line ); 
 		if ( $opt{'W'} )
 		{
-			$line = trim( $line ); # remove leading trailing white space to avoid initial empty pipe fields.
 			# Replace delimiter selection with '|' pipe.
 			$line =~ s/($opt{'W'})/\|/g;
 		}
-		if ( $FULL_READ )
-		{
-			push @ALL_LINES, $line;
-			next;
-		}
-		print process_line( $line );
+		push @ALL_LINES, $line;
 	}
 }
-
+push @ALL_LINES, @LINE_BUFF;
 # Print out all results now we have fully read the entire input file and processed it.
-if ( $FULL_READ )
+finalize_full_read_functions() if ( $READ_FULL );
+while ( @ALL_LINES )
 {
-	finalize_full_read_functions();
-	# Did the user wanted the last lines but we didn't know how many lines there are until now?
-	$END_OUTPUT = scalar @ALL_LINES if ( $END_OUTPUT == 0 );
-	# if the input is 5 lines long, we want the last 2, we need 5 - 2 + 1
-	$START_OUTPUT = scalar @ALL_LINES - $START_OUTPUT + 1 if ( $TAIL_OUTPUT == 1 );
-	while ( @ALL_LINES )
-	{
-		$LINE_NUMBER++;
-		my $line = shift @ALL_LINES;
-		print process_line( $line ) if ( is_printable_range() );
-	}
+	my $line = shift @ALL_LINES;
+	print process_line( $line );
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.

@@ -101,8 +101,8 @@ Complete list of flags
                   produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
-                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Line output
-                  is suppressed if the entered value is greater than lines read on STDIN.
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
+                  requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
  -m[c0:*[_|#]*] : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
@@ -654,6 +654,10 @@ cat t1.lst | pipe.pl -L'17-'
 18
 19
 20
+```
+Combinations of lines can be specified as follows:
+```
+cat one_to_one_hundred.lst | pipe.pl -L'+3,13,27, 55-77, -5'
 ```
 
 Conditional test columns:
