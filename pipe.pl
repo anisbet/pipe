@@ -5,7 +5,7 @@
 # Purpose:
 # Method:
 #
-# Pipe performs handy functions on pipe delimited files.
+# Pipe performs handy operations on pipe delimited files.
 #    Copyright (C) 2015  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.00 - December 06, 2015 bug fix for -L.
+# 0.23.01 - December 08, 2015 bug fix for -L -A output of line numbers.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.00};
+my $VERSION    = qq{0.23.01};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -134,8 +134,10 @@ All column references are 0 based.
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
                   for a line that was duplicated 4 times on a given key. If
-                  -d is not selected, each line of output is numbered sequentially
-                  prior to output.
+                  -d is not selected, line numbers of successfully matched lines
+                  are output. If the last 10 lines of a file are selected, the output
+                  are numbered from 1 to 10 but if other match functions like -g -G -X or -Y
+                  are used, the successful matched line is reported.
  -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
  -B[c0,c1,...cn]: Compare fields and output if columns differ.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
@@ -2186,8 +2188,10 @@ while (<>)
 push @ALL_LINES, @LINE_BUFF;
 # Print out all results now we have fully read the entire input file and processed it.
 finalize_full_read_functions() if ( $READ_FULL );
+$LINE_NUMBER = 0;
 while ( @ALL_LINES )
 {
+	$LINE_NUMBER++;
 	my $line = shift @ALL_LINES;
 	print process_line( $line );
 }

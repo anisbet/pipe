@@ -43,8 +43,10 @@ Complete list of flags
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
                   for a line that was duplicated 4 times on a given key. If
-                  -d is not selected, each line of output is numbered sequentially
-                  prior to output.
+                  -d is not selected, line numbers of successfully matched lines
+                  are output. If the last 10 lines of a file are selected, the output
+                  are numbered from 1 to 10 but if other match functions like -g -G -X or -Y
+                  are used, the successful matched line is reported.
  -b[c0,c1,...cn]: Compare fields and output if each is equal to one-another.
  -B[c0,c1,...cn]: Compare fields and output if columns differ.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
@@ -659,7 +661,9 @@ Combinations of lines can be specified as follows:
 ```
 cat one_to_one_hundred.lst | pipe.pl -L'+3,13,27, 55-77, -5'
 ```
-
+A note about line numbering. -L take operator has precedence over other operations, so it you select the last 
+10 lines of a file line numbering on output starts at 1, not the line from the incoming file. After that if you 
+further select with -g, -G, -X, and or -Y, the successful match will print the line number from the -L selection.
 Conditional test columns:
 -------------------------
 ```
