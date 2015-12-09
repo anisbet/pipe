@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.03 - December 08, 2015 Added fast forward out of file read if possible.
+# 0.23.04 - December 08, 2015 Fix for Wiki output.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.03};
+my $VERSION    = qq{0.23.04};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -795,6 +795,7 @@ sub prepare_table_data( $ )
 	}
 	elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
 	{
+		push @newLine, "\n| ";
 		foreach my $value ( @{ $line } )
 		{
 			push @newLine, $value;
@@ -802,7 +803,7 @@ sub prepare_table_data( $ )
 		}
 		# remove the last ' || '.
 		pop @newLine;
-		push @newLine, "|-\n| ";
+		push @newLine, "\n|-";
 	}
 	@{ $line } = ();
 	foreach my $v ( @newLine )
