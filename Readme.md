@@ -80,14 +80,14 @@ Complete list of flags
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
-                  Example data: 1481241, -g"c0:241  produces '1481241'. Use
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match.
- -h             : Change delimiter from the default '|'.
+ -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
@@ -98,7 +98,8 @@ Complete list of flags
                   '20151110|Andrew' -k"c100:(-f'c0:3?5.6.4'),c0:(-S'c1:0-3')" => 'Andr|20161110'
                   '20151110' -k"c100:(-Sc0:0-4(-fc0:3?5.6.4)) => '20151110|2016'
                   '20151110' -k'c0:(-tc0(-pc0:20 ))' => '20151110', pad upto 20 chars left, then trim.
- -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
+ -K             : Use line breaks instead of the current delimiter between columns (default '|').
+                  Turns all columns into rows.
  -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
@@ -116,7 +117,7 @@ Complete list of flags
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '' to escape either '_', ',' or '#'.
+                  Use '\' to escape either '_', ',' or '#'.
  -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -125,8 +126,8 @@ Complete list of flags
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
- -P             : Output a trailing delimiter before new line on output (default '|'). If one there
-                  isn't 1 already. Places a delimiter between counts (-A on dedup) and the rest of the row.
+ -P             : Ensures a tailing delimiter is output at the end of all lines.
+                  The default delimiter of '|' can be changed with -h.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -147,7 +148,7 @@ Complete list of flags
  -V             : Validate that the output has the same number of columns as the input.
  -w[c0,c1,...cn]: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
+ -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -X[c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.

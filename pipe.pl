@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.04 - December 08, 2015 Fix for Wiki output.
+# 0.23.05 - December 10, 2015 Fix for -W on lines that contain pipes.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.04};
+my $VERSION    = qq{0.23.05};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -54,6 +54,7 @@ my @ALL_LINES   = ();
 my $PIPE              = "pipe.pl";
 # my $PIPE              = "./p.exp.pl";
 my $DELIMITER         = '|';
+my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
@@ -179,7 +180,7 @@ All column references are 0 based.
                   for the line to be output.
  -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match.
- -h             : Change delimiter from the default '|'.
+ -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
@@ -190,7 +191,8 @@ All column references are 0 based.
                   '20151110|Andrew' -k"c100:(-f'c0:3?5.6.4'),c0:(-S'c1:0-3')" => 'Andr|20161110'
                   '20151110' -k"c100:(-Sc0:0-4(-fc0:3?5.6.4)) => '20151110|2016'
                   '20151110' -k'c0:(-tc0(-pc0:20 ))' => '20151110', pad upto 20 chars left, then trim.
- -K             : Use line breaks instead of pipe '|' between columns. Turns all columns into rows.
+ -K             : Use line breaks instead of the current delimiter between columns (default '|').
+                  Turns all columns into rows.
  -l[c0:exp,... ]: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'.
  -L[[+|-]?n-?m?]: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
@@ -217,8 +219,8 @@ All column references are 0 based.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
- -P             : Output a trailing delimiter before new line on output (default '|'). If one there
-                  isn't 1 already. Places a delimiter between counts (-A on dedup) and the rest of the row.
+ -P             : Ensures a tailing delimiter is output at the end of all lines.
+                  The default delimiter of '|' can be changed with -h.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -1993,6 +1995,14 @@ sub process_line( $ )
 	my $line = shift;
 	chomp $line;
 	my @columns = split '\|', $line;
+	if ( $opt{'W'} )
+	{
+		foreach my $col ( @columns )
+		{
+			# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+			$col =~ s/($SUB_DELIMITER)/\|/g;
+		}
+	}
 	if ( $opt{'X'} )
 	{
 		# If IS_X_MATCH is turned on we found the anchor now test for the -y and -Y.
@@ -2060,21 +2070,25 @@ sub process_line( $ )
 	}
 	else
 	{
-		$modified_line = join '|', @columns;
+		$modified_line = join "$DELIMITER", @columns;
 	}
 	$line = validate( $line, $modified_line, $LINE_NUMBER );
-	if ( $opt{'P'} )
+	chomp $line;
+	if ( $opt{'h'} )
 	{
-		chomp $line;
-		$line .= "|" if ( trim( $line ) !~ m/\|$/ );
+		$line =~ s/($DELIMITER)/\n/g if ( $opt{'K'} );
+		$line .= "$DELIMITER" if ( trim( $line ) !~ m/($DELIMITER)$/ and $opt{'P'} );
+	}
+	else
+	{
+		$line =~ s/\|/\n/g if ( $opt{'K'} );
+		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'} );
 	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( $opt{'A'} and ! $opt{'d'} )
 	{
 		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
 	}
-	$line =~ s/\|/\n/g if ( $opt{'K'} );
-	$line =~ s/\|/$DELIMITER/g if ( $opt{'h'} );
 	return $line if ( $opt{'H'} );
 	return $line . "\n";
 }
@@ -2197,6 +2211,7 @@ while ( @ALL_LINES )
 	if ( $opt{'W'} )
 	{
 		# Replace delimiter selection with '|' pipe.
+		$line =~ s/\|/$SUB_DELIMITER/g;
 		$line =~ s/($opt{'W'})/\|/g;
 	}
 	print process_line( $line );
