@@ -52,11 +52,12 @@ Complete list of flags
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
+ -C[c0:[gt|lt|eq|ge|le]value,... ]: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
-                  comparison is made lexically.
+                  comparison is made lexically. All specified columns must match to return
+                  true, that is '-C' is logically AND across columns.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).

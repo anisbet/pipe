@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.05 - December 10, 2015 Fix for -W on lines that contain pipes.
+# 0.23.06 - December 15, 2015 -C all columns tests must match to return true (AND rather than OR).
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.05};
+my $VERSION    = qq{0.23.06};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -145,11 +145,12 @@ All column references are 0 based.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C[c0:[gt|lt|eq|ge|le]exp,... ]: Compare column and output line if value in column
+ -C[c0:[gt|lt|eq|ge|le]value,... ]: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
-                  comparison is made lexically.
+                  comparison is made lexically. All specified columns must match to return
+                  true, that is '-C' is logically AND across columns.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -1191,6 +1192,7 @@ sub pad_line( $ ) # remove split
 sub test_condition( $ ) # remove split
 {
 	my $line = shift;
+	my $result = 0;
 	foreach my $colIndex ( @COND_CMP_COLUMNS )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
@@ -1210,23 +1212,23 @@ sub test_condition( $ ) # remove split
 			{
 				if ( $cmpOperator eq 'eq' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] == $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] == $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'lt' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] < $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] < $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'gt' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] > $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] > $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'le' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] <= $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] <= $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'ge' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] >= $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] >= $cmpValue );
 				}
 			}
 			else
@@ -1238,27 +1240,29 @@ sub test_condition( $ ) # remove split
 				}
 				if ( $cmpOperator eq 'eq' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] eq $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] eq $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'lt' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] lt $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] lt $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'gt' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] gt $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] gt $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'le' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] le $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] le $cmpValue );
 				}
 				elsif ( $cmpOperator eq 'ge' )
 				{
-					return 1 if ( @{ $line }[ $colIndex ] ge $cmpValue );
+					$result += 1 if ( @{ $line }[ $colIndex ] ge $cmpValue );
 				}
 			}
 		}
 	}
+	# All requested tests succeeded if the result count matches the number of test requests.
+	return 1 if ( scalar( @COND_CMP_COLUMNS ) == $result );
 	return 0;
 }
 
