@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.24.00 - December 16, 2015 Add keyword 'any' to match any column on some functions.
+# 0.24.01 - December 17, 2015 Add keyword 'any' to -C.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION     = qq{0.24.00};
+my $VERSION     = qq{0.24.01};
 my $KEYWORD_ANY = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
@@ -104,7 +104,7 @@ sub usage()
        [W<delimiter>h<delimiter>]
        [-bBcovwzZ<c0,c1,...,cn>]
        [-ntu<[any|c0,c1,...,cn]>]
-       [-C<cn:[gt|lt|eq|ge|le]exp,...>]
+       [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
@@ -117,7 +117,7 @@ sub usage()
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
        [-T<HTML|WIKI>]
-       [-X<any|cn:regex,...>][-Y<any|cn:regex,...>]
+       [-X<any|cn:regex,...> [-Y<any|cn:regex,...>]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -147,12 +147,14 @@ All column references are 0 based.
  -c[c0,c1,...cn]: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C[c0:[gt|lt|eq|ge|le]value,... ]: Compare column and output line if value in column
+ -C[any|c0:[gt|lt|eq|ge|le]value,... ]: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
-                  true, that is '-C' is logically AND across columns.
+                  true, that is '-C' is logically AND across columns. This behaviour changes
+                  if the keyword 'any' is used, in that case test returns true as soon  
+                  as any column comparison matches successfully.
  -d[c0,c1,...cn]: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -1287,6 +1289,71 @@ sub pad_line( $ ) # remove split
 	}
 }
 
+# Tests and returns failure or success depending on expression value.
+# param:  comparison operator (lt|gt|lt|eq|ge|le).
+# param:  the value of comparison, what the data will be measured against.
+# parma:  data from a column.
+# return: 1 on success and 0 otherwise.
+sub test_condition_cmp( $$$ )
+{
+	my $cmpOperator = shift;
+	my $cmpValue    = shift;
+	my $value       = shift;
+	my $result      = 0;
+	if ( $value =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
+	{
+		if ( $cmpOperator eq 'eq' )
+		{
+			$result = 1 if ( $value == $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'lt' )
+		{
+			$result = 1 if ( $value < $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'gt' )
+		{
+			$result = 1 if ( $value > $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'le' )
+		{
+			$result = 1 if ( $value <= $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'ge' )
+		{
+			$result = 1 if ( $value >= $cmpValue );
+		}
+	}
+	else
+	{
+		if ( $opt{'U'} ) # request comparison on numbers 'U' only so ignore this one.
+		{
+			printf STDERR "* comparison fails on non-numeric value: '%s' \n", $value if ( $opt{'D'} );
+			return 0;
+		}
+		if ( $cmpOperator eq 'eq' )
+		{
+			$result = 1 if ( $value eq $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'lt' )
+		{
+			$result = 1 if ( $value lt $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'gt' )
+		{
+			$result = 1 if ( $value gt $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'le' )
+		{
+			$result = 1 if ( $value le $cmpValue );
+		}
+		elsif ( $cmpOperator eq 'ge' )
+		{
+			$result = 1 if ( $value ge $cmpValue );
+		}
+	}
+	return $result;
+}
+
 # Tests the values in a given field using lt, gt, eq, le, ge.
 # param:  String of line data - pipe-delimited.
 # return: line if the specified condition was met and nothing if it didn't.
@@ -1294,14 +1361,33 @@ sub test_condition( $ )
 {
 	my $line = shift;
 	my $result = 0;
+	if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
+		# The first 2 characters determine the type of comparison.
+		$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
+		if ( ! $& )
+		{
+			printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
+			usage();
+		}
+		my $cmpValue    = $';
+		my $cmpOperator = $&;
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			return 1 if( test_condition_cmp( $cmpOperator, $cmpValue, @{ $line }[ $colIndex ] ) );
+		}
+		return $result;
+	}
 	foreach my $colIndex ( @COND_CMP_COLUMNS )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
 		{
 			printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$colIndex} if ( $opt{'D'} );
-			my $exp = $cond_cmp_ref->{$colIndex};
+			my $exp = lc $cond_cmp_ref->{$colIndex};
 			# The first 2 characters determine the type of comparison.
-			$exp =~ m/^[lge][tqe]/;
+			$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
 			if ( ! $& )
 			{
 				printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
@@ -1309,57 +1395,7 @@ sub test_condition( $ )
 			}
 			my $cmpValue    = $';
 			my $cmpOperator = $&;
-			if ( @{ $line }[ $colIndex ] =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
-			{
-				if ( $cmpOperator eq 'eq' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] == $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'lt' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] < $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'gt' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] > $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'le' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] <= $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'ge' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] >= $cmpValue );
-				}
-			}
-			else
-			{
-				if ( $opt{'U'} ) # request comparison on numbers 'U' only so ignore this one.
-				{
-					printf STDERR "* comparison fails on non-numeric value: '%s' \n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
-					return 0;
-				}
-				if ( $cmpOperator eq 'eq' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] eq $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'lt' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] lt $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'gt' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] gt $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'le' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] le $cmpValue );
-				}
-				elsif ( $cmpOperator eq 'ge' )
-				{
-					$result += 1 if ( @{ $line }[ $colIndex ] ge $cmpValue );
-				}
-			}
+			$result += test_condition_cmp( $cmpOperator, $cmpValue, @{ $line }[ $colIndex ] );
 		}
 	}
 	# All requested tests succeeded if the result count matches the number of test requests.
@@ -2224,7 +2260,7 @@ sub init
 		build_encoding_table();
 		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
 	}
-	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, 0 )    if ( $opt{'C'} );
+	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )    if ( $opt{'C'} );
 	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref, 0 )        if ( $opt{'e'} );
 	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref, 0 )     if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
