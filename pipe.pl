@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.23.06 - December 15, 2015 -C all columns tests must match to return true (AND rather than OR).
+# 0.24.00 - December 16, 2015 Add keyword 'any' to match any column on some functions.
 #
 ###########################################################################
 
@@ -37,7 +37,8 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION    = qq{0.23.06};
+my $VERSION     = qq{0.24.00};
+my $KEYWORD_ANY = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
 my $MAX_LINE    = 10000000;
@@ -101,21 +102,22 @@ sub usage()
 
     usage: cat file | pipe.pl [-ADHLtUVx]
        [W<delimiter>h<delimiter>]
-       [-bBcnotuvwzZ<c0,c1,...,cn>]
+       [-bBcovwzZ<c0,c1,...,cn>]
+       [-ntu<[any|c0,c1,...,cn]>]
        [-C<cn:[gt|lt|eq|ge|le]exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
        [-F[c0:[x|b|d],...]]
-       [-gG<cn:regex,...>]
+       [-gG<[any|cn]:regex,...>]
        [-kcn:(expr_n[(expr_n-1[(...)])])]
        [-l[c0:n.p,...]]
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
        [-T<HTML|WIKI>]
-       [-X<cn:regex,...>][-Y<cn:regex,...>]
+       [-X<any|cn:regex,...>][-Y<any|cn:regex,...>]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -173,14 +175,17 @@ All column references are 0 based.
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
+ -g[any|c0:regex,...]: Searches the specified field for the regular (Perl) expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
-                  for the line to be output.
- -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
-                  return true if match on column 1, and column 2 not match.
+                  for the line to be output. The behaviour of -g turns into OR if the
+                  keyword 'any' is used. In that case all other column specifications
+                  are ignored and any successful match will return true.
+ -G[any|c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
+                  return true if match on column 1, and column 2 not match. If the keyword
+                  'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
@@ -212,7 +217,7 @@ All column references are 0 based.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
+ -n[any|c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
@@ -231,9 +236,9 @@ All column references are 0 based.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
- -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
- -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
+ -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison. With -C, non-numeric value tests always fail, that is
@@ -244,10 +249,12 @@ All column references are 0 based.
                   the minimum and maximum number of columns by line.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X[c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
+ -X[any|c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
- -Y[c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
+                  If the keyword 'any' is used the first column to match will return true.
+ -Y[any|c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
+                  If the keyword 'any' is used the first column to match will return true.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 
@@ -300,12 +307,14 @@ EOF
 # and populates the appropriate hash reference of column qualifiers hash-reference.
 # param:  command line string of requested columns.
 # param:  hash reference of column names and qualifiers.
+# param:  is_allowed string that specifies a keyword like $KEYWORD_ANY.
 # return: New array.
-sub read_requested_qualified_columns( $$ )
+sub read_requested_qualified_columns( $$$ )
 {
-	my $line     = shift;
-	my @list     = ();
-	my $hash_ref = shift;
+	my $line       = shift;
+	my @list       = ();
+	my $hash_ref   = shift;
+	my $is_allowed = shift;
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
 	# To accommodate expressions that include a ',' as part of the mask split on non-escaped ','s
@@ -333,6 +342,25 @@ sub read_requested_qualified_columns( $$ )
 			push( @list, trim( $nameQualifier[0] ) );
 			# Add the qualifier to the hash reference too for reference later.
 			$hash_ref->{$nameQualifier[0]} = trim( $nameQualifier[1] );
+		}
+		elsif ( $colNum =~ m/any/ and $is_allowed =~ m/($KEYWORD_ANY)/i )
+		{
+			my @nameQualifier = ();
+			if ( $colNum =~ m/:/ )
+			{
+				push @nameQualifier, $`;
+				push @nameQualifier, $';
+			}
+			if ( scalar @nameQualifier != 2 )
+			{
+				print STDERR "*** Error missing qualifier '$colNum'. ***\n";
+				usage();
+			}
+			@list = ();
+			push( @list, trim( $nameQualifier[0] ) );
+			# Add the qualifier to the hash reference too for reference later.
+			$hash_ref->{$KEYWORD_ANY} = trim( $nameQualifier[1] );
+			last;
 		}
 		else
 		{
@@ -415,10 +443,12 @@ sub parse_line_ranges( $ )
 
 # Reads the values supplied on the command line and parses them out into the argument list.
 # param:  command line string of requested columns.
+# param:  command "any" if the caller is allowed to operate on any column without restriction.
 # return: New array.
-sub read_requested_columns( $ )
+sub read_requested_columns( $$ )
 {
-	my $line = shift;
+	my $line       = shift;
+	my $is_allowed = shift;
 	my @list = ();
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
@@ -431,6 +461,13 @@ sub read_requested_columns( $ )
 		{
 			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
 			push( @list, trim( $colNum ) );
+		}
+		elsif ( $colNum =~ m/^any$/ and $is_allowed =~ m/($KEYWORD_ANY)/i )
+		{
+			# Clear any other column selections the user may have already requested.
+			@list = ();
+			push( @list, $is_allowed );
+			last; # don't allow user to add more.
 		}
 		else
 		{
@@ -618,6 +655,14 @@ sub average( $ )
 sub trim_line( $ )
 {
 	my $line = shift;
+	if ( $TRIM_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			@{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ] );
+		}
+		return;
+	}
 	foreach my $colIndex ( @TRIM_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
@@ -635,6 +680,14 @@ sub trim_line( $ )
 sub normalize_line( $ )
 {
 	my $line = shift;
+	if ( $NORMAL_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			@{ $line }[ $colIndex ] = normalize( @{ $line }[ $colIndex ] );
+		}
+		return;
+	}
 	foreach my $colIndex ( @NORMAL_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
@@ -972,8 +1025,24 @@ sub sub_string( $ )
 # return: line if the patterns match on all fields and nothing if it didn't.
 sub is_match( $ )
 {
-	my $line = shift;
+	my $line       = shift;
 	my $matchCount = 0;
+	if ( $MATCH_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		printf STDERR "regex: '%s' \n", $match_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			if ( $opt{'I'} ) # Ignore case on search
+			{
+				return 1 if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/i );
+			}
+			else
+			{
+				return 1 if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/ );
+			}
+		}
+		return 0;
+	}
 	foreach my $colIndex ( @MATCH_COLUMNS )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $match_ref->{ $colIndex } )
@@ -1004,6 +1073,22 @@ sub is_x_match( $$$ )
 	my $regex_hash_ref = shift;  # Can be -X or -Y reference of regular expressions.
 	my $match_columns  = shift;
 	my $matchCount     = 0;
+	if ( @{ $match_columns }[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		printf STDERR "regex: '%s' \n", $regex_hash_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			if ( $opt{'I'} ) # Ignore case on search
+			{
+				return 1 if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/i );
+			}
+			else
+			{
+				return 1 if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/ );
+			}
+		}
+		return 0;
+	}
 	foreach my $colIndex ( @{ $match_columns } )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $regex_hash_ref->{ $colIndex } )
@@ -1030,6 +1115,22 @@ sub is_x_match( $$$ )
 sub is_not_match( $ )
 {
 	my $line = shift;
+	if ( $NOT_MATCH_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		printf STDERR "regex: '%s' \n", $not_match_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			if ( $opt{'I'} ) # Ignore case on search
+			{
+				return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $KEYWORD_ANY })/i );
+			}
+			else
+			{
+				return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $KEYWORD_ANY })/ );
+			}
+		}
+		return 1;
+	}
 	foreach my $colIndex ( @NOT_MATCH_COLUMNS )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $not_match_ref->{ $colIndex } )
@@ -1189,7 +1290,7 @@ sub pad_line( $ ) # remove split
 # Tests the values in a given field using lt, gt, eq, le, ge.
 # param:  String of line data - pipe-delimited.
 # return: line if the specified condition was met and nothing if it didn't.
-sub test_condition( $ ) # remove split
+sub test_condition( $ )
 {
 	my $line = shift;
 	my $result = 0;
@@ -1933,6 +2034,14 @@ sub map_url_characters( $ )
 sub url_encode_line( $ )
 {
 	my $line = shift;
+	if ( $U_ENCODE_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			@{ $line }[ $colIndex ] = map_url_characters( @{ $line }[ $colIndex ] ) if ( @{ $line }[ $colIndex ] );
+		}
+		return;
+	}
 	foreach my $colIndex ( @U_ENCODE_COLUMNS )
 	{
 		# print STDERR "$colIndex\n";
@@ -2106,42 +2215,42 @@ sub init
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
-	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
-	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
-	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
-	@SHOW_EMPTY_COLUMNS= read_requested_columns( $opt{'Z'} ) if ( $opt{'Z'} );
+	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
+	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
+	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );
+	@SHOW_EMPTY_COLUMNS= read_requested_columns( $opt{'Z'}, 0 ) if ( $opt{'Z'} );
 	if ( $opt{'u'} )
 	{
 		build_encoding_table();
-		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'} );
+		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
 	}
-	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref )    if ( $opt{'C'} );
-	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref )        if ( $opt{'e'} );
-	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
-	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref )   if ( $opt{'G'} );
-	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref )       if ( $opt{'g'} );
-	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref ) if ( $opt{'X'} );
-	@MATCH_LA_COLUMNS  = read_requested_qualified_columns( $opt{'Y'}, $match_la_ref )    if ( $opt{'Y'} );
-	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref )      if ( $opt{'k'} );
-	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref )        if ( $opt{'m'} );
-	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref )        if ( $opt{'S'} );
-	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref )       if ( $opt{'l'} );
-	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref )         if ( $opt{'p'} );
-	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref )        if ( $opt{'f'} );
-	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref )      if ( $opt{'F'} );
-	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} )                             if ( $opt{'b'} );
-	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} )                             if ( $opt{'B'} );
-	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'} )                             if ( $opt{'n'} );
-	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'} )                             if ( $opt{'o'} );
-	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'} )                             if ( $opt{'t'} );
+	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, 0 )    if ( $opt{'C'} );
+	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref, 0 )        if ( $opt{'e'} );
+	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref, 0 )     if ( $opt{'E'} );
+	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
+	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
+	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref, $KEYWORD_ANY ) if ( $opt{'X'} );
+	@MATCH_LA_COLUMNS  = read_requested_qualified_columns( $opt{'Y'}, $match_la_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
+	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref, 0 )      if ( $opt{'k'} );
+	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref, 0 )        if ( $opt{'m'} );
+	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref, 0 )        if ( $opt{'S'} );
+	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref, 0 )       if ( $opt{'l'} );
+	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref, 0 )         if ( $opt{'p'} );
+	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref, 0 )        if ( $opt{'f'} );
+	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref, 0 )      if ( $opt{'F'} );
+	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
+	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
+	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
+	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
+	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'v'} )
 	{
-		@AVG_COLUMNS   = read_requested_columns( $opt{'v'} ) if ( $opt{'v'} );
+		@AVG_COLUMNS   = read_requested_columns( $opt{'v'}, 0 ) if ( $opt{'v'} );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'d'} )
 	{
-		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'} );
+		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'}, 0 );
 		$READ_FULL = 1;
 	}
 	# Output specific lines.
@@ -2167,12 +2276,12 @@ sub init
 	}
 	if ( $opt{'s'} )
 	{
-		@SORT_COLUMNS  = read_requested_columns( $opt{'s'} );
+		@SORT_COLUMNS  = read_requested_columns( $opt{'s'}, 0 );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'w'} )
 	{
-		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'} );
+		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'}, 0 );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'T'} )

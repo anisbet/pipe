@@ -80,14 +80,17 @@ Complete list of flags
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F[c0:[x|b|d],...]: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g[c0:regex,...]: Searches the specified field for the regular (Perl) expression.
+ -g[any|c0:regex,...]: Searches the specified field for the regular (Perl) expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
-                  for the line to be output.
- -G[c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
-                  return true if match on column 1, and column 2 not match.
+                  for the line to be output. The behaviour of -g turns into OR if the
+                  keyword 'any' is used. In that case all other column specifications
+                  are ignored and any successful match will return true.
+ -G[any|c0:regex,...]: Inverse of '-g', and can be used together to perform AND operation as
+                  return true if match on column 1, and column 2 not match. If the keyword
+                  'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
@@ -119,7 +122,7 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -n[c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
+ -n[any|c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
@@ -138,9 +141,9 @@ Complete list of flags
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
- -t[c0,c1,...cn]: Trim the specified columns of white space front and back.
+ -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
  -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
- -u[c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
+ -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison. With -C, non-numeric value tests always fail, that is
@@ -151,10 +154,12 @@ Complete list of flags
                   the minimum and maximum number of columns by line.
  -W[delimiter]  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X[c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
+ -X[any|c0:regex,...]: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
- -Y[c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
+                  If the keyword 'any' is used the first column to match will return true.
+ -Y[any|c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
+                  If the keyword 'any' is used the first column to match will return true.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 ```
