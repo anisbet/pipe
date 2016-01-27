@@ -1005,4 +1005,20 @@ cat x.lst | pipe.pl -X'c0:2+' -Y'c0:6'
 2
 6
 ```
+Pro tips
+--------
+Replace all the spaces in the following: '31221 21448 3104'
+Method 1: Replace any space char with nothing.
+```
+echo 31221 21448 3104 | pipe.pl -l'c0:\ .'
+```
 
+Method 2: Replace any space char with nothing.
+```
+echo 31221 21448 3104 | pipe.pl -m'c0:#####_#####_####'
+```
+
+Method 3: The fastest and easiest.
+```
+echo 31221 21448 3104 | pipe.pl -n'c0'
+```
