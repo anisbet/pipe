@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.24.01 - December 17, 2015 Add keyword 'any' to -C.
+# 0.24.02 - Feb 9, 2016 Add ingnore case on comparisons in -E, and -f. Updated docs.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION     = qq{0.24.01};
+my $VERSION     = qq{0.24.02};
 my $KEYWORD_ANY = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
@@ -52,8 +52,8 @@ my @ALL_LINES   = ();
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
-my $PIPE              = "pipe.pl";
-# my $PIPE              = "./p.exp.pl";
+# my $PIPE              = "pipe.pl";
+my $PIPE              = "./p.exp.pl";
 my $DELIMITER         = '|';
 my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
@@ -190,7 +190,7 @@ All column references are 0 based.
                   'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
+ -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
                   and the result would be put in field c1, clobbering any value there. To
@@ -280,7 +280,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
-  -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
+  -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
@@ -1542,6 +1542,11 @@ sub apply_flip
 	my $site = $f[ $location ];
 	if ( defined $condition )
 	{
+		if ( $opt{'I'} )
+		{
+			$condition = lc $condition;
+			$site = lc $site;
+		}
 		if ( $condition eq $site )
 		{
 			$f[ $location ] = $replacement;
@@ -1582,7 +1587,7 @@ sub replace_line( $ )
 				$replacement =~ s/\\//g;
 				$on_else     =~ s/\\//g if ( defined $on_else );
 			}
-			else # simple case of n.p
+			else # simple case of 'n.p'
 			{
 				$replacement = $exp;
 			}
@@ -1670,7 +1675,7 @@ sub replace( $$$$ )
 	my ( $field, $replacement, $condition, $on_else ) = @_;
 	if ( defined $condition )
 	{
-		if ( $condition eq $field )
+		if ( $condition eq $field or ( $opt{'I'} and lc( $condition ) eq lc( $field ) ) )
 		{
 			printf STDERR "* '%s'\n", $replacement if ( $opt{'D'} );
 			return $replacement;

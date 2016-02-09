@@ -210,6 +210,7 @@ The order of operations is as follows:
   -H - Suppress new line on output.
   -h - Replace default delimiter.
 ```
+
 Ordering, sorting, and splitting on non-pipe character
 ------------------------------------------------------
 ```
@@ -317,6 +318,24 @@ Catkey|1478591|has|207|T024's
 == count
 c0:       2
 ```
+
+Ignoring case on comparisons
+----------------------------
+Some switches like -d, -E, -f, -g, -G, -n, and -s, can be made more flexible by using the -I ignore case switch. For example.
+```
+echo ABC | pipe -f'c0:1?b.7'
+ABC
+echo ABC | pipe -f'c0:1?b.7' -I
+A7C
+echo 'aaa|bbb|ccc' | pipe -E'c1:BBB'
+aaa|BBB|ccc
+echo 'aaa|bbb|ccc' | pipe -E'c1:?BBB.777'
+aaa|bbb|ccc
+echo 'aaa|bbb|ccc' | pipe -E'c1:?BBB.777' -I
+aaa|777|ccc
+```
+
+
 Using masks
 -----------
 Masks work using two special characters '\#' to print a character, and '\_' to suppress a character. Any other character is output as-is, in order, until both the mask and the input string are exhausted. The special characters can also be output as literals if they are escaped with a back slash '\\'.
