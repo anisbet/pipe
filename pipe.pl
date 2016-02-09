@@ -52,8 +52,8 @@ my @ALL_LINES   = ();
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
-# my $PIPE              = "pipe.pl";
-my $PIPE              = "./p.exp.pl";
+my $PIPE              = "pipe.pl";
+# my $PIPE              = "./p.exp.pl";
 my $DELIMITER         = '|';
 my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
