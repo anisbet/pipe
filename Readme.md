@@ -95,7 +95,7 @@ Complete list of flags
                   'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -I             : Ignore case on operations (-d, -g, -G, and -s) dedup grep and sort.
+ -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
                   and the result would be put in field c1, clobbering any value there. To
@@ -190,7 +190,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
-  -I - Ingnore case on sort and dedup. See '-d', '-s', '-g', '-G', and '-n'.
+  -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
