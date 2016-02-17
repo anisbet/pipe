@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.24.02 - Feb 9, 2016 Add ingnore case on comparisons in -E, and -f. Updated docs.
+# 0.25.00 - Feb 17, 2016 Quote columns; allows the use of 'any' keyword.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION     = qq{0.24.02};
+my $VERSION     = qq{0.25.00};
 my $KEYWORD_ANY = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES = {};
@@ -70,6 +70,7 @@ my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
+my @QUOTE_COLUMNS     = ();
 my @TRANSLATE_COLUMNS = (); my $trans_ref     = {}; # Translation values.
 my @MASK_COLUMNS      = (); my $mask_ref      = {}; # Stores the masks by column number.
 my @SUBS_COLUMNS      = (); my $subs_ref      = {}; # Stores the sub string indexes by column number.
@@ -102,7 +103,7 @@ sub usage()
 
     usage: cat file | pipe.pl [-ADHLtUVx]
        [W<delimiter>h<delimiter>]
-       [-bBcovwzZ<c0,c1,...,cn>]
+       [-bBcoqvwzZ<c0,c1,...,cn>]
        [-ntu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
@@ -229,6 +230,7 @@ All column references are 0 based.
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -q[any|c0,c1,...cn]: Double-quote any, or all columns. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -282,6 +284,7 @@ The order of operations is as follows:
   -t - Trim selected columns.
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
+  -q - Double-quote any, or all columns. 
   -r - Randomize line output.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
@@ -1768,6 +1771,30 @@ sub format_radix( $ )
 	}
 }
 
+# Formats the specified column to the desired base type.
+# param:  Original line input.
+# return: <none>.
+sub quote_line( $ )
+{
+	my $line = shift;
+	if ( $QUOTE_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			@{ $line }[ $colIndex ] = '"' . @{ $line }[ $colIndex ] . '"';
+		}
+		return;
+	}
+	foreach my $colIndex ( @QUOTE_COLUMNS )
+	{
+		# print STDERR "$colIndex\n";
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			@{ $line }[ $colIndex ] = '"' . @{ $line }[ $colIndex ] . '"';
+		}
+	}
+}
+
 # Executes a command in the format '(expression)'.
 # param:  input line.
 # param:  expression.
@@ -2205,6 +2232,7 @@ sub process_line( $ )
 	normalize_line( \@columns )         if ( $opt{'n'} );
 	trim_line( \@columns )              if ( $opt{'t'} );
 	pad_line( \@columns )               if ( $opt{'p'} );
+	quote_line( \@columns )             if ( $opt{'q'} );
 	# Stop processing lines if the requested column(s) test empty.
 	return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
 	return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
@@ -2252,7 +2280,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIk:Kl:L:m:Nn:o:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIk:Kl:L:m:Nn:o:p:Pr:q:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2281,6 +2309,7 @@ sub init
 	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref, 0 )      if ( $opt{'F'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
+	@QUOTE_COLUMNS     = read_requested_columns( $opt{'q'}, $KEYWORD_ANY )                  if ( $opt{'q'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );

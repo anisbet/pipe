@@ -134,6 +134,7 @@ Complete list of flags
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -q[any|c0,c1,...cn]: Double-quote any, or all columns. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -192,6 +193,7 @@ The order of operations is as follows:
   -t - Trim selected columns.
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
+  -q - Double-quote any, or all columns.
   -r - Randomize line output.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
@@ -209,6 +211,28 @@ The order of operations is as follows:
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
+```
+
+Quoted strings
+--------------
+Pipe can be used to quote strings or specific column data for consumption of other applications.
+For example, data can be easily converted into CSV as show below.
+```
+cat data.lst | pipe.pl -q'c1'
+911677,"J 927.824 SWI, RYA"
+612856,"E HAR"
+1442211,"EGA"
+758054,"DVD FLI"
+1100335,"Large Print WIN"
+708437,"General fiction, G PBK"
+1488252,"746.43204 FIF"
+362834,"CD POP ROCK MET"
+1142623,"DVD J DIG"
+1423109,"DVD INT"
+851760,"364.10922 MAR"
+884413,"DVD LIL v.3"
+1487346,"ON-ORDER"
+619767,"DVD IN"
 ```
 
 Ordering, sorting, and splitting on non-pipe character
