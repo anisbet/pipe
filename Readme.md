@@ -542,8 +542,8 @@ ls -l {$HIST_DIRECTORY} | pipe.pl -W'\s+' -g'c8:(2014(0[6-9]|1[0-2])|20150[1-6])
 /s/sirsi/Unicorn/Hist/20150618.hist
 ```
 
-Dedup with counts compared to line counts ('-A')
-------------------------------------------------
+Dedup with counts compared to line counts ('-A'), count of dedupped values, and sum over a group (-J)
+-----------------------------------------------------------------------------------------------------
 To output the data set with line counts:
 ```
 cat test.lst 
@@ -564,19 +564,13 @@ cat test.lst | pipe.pl -A
   5 86020|0
   6 86020|1
 ```
-With -d the line count feature changes to reporting the number of redundant lines.
-```
-cat test.lst | pipe.pl -d'c0' -A
-6 86019|1|
- ```
-Another handy feature to use with dedup is the -J switch which will sum the values in another arbitrary column.
-
 Find the count of different values in column 0.
 ```
 cat test.lst | pipe.pl -dc0 -A
    3 86019|7
    3 86020|1
 ```
+Another handy feature to use with dedup is the -J switch which will sum the values in another arbitrary column.
 Find the sum of c1 for each uniq group in c0.
 ```
 cat test.lst | pipe.pl -dc0 -Jc1
