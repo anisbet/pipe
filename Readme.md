@@ -26,6 +26,7 @@ Things pipe.pl can do
 20. Replace values in columns conditionally.
 21. Translate values within columns.
 22. Compute new column values based on values in other columns recursively.
+23. Sum values over groups.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -96,6 +97,9 @@ Complete list of flags
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -J[cn]         : Sums the numeric values in a given column during the dedup process (-d)
+                  providing a sum over group-like functionality. Does not work if -A is selected
+                  (see -A).  
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
                   and the result would be put in field c1, clobbering any value there. To
@@ -134,7 +138,6 @@ Complete list of flags
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
- -q[any|c0,c1,...cn]: Double-quote any, or all columns. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -177,7 +180,8 @@ The order of operations is as follows:
   -Y - Grep values in specified columns once greps with -X succeeds.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
-  -A - Displays line numbers or summary of duplicates if '-D' is selected.
+  -A - Displays line numbers or summary of duplicates if '-d' is selected.
+  -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
@@ -193,7 +197,6 @@ The order of operations is as follows:
   -t - Trim selected columns.
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
-  -q - Double-quote any, or all columns.
   -r - Randomize line output.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
@@ -543,19 +546,50 @@ Dedup with counts compared to line counts ('-A')
 ------------------------------------------------
 To output the data set with line counts:
 ```
+cat test.lst 
+ 86019|4|
+ 86019|9|
+ 86019|7|
+ 86020|0|
+ 86020|0|
+ 86020|1|
+```
+Using the above as test data show the line numbers from the file.
+```
 cat test.lst | pipe.pl -A
- 1  86019|4|
- 2  86019|9|
- 3  86019|7|
- 4  86019|0|
- 5  86019|0|
- 6  86019|1|
+  1 86019|4
+  2 86019|9
+  3 86019|7
+  4 86020|0
+  5 86020|0
+  6 86020|1
 ```
 With -d the line count feature changes to reporting the number of redundant lines.
 ```
 cat test.lst | pipe.pl -d'c0' -A
 6 86019|1|
  ```
+Another handy feature to use with dedup is the -J switch which will sum the values in another arbitrary column.
+
+Find the count of different values in column 0.
+```
+cat test.lst | pipe.pl -dc0 -A
+   3 86019|7
+   3 86020|1
+```
+Find the sum of c1 for each uniq group in c0.
+```
+cat test.lst | pipe.pl -dc0 -Jc1
+  20 86019|7
+   1 86020|1
+```
+Of course you can separate the counts and sum from the other values to make further processing easier.
+```
+cat test.lst | pipe.pl -dc0 -Jc1 -P
+20|86019|7|
+1|86020|1|
+```
+
 
 Width reporting
 ---------------
