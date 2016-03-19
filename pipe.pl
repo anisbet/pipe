@@ -6,7 +6,7 @@
 # Method:
 #
 # Pipe performs handy operations on pipe delimited files.
-#    Copyright (C) 2015  Andrew Nisbet
+#    Copyright (C) 2015 - 2016  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.25.00 - Feb 17, 2016 Quote columns; allows the use of 'any' keyword.
+# 0.26.00 - March 18, 2016 Add long options and groupby.
 #
 ###########################################################################
 
@@ -37,17 +37,17 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION     = qq{0.25.00};
-my $KEYWORD_ANY = qw{any};
+my $VERSION           = qq{0.26.00};
+my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
-my $LINE_RANGES = {};
-my $MAX_LINE    = 10000000;
-$LINE_RANGES->{'1'} = $MAX_LINE;
-my $READ_FULL   = 0; # Set true to read the entire file before output as with -L'-n'.
-my $KEEP_LINES  = 10; # Number of lines to keep in buffer if -L'-n' is used.
-my @LINE_BUFF   = (); # Buffer of last 'n' lines used with -L'-n'.
-my $FAST_FORWARD= 0;  # 0 means keep reading 1 means stop reading input.
-my @ALL_LINES   = ();
+my $LINE_RANGES       = {};
+my $MAX_LINE          = 10000000;
+$LINE_RANGES->{'1'}   = $MAX_LINE;
+my $READ_FULL         = 0; # Set true to read the entire file before output as with -L'-n'.
+my $KEEP_LINES        = 10; # Number of lines to keep in buffer if -L'-n' is used.
+my @LINE_BUFF         = (); # Buffer of last 'n' lines used with -L'-n'.
+my $FAST_FORWARD      = 0;  # 0 means keep reading 1 means stop reading input.
+my @ALL_LINES         = ();
 # For every requested operation we need an array that can hold the columns
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
@@ -70,7 +70,6 @@ my @TRIM_COLUMNS      = ();
 my @ORDER_COLUMNS     = ();
 my @NORMAL_COLUMNS    = ();
 my @SORT_COLUMNS      = ();
-my @QUOTE_COLUMNS     = ();
 my @TRANSLATE_COLUMNS = (); my $trans_ref     = {}; # Translation values.
 my @MASK_COLUMNS      = (); my $mask_ref      = {}; # Stores the masks by column number.
 my @SUBS_COLUMNS      = (); my $subs_ref      = {}; # Stores the sub string indexes by column number.
@@ -101,9 +100,9 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADHLtUVx]
+    usage: cat file | pipe.pl [-ADHJLtUVx]
        [W<delimiter>h<delimiter>]
-       [-bBcoqvwzZ<c0,c1,...,cn>]
+       [-bBcovwzZ<c0,c1,...,cn>]
        [-ntu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
@@ -192,6 +191,9 @@ All column references are 0 based.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -J[cn]         : Sums the numeric values in a given column during the dedup process (-d)
+                  providing a sum over group-like functionality. Does not work if -A is selected
+                  (see -A).  
  -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
                   where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
                   and the result would be put in field c1, clobbering any value there. To
@@ -230,7 +232,6 @@ All column references are 0 based.
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
- -q[any|c0,c1,...cn]: Double-quote any, or all columns. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -268,7 +269,8 @@ The order of operations is as follows:
   -Y - Grep values in specified columns once greps with -X succeeds.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
-  -A - Displays line numbers or summary of duplicates if '-D' is selected.
+  -A - Displays line numbers or summary of duplicates if '-d' is selected.
+  -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test column values.
   -e - Change case of string in column.
@@ -284,7 +286,6 @@ The order of operations is as follows:
   -t - Trim selected columns.
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
-  -q - Double-quote any, or all columns. 
   -r - Randomize line output.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
@@ -748,7 +749,11 @@ sub get_key( $$ )  # remove split
 		if ( defined $columns[ $j ] and exists $columns[ $j ] )
 		{
 			my $cols = $columns[ $j ];
-			$cols = lc( $columns[ $j ] ) if ( $opt{ 'I' } );
+			# Remove the sub delimiter if the user requested -W.
+			$cols =~ s/($SUB_DELIMITER)/\|/g;
+			$cols = lc( $cols ) if ( $opt{ 'I' } );
+			# And new replace them since they may be used in another process.
+			$cols =~ s/\|/$SUB_DELIMITER/g;
 			push( @newLine, $cols );
 		}
 	}
@@ -1771,30 +1776,6 @@ sub format_radix( $ )
 	}
 }
 
-# Formats the specified column to the desired base type.
-# param:  Original line input.
-# return: <none>.
-sub quote_line( $ )
-{
-	my $line = shift;
-	if ( $QUOTE_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
-	{
-		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
-		{
-			@{ $line }[ $colIndex ] = '"' . @{ $line }[ $colIndex ] . '"';
-		}
-		return;
-	}
-	foreach my $colIndex ( @QUOTE_COLUMNS )
-	{
-		# print STDERR "$colIndex\n";
-		if ( defined @{ $line }[ $colIndex ] )
-		{
-			@{ $line }[ $colIndex ] = '"' . @{ $line }[ $colIndex ] . '"';
-		}
-	}
-}
-
 # Executes a command in the format '(expression)'.
 # param:  input line.
 # param:  expression.
@@ -1899,6 +1880,39 @@ sub execute_script_line( $ )
 	}
 }
 
+# Computes and returns a value based on whether -A (count) or -J (sum) is used.
+# param:  column to select within line. Like 'c2'.
+# param:  line of input.
+# return: numerical value to be added to the running total.
+sub get_column_value( $$ )
+{
+	my $wantedColumn  = shift;
+	my $line          = shift;
+	$wantedColumn     =~ s/c//i;
+	# Make sure the user entered a '[c|C]n'
+	if ( $wantedColumn !~ m/^\d{1,}$/ )
+	{
+		printf STDERR "** invalid column selection for summation over groups: '%s'.\n", $wantedColumn;
+		exit;
+	}
+	my @columns = split( '\|', $line );
+	if ( defined $columns[ $wantedColumn ] )
+	{
+		# The user may have requested -W so there may be SUB_DELIMITERs in string.
+		$columns[ $wantedColumn ] =~ s/($SUB_DELIMITER)/\|/g;
+		if ( $columns[ $wantedColumn ] =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+		{
+			return $columns[ $wantedColumn ];
+		}
+		else
+		{
+			printf STDERR "* warning value in column not numeric: '%s'.\n", $columns[ $wantedColumn ] if ( $opt{'D'} );
+		}
+	}
+	
+	return 0;
+}
+
 # Dedups the ALL_LINES array using (O)1 space.
 # param:  list of columns to sort on.
 # return: <none> - removes duplicate values from the ALL_LINES list.
@@ -1917,6 +1931,11 @@ sub dedup_list( $ )
 		{
 			$count->{ $key } = 0 if ( ! exists $count->{ $key } );
 			$count->{ $key }++;
+		}
+		elsif ( $opt{ 'J' } )
+		{
+			$count->{ $key } = 0 if ( ! exists $count->{ $key } );
+			$count->{ $key } += get_column_value( $opt{ 'J' }, $line );
 		}
 		print STDERR "\$key=$key, \$value=$line\n" if ( $opt{'D'} );
 	}
@@ -1946,7 +1965,7 @@ sub dedup_list( $ )
 	while ( @tmp )
 	{
 		my $key = shift @tmp;
-		if ( $opt{ 'A' } )
+		if ( $opt{ 'A' } or $opt{ 'J' } )
 		{
 			my $summary = '';
 			if ( $opt{'P'} )
@@ -2175,6 +2194,7 @@ sub process_line( $ )
 {
 	my $line = shift;
 	chomp $line;
+	# With -W the line will look like this; '11|abc{_PIPE_}def'
 	my @columns = split '\|', $line;
 	if ( $opt{'W'} )
 	{
@@ -2232,7 +2252,6 @@ sub process_line( $ )
 	normalize_line( \@columns )         if ( $opt{'n'} );
 	trim_line( \@columns )              if ( $opt{'t'} );
 	pad_line( \@columns )               if ( $opt{'p'} );
-	quote_line( \@columns )             if ( $opt{'q'} );
 	# Stop processing lines if the requested column(s) test empty.
 	return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
 	return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
@@ -2267,7 +2286,7 @@ sub process_line( $ )
 		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'} );
 	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
-	if ( $opt{'A'} and ! $opt{'d'} )
+	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
 	{
 		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
 	}
@@ -2280,7 +2299,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIk:Kl:L:m:Nn:o:p:Pr:q:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:Nn:o:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2309,7 +2328,6 @@ sub init
 	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref, 0 )      if ( $opt{'F'} );
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
-	@QUOTE_COLUMNS     = read_requested_columns( $opt{'q'}, $KEYWORD_ANY )                  if ( $opt{'q'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
@@ -2378,7 +2396,14 @@ while (<>)
 	{
 		# remove leading trailing white space to avoid initial empty pipe fields.
 		# Also gracefully handles Windows' EOL handling.
-		$line = trim( $line ); 
+		$line = trim( $line );
+		if ( $opt{'W'} )
+		{
+			# Replace delimiter selection with '|' pipe.
+			$line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
+			# Now replace the user selected delimiter with a pipe.
+			$line =~ s/($opt{'W'})/\|/g;
+		}
 		push @ALL_LINES, $line;
 	}
 	last if ( $FAST_FORWARD );
@@ -2391,13 +2416,7 @@ while ( @ALL_LINES )
 {
 	$LINE_NUMBER++;
 	my $line = shift @ALL_LINES;
-	if ( $opt{'W'} )
-	{
-		# Replace delimiter selection with '|' pipe.
-		$line =~ s/\|/$SUB_DELIMITER/g;
-		$line =~ s/($opt{'W'})/\|/g;
-	}
-	print process_line( $line );
+	printf "%s", process_line( $line );
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
