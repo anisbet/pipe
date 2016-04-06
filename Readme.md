@@ -128,6 +128,7 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+ -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
  -n[any|c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -166,6 +167,8 @@ Complete list of flags
  -Y[any|c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
                   If the keyword 'any' is used the first column to match will return true.
+                  The default behaviour is to output the X and Y matches only, but can be changed.
+                  See '-M' for more details.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 ```
@@ -178,6 +181,7 @@ The order of operations is as follows:
   -x - Usage message, then exits.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
+  -M - Output all data until -Y succeeds.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -1076,6 +1080,19 @@ cat x.lst | pipe.pl -X'c0:2+' -Y'c0:6'
 2
 6
 ```
+The above example illustrates the default behaviour of outputting the initial successful match on '-X'
+followed by the the successful match on '-Y'. Sometimes it's you would like to see all the data in between
+the 2 matches; for that use the '-M' switch. 
+```
+cat X.lst | pipe.pl -X"c0:2" -Y"c0:6" -M
+2
+3
+4
+5
+6
+```
+This is especially useful when the column data are sorted dates.
+
 Pro tips
 --------
 Replace all the spaces in the following: '31221 21448 3104'

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.26.00 - March 18, 2016 Add long options and groupby.
+# 0.26.01 - April 5, 2016 Add -M continuous output for X and Y searches.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.26.00};
+my $VERSION           = qq{0.26.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -92,6 +92,7 @@ my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0; # Does the user want to output to a table.
 my $WIDTHS_COLUMNS    = {};
+my $X_UNTIL_Y         = 0;
 
 #
 # Message about this program and how to use it.
@@ -117,7 +118,7 @@ sub usage()
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
        [-T<HTML|WIKI>]
-       [-X<any|cn:regex,...> [-Y<any|cn:regex,...>]]
+       [-X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -222,6 +223,7 @@ All column references are 0 based.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+ -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
  -n[any|c0,c1,...cn]: Normalize the selected columns, that is, make upper case and remove white space.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -260,6 +262,8 @@ All column references are 0 based.
  -Y[any|c0:regex,...]: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
                   If the keyword 'any' is used the first column to match will return true.
+                  The default behaviour is to output the X and Y matches only, but can be changed.
+                  See '-M' for more details.
  -z[c0,c1,...cn]: Suppress line if the specified column(s) are empty, or don't exist.
  -Z[c0,c1,...cn]: Show line if the specified column(s) are empty, or don't exist.
 
@@ -267,6 +271,7 @@ The order of operations is as follows:
   -x - Usage message, then exits.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
+  -M - Output all data until -Y succeeds.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -2209,7 +2214,18 @@ sub process_line( $ )
 		# If IS_X_MATCH is turned on we found the anchor now test for the -y and -Y.
         if ( $IS_X_MATCH and $opt{'Y'} )
         {
-            return '' if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) );
+            # return '' if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) );
+            if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) )
+			{
+				if ( ! $X_UNTIL_Y )
+				{
+					return '';
+				}
+			}
+			else # Turn off continuous search -- we found the 'Y' search.
+			{
+				$X_UNTIL_Y = 0;
+			}
         }
         # if not '-Y', then once we match on '-X', start outputting lines from there on.
         # But if no match found, try and turn it on by matching this line if no match, suppress output.
@@ -2299,10 +2315,11 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:Nn:o:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:MNn:o:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
+	$X_UNTIL_Y         = 1 if ( $opt{'M'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );
