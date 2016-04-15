@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.26.01 - April 5, 2016 Add -M continuous output for X and Y searches.
+# 0.27.00 - April 15, 2016 Add -O to merge columns together.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.26.01};
+my $VERSION           = qq{0.27.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -82,6 +82,7 @@ my $IS_X_MATCH        = 0;                          # True if -X matched. Turns 
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -y or -Y.
 my @MATCH_LA_COLUMNS  = (), my $match_la_ref  = {}; # Look ahead -Y test conditions supplied by user.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
+my @MERGE_COLUMNS     = (); # List of columns to merge. The first is the anchor column.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
 my @SHOW_EMPTY_COLUMNS= (); # Show empty column number checks.
 my @COMPARE_COLUMNS   = (); # Compare all collected columns and report if equal.
@@ -103,7 +104,7 @@ sub usage()
 
     usage: cat file | pipe.pl [-ADHJLtUVx]
        [W<delimiter>h<delimiter>]
-       [-bBcovwzZ<c0,c1,...,cn>]
+       [-bBcoOvwzZ<c0,c1,...,cn>]
        [-ntu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
@@ -230,6 +231,8 @@ All column references are 0 based.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -O[c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
+                  ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
@@ -304,6 +307,7 @@ The order of operations is as follows:
   -T - Output in table form.
   -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
+  -O - Merge selected columns.
   -o - Order selected columns.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
@@ -2192,6 +2196,28 @@ sub table_output( $ )
 	}
 }
 
+# Formats the specified column to the desired base type.
+# param:  Original line input.
+# return: <none>.
+sub merge_line( $ )
+{
+	my $line = shift;
+	my $i    = 0;
+	if ( ! defined $MERGE_COLUMNS[ 0 ] or ! defined @{ $line }[ $MERGE_COLUMNS[ 0 ] ] ) 
+	{
+		printf STDERR "** warning: merge target 'c%s' doesn't exist in line '%s...'.\n", $MERGE_COLUMNS[ 0 ], @{ $line }[0] if ( $opt{'D'} );
+	}
+	# The rest of the columns are to be appended to @{ $line }[ $MERGE_COLUMNS[ 0 ] ]
+	for ( $i = 1; $i < scalar( @{ $line } ); $i++ )
+	{
+		if ( defined $MERGE_COLUMNS[ $i ] and defined @{ $line }[ $MERGE_COLUMNS[ $i ] ] )
+		{
+			printf STDERR "merge: '%s' \n", @{ $line }[ $MERGE_COLUMNS[ $i ] ] if ( $opt{'D'} );
+			@{ $line }[ $MERGE_COLUMNS[ 0 ] ] .= @{ $line }[ $MERGE_COLUMNS[ $i ] ];
+		}
+	}
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -2277,6 +2303,7 @@ sub process_line( $ )
 	sum( \@columns )                    if ( $opt{'a'} );
 	count( \@columns )                  if ( $opt{'c'} );
 	average( \@columns )                if ( $opt{'v'} );
+	merge_line( \@columns )             if ( $opt{'O'} );
 	order_line( \@columns )             if ( $opt{'o'} );
 	my $modified_line = '';
 	if ( $TABLE_OUTPUT )
@@ -2315,7 +2342,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:MNn:o:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2346,6 +2373,7 @@ sub init
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
+	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, 0 )                             if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'v'} )

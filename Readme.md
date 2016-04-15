@@ -4,29 +4,30 @@ cat file.lst | pipe.pl -c'c0'
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 Things pipe.pl can do
 ---------------------
-1.  Trim arbitrary fields.
-2.  Order and suppress output of arbitrary fields.
-3.  Randomize all, or a specific sample size of the records from input.
-4.  De-duplicate records from input.
-5.  Count non-empty fields from input records.
-6.  Summation over non-empty numeric values of arbitrary fields.
-7.  Sort input lines based on one or more arbitrary fields, numerically or lexical-ly.
-8.  Mask output of specific characters, and range of characters, within arbitrary fields.
-9.  Averages over columns.
-10. Output line numbers or counts of dedups.
-11. Force trailing pipe on output.
-12. Grep a specific column value with regular expressions.
-13. Compare columns for differences.
-14. Flexibly pad output fields.
-15. Report maximum and minimum width of column data.
-16. Output sub strings of values in columns by specific index or range of indices.
-17. Change case of fields.
-18. Flip character value conditionally.
-19. Output characters in different bases.
-20. Replace values in columns conditionally.
-21. Translate values within columns.
-22. Compute new column values based on values in other columns recursively.
-23. Sum values over groups.
+* Trim arbitrary fields.
+* Order and suppress output of arbitrary fields.
+* Randomize all, or a specific sample size of the records from input.
+* De-duplicate records from input.
+* Count non-empty fields from input records.
+* Summation over non-empty numeric values of arbitrary fields.
+* Sort input lines based on one or more arbitrary fields, numerically or lexical-ly.
+* Mask output of specific characters, and range of characters, within arbitrary fields.
+* Averages over columns.
+* Output line numbers or counts of dedups.
+* Force trailing pipe on output.
+* Grep a specific column value with regular expressions.
+* Compare columns for differences.
+* Flexibly pad output fields.
+* Report maximum and minimum width of column data.
+* Output sub strings of values in columns by specific index or range of indices.
+* Change case of fields.
+* Flip character value conditionally.
+* Output characters in different bases.
+* Replace values in columns conditionally.
+* Translate values within columns.
+* Compute new column values based on values in other columns recursively.
+* Sum values over groups.
+* Merge columns.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -135,6 +136,8 @@ Complete list of flags
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
+ -O[c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
+                  ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
@@ -214,11 +217,35 @@ The order of operations is as follows:
   -T - Output in table form.
   -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
+  -O - Merge selected columns.
   -o - Order selected columns.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
 ```
+
+Merging columns
+---------------
+Using -O you can merge any specified columns into an arbitrary but specific column.
+You specify columns as you do any other option in pipe, but the first column you identify
+becomes the target column to which any other specified column, or columns are appended.
+Examples:
+```
+echo 'aaa|bbb|ccc' | pipe.pl -Oc0,c1
+aaabbb|bbb|ccc
+echo 'aaa|bbb|ccc' | pipe.pl -Oc1,c0
+aaa|bbbaaa|ccc
+echo 'aaa|bbb|ccc' | pipe.pl -Oc2
+aaa|bbb|ccc
+echo 'aaa|bbb|ccc' | pipe.pl -Oc99  # Huh?
+aaa|bbb|ccc
+echo 'aaa|bbb|ccc' | pipe.pl -Oc99 -D
+columns requested: '99'
+** warning: merge target 'c99' doesn't exist in line 'aaa...'.
+original: 2, modified: 2 fields at line number 1.
+aaa|bbb|ccc
+```
+To remove extraneous columns use '-o' to order the column(s) output.
 
 Quoted strings
 --------------
