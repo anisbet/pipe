@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.27.00 - April 15, 2016 Add -O to merge columns together.
+# 0.27.01 - April 15, 2016 Add -O to merge columns together, and 'any' keyword.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.27.00};
+my $VERSION           = qq{0.27.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -104,8 +104,8 @@ sub usage()
 
     usage: cat file | pipe.pl [-ADHJLtUVx]
        [W<delimiter>h<delimiter>]
-       [-bBcoOvwzZ<c0,c1,...,cn>]
-       [-ntu<[any|c0,c1,...,cn]>]
+       [-bBcovwzZ<c0,c1,...,cn>]
+       [-nOtu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn>]
        [-e[c0:[uc|lc|mc|us],...]]
@@ -231,8 +231,9 @@ All column references are 0 based.
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
- -O[c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
+ -O[any|c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
+                  Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
@@ -2203,6 +2204,12 @@ sub merge_line( $ )
 {
 	my $line = shift;
 	my $i    = 0;
+	if ( $MERGE_COLUMNS[ 0 ] =~ m/($KEYWORD_ANY)/i )
+	{
+		printf STDERR "merge: '%s' \n", $KEYWORD_ANY if ( $opt{'D'} );
+		@{ $line }[ 0 ] = join '', @{ $line };
+		return;
+	}
 	if ( ! defined $MERGE_COLUMNS[ 0 ] or ! defined @{ $line }[ $MERGE_COLUMNS[ 0 ] ] ) 
 	{
 		printf STDERR "** warning: merge target 'c%s' doesn't exist in line '%s...'.\n", $MERGE_COLUMNS[ 0 ], @{ $line }[0] if ( $opt{'D'} );
@@ -2373,7 +2380,7 @@ sub init
 	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
-	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, 0 )                             if ( $opt{'O'} );
+	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'v'} )

@@ -136,8 +136,9 @@ Complete list of flags
                   Output is not normalized. For that see (-n).
                   See also (-I) for case insensitive comparisons.
  -o[c0,c1,...cn]: Order the columns in a different order. Only the specified columns are output.
- -O[c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
+ -O[any|c0,c1,...cn]: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
+                  Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p[c0:exp,... ]: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
@@ -244,6 +245,8 @@ columns requested: '99'
 ** warning: merge target 'c99' doesn't exist in line 'aaa...'.
 original: 2, modified: 2 fields at line number 1.
 aaa|bbb|ccc
+echo 'aaa|bbb|ccc' | pipe.pl -Oany
+aaabbbccc|bbb|ccc
 ```
 To remove extraneous columns use '-o' to order the column(s) output.
 
