@@ -2473,7 +2473,7 @@ while ( @ALL_LINES )
 {
 	$LINE_NUMBER++;
 	my $line = shift @ALL_LINES;
-	$LAST_LINE = 1 if ( $opt{'j'} and scalar( @ALL_LINES ) == 1 ); # last line of report.
+	$LAST_LINE = 1 if ( scalar( @ALL_LINES ) == 0 ); # last line of report.
 	printf "%s", process_line( $line );
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );

@@ -98,6 +98,7 @@ Complete list of flags
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J[cn]         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).  
@@ -223,6 +224,7 @@ The order of operations is as follows:
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
+  -j - Remove last delimiter on the last line of data output.
 ```
 
 Merging columns
@@ -1050,11 +1052,11 @@ cat p.lst
 1|2|4|
 1|2|3
 
-cat p.lst | ./p.exp.pl -d'c2' -A  -h'^'
+cat p.lst | pipe.pl -d'c2' -A  -h'^'
    2 1^2^3
    2 1^2^4
 
-cat p.lst | ./p.exp.pl -d'c2' -A -P -h'^'
+cat p.lst | pipe.pl -d'c2' -A -P -h'^'
 2^1^2^3^
 2^1^2^4^
 ```
@@ -1063,7 +1065,7 @@ cat p.lst | ./p.exp.pl -d'c2' -A -P -h'^'
 cat s.lst
 E201411051046470005R ^S01JZFFBIBLIOCOMM^FcNONE^FEEPLCPL^UO21221019966206^Uf3250^NQ31221106815538^HB11/05/2015^HKTITLE^HOEPLCPL^^O00108
 
-cat s.lst | ./p.exp.pl -W'\^' -h'#'
+cat s.lst | pipe.pl -W'\^' -h'#'
 E201411051046470005R #S01JZFFBIBLIOCOMM#FcNONE#FEEPLCPL#UO21221019966206#Uf3250#NQ31221106815538#HB11/05/2015#HKTITLE#HOEPLCPL##O00108
 ``` 
 
