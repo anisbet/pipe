@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.27.01 - April 15, 2016 Add -O to merge columns together, and 'any' keyword.
+# 0.28.00 - April 19, 2016 Add -j to remove the last delimiter on the last processed line.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.27.01};
+my $VERSION           = qq{0.28.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -94,6 +94,7 @@ my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0; # Does the user want to output to a table.
 my $WIDTHS_COLUMNS    = {};
 my $X_UNTIL_Y         = 0;
+my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 
 #
 # Message about this program and how to use it.
@@ -102,12 +103,12 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADHJLtUVx]
+    usage: cat file | pipe.pl [-ADHjLtUVx]
        [W<delimiter>h<delimiter>]
        [-bBcovwzZ<c0,c1,...,cn>]
        [-nOtu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
-       [-ds[-IRN]<c0,c1,...,cn>]
+       [-ds[-IRN]<c0,c1,...,cn> [-J[cn]]]
        [-e[c0:[uc|lc|mc|us],...]]
        [-E[c0:[r|?c.r[.e]],...]]
        [-f[c0:n.p[?p.q[.r]],...]]
@@ -193,6 +194,7 @@ All column references are 0 based.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J[cn]         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).  
@@ -313,6 +315,7 @@ The order of operations is as follows:
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
+  -j - Remove last delimiter on the last line of data output.
 
 Version: $VERSION
 EOF
@@ -2328,12 +2331,14 @@ sub process_line( $ )
 	if ( $opt{'h'} )
 	{
 		$line =~ s/($DELIMITER)/\n/g if ( $opt{'K'} );
-		$line .= "$DELIMITER" if ( trim( $line ) !~ m/($DELIMITER)$/ and $opt{'P'} );
+		# Don't add a delimiter on the last line if not -j and not the last line.
+		$line .= "$DELIMITER" if ( trim( $line ) !~ m/($DELIMITER)$/ and $opt{'P'} and ! ( $opt{'j'} and $LAST_LINE ) );
 	}
 	else
 	{
 		$line =~ s/\|/\n/g if ( $opt{'K'} );
-		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'} );
+		# Don't add a delimiter on the last line if not -j and not the last line.
+		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'}  and ! ( $opt{'j'} and $LAST_LINE ) );
 	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
@@ -2349,7 +2354,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2468,6 +2473,7 @@ while ( @ALL_LINES )
 {
 	$LINE_NUMBER++;
 	my $line = shift @ALL_LINES;
+	$LAST_LINE = 1 if ( $opt{'j'} and scalar( @ALL_LINES ) == 1 ); # last line of report.
 	printf "%s", process_line( $line );
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
