@@ -1060,6 +1060,14 @@ cat p.lst | pipe.pl -d'c2' -A -P -h'^'
 2^1^2^3^
 2^1^2^4^
 ```
+Stop output of the last delimiter on the last line. This can be useful if your output is sensitive to trailing delimiters on the last
+line of data like when you are producing JSON.
+```
+cat p.lst | pipe.pl -d'c2' -A -P -h'^' -j
+2^1^2^3^
+2^1^2^4
+```
+
 -W and -h work independantly.
 ```
 cat s.lst
