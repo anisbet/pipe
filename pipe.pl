@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.28.00 - April 19, 2016 Add -j to remove the last delimiter on the last processed line.
+# 0.29.00 - June 9, 2016 Add -1 to increment a value in a field.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.28.00};
+my $VERSION           = qq{0.29.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -58,6 +58,7 @@ my $DELIMITER         = '|';
 my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
+my @INCR_COLUMNS      = ();                         # Columns to increment.
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
 my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
@@ -104,8 +105,8 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADHjLtUVx]
-       [W<delimiter>h<delimiter>]
-       [-bBcovwzZ<c0,c1,...,cn>]
+       [-W<delimiter>h<delimiter>]
+       [-1bBcovwzZ<c0,c1,...,cn>]
        [-nOtu<[any|c0,c1,...,cn]>]
        [-C<[any|cn]:(gt|lt|eq|ge|le)exp,...>]
        [-ds[-IRN]<c0,c1,...,cn> [-J[cn]]]
@@ -137,6 +138,8 @@ Example: cat file.lst | pipe.pl -c"c0"
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based.
 
+ -1[c0,c1,...cn]: Increment the value stored in given column(s). Works on both integers and
+                  strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -278,6 +281,7 @@ The order of operations is as follows:
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
+  -1 - Increment value in specified columns.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -1893,6 +1897,21 @@ sub execute_script_line( $ )
 	}
 }
 
+# Increments values in column data.
+# param:  Array reference of line's columns.
+# return: string with table formatting.
+sub inc_line( $ )
+{
+	my $line = shift;
+	foreach my $colIndex ( @INCR_COLUMNS )
+	{
+		if ( defined @{ $line }[ $colIndex ] ) # and @{ $line }[ $colIndex ] =~ m/\S/ )
+		{
+			@{ $line }[ $colIndex ]++;
+		}
+	}
+}
+
 # Computes and returns a value based on whether -A (count) or -J (sum) is used.
 # param:  column to select within line. Like 'c2'.
 # param:  line of input.
@@ -2292,6 +2311,7 @@ sub process_line( $ )
 	{
 		return '';
 	}
+	inc_line( \@columns  )              if ( $opt{'1'} );
 	execute_script_line( \@columns  )   if ( $opt{'k'} );
 	modify_case_line( \@columns  )      if ( $opt{'e'} );
 	replace_line( \@columns )           if ( $opt{'E'} );
@@ -2354,11 +2374,12 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = 'a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '1:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$X_UNTIL_Y         = 1 if ( $opt{'M'} );
+	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );
