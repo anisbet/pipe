@@ -28,6 +28,7 @@ Things pipe.pl can do
 * Compute new column values based on values in other columns recursively.
 * Sum values over groups.
 * Merge columns.
+* Increment values in columns.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -41,6 +42,8 @@ cat file | pipe.pl -t'c0' | pipe.pl -o'c1,c0'
 Complete list of flags
 ----------------------
 ```
+ -1[c0,c1,...cn]: Increment the value stored in given column(s). Works on both integers and
+                  strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -187,6 +190,7 @@ The order of operations is as follows:
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
+  -1 - Increment value in specified columns.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -225,6 +229,17 @@ The order of operations is as follows:
   -H - Suppress new line on output.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
+```
+Incrementing values in a column
+-------------------------------
+The ironic '-1' allows you to increment the values in a column.
+```
+echo 9 | pipe.pl -1c0
+10
+echo 'aaa' | pipe.pl -1c0
+aab
+echo 'zzz' | pipe.pl -1c0
+aaaa
 ```
 
 Merging columns
