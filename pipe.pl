@@ -2,8 +2,6 @@
 ###########################################################################
 #
 # Perl source file for project pipe EXPERIMENTAL version.
-# Purpose:
-# Method:
 #
 # Pipe performs handy operations on pipe delimited files.
 #    Copyright (C) 2015 - 2016  Andrew Nisbet
@@ -27,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.29.00 - June 9, 2016 Add -1 to increment a value in a field.
+# 0.30.00 - June 13, 2016 Add -2 to add an auto-increment field.
 #
 ###########################################################################
 
@@ -37,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.29.00};
+my $VERSION           = qq{0.30.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -58,7 +56,8 @@ my $DELIMITER         = '|';
 my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
-my @INCR_COLUMNS      = ();                         # Columns to increment.
+my @INCR_COLUMNS      = ();                          # Columns to increment.
+my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED = {}; # Column and seed value to insert auto-increment columns into.
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
 my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
@@ -120,6 +119,7 @@ sub usage()
        [-m'cn:[_|#]*,...']
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
+       [-2<cn:[start],...>]
        [-T<HTML|WIKI>]
        [-X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
@@ -140,6 +140,11 @@ All column references are 0 based.
 
  -1[c0,c1,...cn]: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
+ -2[cn:[start]] : Adds a field to the data that auto increments starting at a given integer.
+                  Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
+                  function occurs last in the order of operations. The auto-increment value
+                  will be appended to the end of the line if the specified column index is
+                  greater than, or equal to, the number of columns a given line.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -316,6 +321,7 @@ The order of operations is as follows:
   -K - Output everything as a single column.
   -O - Merge selected columns.
   -o - Order selected columns.
+  -2 - Add an auto-increment field to output.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
@@ -324,6 +330,32 @@ The order of operations is as follows:
 Version: $VERSION
 EOF
 	exit;
+}
+
+# Takes a single argument from the command line in pipe.pl style input and returns a list of the column index and the value supplied.
+# Looks like this: -2c1:1000, where '-2' is the flag, c1 is the column requested, and 1000 the additional input for the column.
+# param:  string argument from the command line.
+# return: List of 2 values, the column index and the requested value. In the example above the return values are (1, 1000).
+sub parse_single_column_single_argument( $ )
+{
+	my $input = shift;
+	if ( $input =~ m/^[C|c]\d{1,}/ )
+	{
+		my ( $colNum, $value ) = split ':', $input;
+		$colNum =~ s/c//i; # get rid of the 'c' because it causes problems later.
+		# There may be an additional value after the column specifier (or not).
+		if ( $input =~ m/:/ )
+		{
+			$value = $';
+		}
+		if ( ! $value )
+		{
+			$value = 0;
+		}
+		return ( $colNum, $value );
+	}
+	printf STDERR "** error parsing column specification in '%s'\n", $input;
+	exit( 0 );
 }
 
 # Reads the values supplied on the command line and parses them out into the argument list,
@@ -1905,10 +1937,27 @@ sub inc_line( $ )
 	my $line = shift;
 	foreach my $colIndex ( @INCR_COLUMNS )
 	{
-		if ( defined @{ $line }[ $colIndex ] ) # and @{ $line }[ $colIndex ] =~ m/\S/ )
+		if ( defined @{ $line }[ $colIndex ] )
 		{
 			@{ $line }[ $colIndex ]++;
 		}
+	}
+}
+
+# Adds an auto-incremented field to the output line in the column position specified.
+# param:  Array reference of line's columns.
+# return: string with table formatting.
+sub add_auto_increment( $ )
+{
+	my $line = shift;
+	my $size = scalar( @{ $line } );
+	if ( $AUTO_INCR_COLUMN >= $size )
+	{
+		push @{ $line }, $AUTO_INCR_SEED++;
+	}
+	else
+	{
+		splice @{ $line }, $AUTO_INCR_COLUMN, 0, $AUTO_INCR_SEED++;
 	}
 }
 
@@ -2335,6 +2384,7 @@ sub process_line( $ )
 	average( \@columns )                if ( $opt{'v'} );
 	merge_line( \@columns )             if ( $opt{'O'} );
 	order_line( \@columns )             if ( $opt{'o'} );
+	add_auto_increment( \@columns )     if ( $opt{'2'} );
 	my $modified_line = '';
 	if ( $TABLE_OUTPUT )
 	{
@@ -2374,7 +2424,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '1:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '1:2:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2409,6 +2459,7 @@ sub init
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
+	($AUTO_INCR_COLUMN, $AUTO_INCR_SEED) = parse_single_column_single_argument( $opt{'2'} ) if ( $opt{'2'} );
 	if ( $opt{'v'} )
 	{
 		@AVG_COLUMNS   = read_requested_columns( $opt{'v'}, 0 ) if ( $opt{'v'} );
