@@ -29,6 +29,7 @@ Things pipe.pl can do
 * Sum values over groups.
 * Merge columns.
 * Increment values in columns.
+* Add an auto-increment column.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -44,6 +45,11 @@ Complete list of flags
 ```
  -1[c0,c1,...cn]: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
+ -2[cn:[start]] : Adds a field to the data that auto increments starting at a given integer.
+                  Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
+                  function occurs last in the order of operations. The auto-increment value
+                  will be appended to the end of the line if the specified column index is
+                  greater than, or equal to, the number of columns a given line.
  -a[c0,c1,...cn]: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -225,11 +231,41 @@ The order of operations is as follows:
   -K - Output everything as a single column.
   -O - Merge selected columns.
   -o - Order selected columns.
+  -2 - Add an auto-increment field to output.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
+Add an auto-increment column
+----------------------------
+With '-2' you can add an auto-increment column with a default of '0' as an initial value.
+```
+cat p.lst | pipe.pl -2c0
+0|1|2|3
+1|1|2|4
+2|1|2|4
+3|1|2|3
+```
+
+Here we set the initial value to 999, and start counting from there.
+```
+cat p.lst | pipe.pl -2c100:999
+1|2|3|999
+1|2|4|1000
+1|2|4|1001
+1|2|3|1002
+```
+
+You aren't restricted to integers either. Try specifying a string as an initial value.
+```
+cat p.lst | pipe.pl -2c100:a
+1|2|3|a
+1|2|4|b
+1|2|4|c
+1|2|3|d
+```
+
 Incrementing values in a column
 -------------------------------
 The ironic '-1' allows you to increment the values in a column.
