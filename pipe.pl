@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.30.00 - June 13, 2016 Add -2 to add an auto-increment field.
+# 0.30.01 - June 16, 2016 Add attributes to HTML output.
 #
 ###########################################################################
 
@@ -91,7 +91,7 @@ my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
-my $TABLE_OUTPUT      = 0; # Does the user want to output to a table.
+my $TABLE_OUTPUT      = 0; my $TABLE_ATTR = ''; # Does the user want to output to a table.
 my $WIDTHS_COLUMNS    = {};
 my $X_UNTIL_Y         = 0;
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
@@ -120,7 +120,7 @@ sub usage()
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
        [-2<cn:[start],...>]
-       [-T<HTML|WIKI>]
+       [-T[HTML:[table_attributes]|WIKI]
        [-X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -258,7 +258,9 @@ All column references are 0 based.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
- -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -T[HTML[:attributes]|WIKI]  : Output as a Wiki table or an HTML table. HTML also allows for
+                  adding CSS or other HTML attributes to the <table> tag. A bootstrap example is
+                  '1|2|3' -T'HTML:class="table table-hover"'.
  -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
@@ -2248,22 +2250,22 @@ sub table_output( $ )
 	{
 		if ( $placement =~ m/HEAD/ )
 		{
-			print "<table>\n  <tbody>\n";
+			printf "<table%s>\n  <tbody>\n", $TABLE_ATTR;
 		}
 		else
 		{
-			print "  </tbody>\n</table>\n";
+			printf "  </tbody>\n</table>\n";
 		}
 	}
 	if ( $TABLE_OUTPUT =~ m/WIKI/ )
 	{
 		if ( $placement =~ m/HEAD/ )
 		{
-			print "{| class='wikitable'\n";
+			printf "{| class='wikitable'%s", $TABLE_ATTR;
 		}
 		else
 		{
-			print "|-\n|}\n";
+			printf "|-\n|}\n";
 		}
 	}
 }
@@ -2503,6 +2505,10 @@ sub init
 	}
 	if ( $opt{'T'} )
 	{
+		my @attrs     = split ':', $opt{'T'};
+		shift @attrs; 
+		# Shift of 'HTML' or 'WIKI' and re-join the rest of the string to account for ':' separators in both CSS AND Wiki attributes.
+		$TABLE_ATTR   = ' ' . join ':', @attrs if ( scalar( @attrs ) > 0 );
 		if ( $opt{'T'} =~ m/HTML/i )
 		{
 			$TABLE_OUTPUT = "HTML";

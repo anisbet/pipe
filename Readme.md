@@ -163,7 +163,10 @@ Complete list of flags
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
- -T[HTML|WIKI]  : Output as a Wiki table or an HTML table.
+ -T[HTML[:attributes]|WIKI]  : Output as a Wiki table or an HTML table. HTML also allows for
+                  adding CSS or other HTML attributes to the <table> tag. A bootstrap example is
+                  -T'HTML:class="table table-hover"'. An arbitrary number of attributes can be 
+                  added to the table tag.
  -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
@@ -527,9 +530,10 @@ CPL|21221019966206|31221106815538|11052015
 
 Output as tables
 ----------------
-Pipe supports currently supports output as HTML or MediaWiki table format.
+Pipe supports currently supports output as HTML or MediaWiki table format. Using the data from the previous example I have 
+removed the non-'-T' switch settings for clarity.
 ```
-bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o'c3,c4,c6,c7' -m'c3:_____###,c4:__#,c6:__#,c7:__##_##_####' -s'c2' -T'HTML'
+bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML'
 <table>
   <tbody>
   <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
@@ -545,6 +549,28 @@ bash-3.2$ head holds_1411.lst | pipe.pl -W"\^" -o'c3,c4,c6,c7' -m'c3:_____###,c4
   </tbody>
 </table>
 ```
+
+You can add attributes to the outer table tag.
+```
+bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML:class="table table-hover"'
+<table class="table table-hover">
+  <tbody>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815504</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815512</td><td>11052015</td></tr>
+  <tr><td>CPL</td><td>21221019966206</td><td>31221106815538</td><td>11052015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815496</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815504</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815512</td><td>11122015</td></tr>
+  <tr><td>LON</td><td>21221022260092</td><td>31221106815520</td><td>11122015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815504</td><td>11082015</td></tr>
+  <tr><td>RIV</td><td>21221014186727</td><td>31221106815512</td><td>11082015</td></tr>
+  <tr><td>WMC</td><td>21221019655684</td><td>31221106815504</td><td>11172015</td></tr>
+  </tbody>
+</table>
+```
+
+Masking and tables
+------------------
 A new feature in -m to allow arbitrary characters to be inserted. For data like this:
 
 ```
@@ -568,6 +594,40 @@ bash-3.2$  cat s.lst | pipe.pl -W"\^" -o'c0,c3' -m'c0:_####/##/## ##:##:##_,c3:_
   </tbody>
 </table>
 ```
+... or in MediaWiki format:
+```
+bash-3.2$  cat s.lst | pipe.pl -W"\^" -o'c0,c3' -m'c0:_####/##/## ##:##:##_,c3:_____###' -T'WIKI'
+{| class='wikitable'
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/08 12:38:19 || RIV
+|-
+| 2014/11/08 12:38:19 || RIV
+|-|-
+|}
+```
+
+... and further:
+```
+bash-3.2$  cat s.lst | pipe.pl -W"\^" -o'c0,c3' -m'c0:_####/##/## ##:##:##_,c3:_____###' -T'WIKI:cellpadding=5 style="border:1px solid #BBB"'
+{| class='wikitable' cellpadding=5 style="border:1px solid #BBB"
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/05 10:46:47 || CPL
+|-
+| 2014/11/08 12:38:19 || RIV
+|-
+| 2014/11/08 12:38:19 || RIV
+|-|-
+|}
+```
+
 
 Formatting Unix tool outputs like **ls -la**, and a handy hack with masks
 -------------------------------------------------------------------------
