@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.30.01 - June 16, 2016 Add attributes to HTML output.
+# 0.30.02 - June 22, 2016 Add markdown table output.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.30.01};
+my $VERSION           = qq{0.30.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -120,7 +120,7 @@ sub usage()
        [-p'cn:[+|-]countChar+,...]
        [-S<cn:[range],...>]
        [-2<cn:[start],...>]
-       [-T[HTML:[table_attributes]|WIKI]
+       [-THTML[:attributes]|WIKI[:attributes]|MD[:attributes]]
        [-X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -258,7 +258,7 @@ All column references are 0 based.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
- -T[HTML[:attributes]|WIKI]  : Output as a Wiki table or an HTML table. HTML also allows for
+ -T[HTML[:attributes]|WIKI[:attributes]|MD[:attributes]]  : Output as a Wiki table or an HTML table. HTML also allows for
                   adding CSS or other HTML attributes to the <table> tag. A bootstrap example is
                   '1|2|3' -T'HTML:class="table table-hover"'.
  -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
@@ -921,6 +921,17 @@ sub prepare_table_data( $ )
 		# remove the last ' || '.
 		pop @newLine;
 		push @newLine, "\n|-";
+	}
+	elsif ( $TABLE_OUTPUT =~ m/MD/i )
+	{
+		foreach my $value ( @{ $line } )
+		{
+			push @newLine, $value;
+			push @newLine, ' | ';
+		}
+		# remove the last ' | '.
+		pop @newLine;
+		push @newLine, "\n";
 	}
 	@{ $line } = ();
 	foreach my $v ( @newLine )
@@ -2257,7 +2268,7 @@ sub table_output( $ )
 			printf "  </tbody>\n</table>\n";
 		}
 	}
-	if ( $TABLE_OUTPUT =~ m/WIKI/ )
+	elsif ( $TABLE_OUTPUT =~ m/WIKI/ )
 	{
 		if ( $placement =~ m/HEAD/ )
 		{
@@ -2267,6 +2278,14 @@ sub table_output( $ )
 		{
 			printf "|-\n|}\n";
 		}
+	}
+	elsif ( $TABLE_OUTPUT =~ m/MD/ )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			printf "%s", $TABLE_ATTR;
+		}
+		# No footer for MarkDown.
 	}
 }
 
@@ -2513,9 +2532,18 @@ sub init
 		{
 			$TABLE_OUTPUT = "HTML";
 		}
-		if ( $opt{'T'} =~ m/WIKI/i )
+		elsif ( $opt{'T'} =~ m/WIKI/i )
 		{
 			$TABLE_OUTPUT = "WIKI";
+		}
+		elsif ( $opt{'T'} =~ m/MD/i )
+		{
+			$TABLE_OUTPUT = "MD";
+		}
+		else
+		{
+			printf STDERR "** error, unsupported table type '%s'\n", $opt{'T'};
+			exit( 0 );
 		}
 	}
 }
