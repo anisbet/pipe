@@ -163,10 +163,9 @@ Complete list of flags
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t[any|c0,c1,...cn]: Trim the specified columns of white space front and back.
- -T[HTML[:attributes]|WIKI]  : Output as a Wiki table or an HTML table. HTML also allows for
+ -T[HTML[:attributes]|WIKI[:attributes]|MD[:attributes]]  : Output as a Wiki table or an HTML table. HTML also allows for
                   adding CSS or other HTML attributes to the <table> tag. A bootstrap example is
-                  -T'HTML:class="table table-hover"'. An arbitrary number of attributes can be 
-                  added to the table tag.
+                  '1|2|3' -T'HTML:class="table table-hover"'.
  -u[any|c0,c1,...cn]: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
@@ -530,7 +529,7 @@ CPL|21221019966206|31221106815538|11052015
 
 Output as tables
 ----------------
-Pipe supports currently supports output as HTML or MediaWiki table format. Using the data from the previous example I have 
+Pipe supports currently supports output as HTML, Mark Down, or MediaWiki table format. Using the data from the previous example I have 
 removed the non-'-T' switch settings for clarity.
 ```
 bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML'
