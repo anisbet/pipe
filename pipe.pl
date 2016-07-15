@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.31.00 - June 28, 2016 Added skip keyword to -L switch.
+# 0.31.01 - July 15, 2016 Bug fix for regex that include escaped expression delimiters.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.31.00};
+my $VERSION           = qq{0.31.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -404,6 +404,8 @@ sub read_requested_qualified_columns( $$$ )
 			}
 			push( @list, trim( $nameQualifier[0] ) );
 			# Add the qualifier to the hash reference too for reference later.
+			# The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
+			$nameQualifier[1] =~ s/\\,/,/g;
 			$hash_ref->{$nameQualifier[0]} = trim( $nameQualifier[1] );
 		}
 		elsif ( $colNum =~ m/any/ and $is_allowed =~ m/($KEYWORD_ANY)/i )
@@ -422,6 +424,8 @@ sub read_requested_qualified_columns( $$$ )
 			@list = ();
 			push( @list, trim( $nameQualifier[0] ) );
 			# Add the qualifier to the hash reference too for reference later.
+			# The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
+			$nameQualifier[1] =~ s/\\,/,/g;
 			$hash_ref->{$KEYWORD_ANY} = trim( $nameQualifier[1] );
 			last;
 		}
