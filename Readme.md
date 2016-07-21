@@ -31,6 +31,7 @@ Things pipe.pl can do
 * Increment values in columns.
 * Add an auto-increment column.
 * Output alternate lines.
+* Show regional context of a match. See -g and -G.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -157,6 +158,12 @@ Complete list of flags
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
+                  view the context around a match, that is, the line before the match and the line after.
+                  The lines are written to STDERR, and are immutable. The line preceding a match 
+                  is denoted by ‘<=’, the line after by ‘=>’. If the match occurs on the first line 
+                  the preceding match is ‘<=BOF’, beginning of file, and if the match occurs on 
+                  the last line the trailing match is ‘=>EOF’. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -202,7 +209,6 @@ The order of operations is as follows:
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
-  -q - Output alternate lines relative to the current line.
   -1 - Increment value in specified columns.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
@@ -216,6 +222,7 @@ The order of operations is as follows:
   -F - Format column value into bin, hex, or dec.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
+  -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.
   -S - Sub string column values.
   -l - Translate character sequence.
@@ -455,7 +462,48 @@ aaa|bbb|ccc
 echo 'aaa|bbb|ccc' | pipe -E'c1:?BBB.777' -I
 aaa|777|ccc
 ```
-
+Using '-Q' in conjunction with '-g' and '-G'
+--------------------------------------------
+The -Q flag will display the context of a search with -g and -G. Sometimes it is useful to be able to see what the line before
+and after a match looks like. I will demonstrate with the following data set.
+```
+ 86019|4|
+ 86019|9|
+ 86019|7|
+ 86020|0|
+ 86021|0|
+ 86022|1|
+```
+Again finding the line that has '7' in the second column is done like so.
+```
+cat test.lst | pipe.pl -g'c1:7'
+86019|7
+```
+Now with -Q
+```
+cat test.lst | pipe.pl -g'c1:7' -Q
+<=86019|9|  # Note: these lines are immutable and appear on STDERR.
+86019|7
+=>86020|0|
+cat test.lst | pipe.pl -g'c1:4' -Q
+<=BOF
+86019|4
+=>86019|9|
+cat test.lst | pipe.pl -g'c1:1' -Q
+<=86021|0|
+86022|1
+=>EOF
+```
+This is what happens if 2 lines match, one after another.
+```
+cat test.lst | pipe.pl -g'c1:0' -Q
+<=86019|7|
+86020|0
+=>86021|0|
+<=86020|0
+86021|0
+=>86022|1|
+```
 
 Using masks
 -----------

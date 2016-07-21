@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.31.01 - July 15, 2016 Bug fix for regex that include escaped expression delimiters.
+# 0.32.00 - July 20, 2016 Add -Q view matched search region.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.31.01};
+my $VERSION           = qq{0.32.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -96,6 +96,8 @@ my $WIDTHS_COLUMNS    = {};
 my $X_UNTIL_Y         = 0;
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
+my $PREVIOUS_LINE     = "BOF"; # For '-Q' region search display.
+my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 
 #
 # Message about this program and how to use it.
@@ -104,7 +106,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADHjLtUVx]
+    usage: cat file | pipe.pl [-ADHjLQtUVx]
        -Wh<delimiter>
        -1bBcovwzZ<c0,c1,...,cn>
        -nOtu<[any|c0,c1,...,cn]>
@@ -254,6 +256,12 @@ All column references are 0 based.
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
+                  view the context around a match, that is, the line before the match and the line after.
+                  The lines are written to STDERR, and are immutable. The line preceding a match 
+                  is denoted by ‘<=’, the line after by ‘=>’. If the match occurs on the first line 
+                  the preceding match is ‘<=BOF’, beginning of file, and if the match occurs on 
+                  the last line the trailing match is ‘=>EOF’. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d and -s).
@@ -307,6 +315,7 @@ The order of operations is as follows:
   -F - Format column value into bin, hex, or dec.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
+  -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.
   -S - Sub string column values.
   -l - Translate character sequence.
@@ -2387,19 +2396,39 @@ sub process_line( $ )
 	# This function allows the line by line operations to work with operations
 	# that require the entire file to be read before working (like sort and dedup).
 	# Each operation specified by a different flag.
-	# Grep comes first because it assumes that non-matching lines don't require additional operations.
-	if ( $opt{'g'} and $opt{'G'} )
+	if ( $opt{'g'} or $opt{'G'} )
 	{
-		return '' if ( ! ( is_match( \@columns ) and is_not_match( \@columns ) ) );
+		if ( $opt{'Q'} and $IS_A_POST_MATCH ) # There was a match so dump the buffer if we have been filling it.
+		{
+			printf STDERR "=>%s\n", $line;
+			$IS_A_POST_MATCH = 0;
+		}
+		# Grep comes first because it assumes that non-matching lines don't require additional operations.
+		if ( $opt{'g'} and $opt{'G'} )
+		{
+			$PREVIOUS_LINE = $line;
+			return '' if ( ! ( is_match( \@columns ) and is_not_match( \@columns ) ) );
+		}
+		elsif ( $opt{'g'} and ! is_match( \@columns ) )
+		{
+			$PREVIOUS_LINE = $line;
+			return '';
+		}
+		elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
+		{
+			$PREVIOUS_LINE = $line;
+			return '';
+		}
+		else # One of the above conditions matched.
+		{
+			if ( $opt{'Q'} ) # There was a match so dump the buffer if we have been filling it.
+			{
+				printf STDERR "<=%s\n", $PREVIOUS_LINE;
+				$IS_A_POST_MATCH = 1;
+			}
+		}
 	}
-	elsif ( $opt{'g'} and ! is_match( \@columns ) )
-	{
-		return '';
-	}
-	elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
-	{
-		return '';
-	}
+	
 	if ( $opt{'C'} and ! test_condition( \@columns ) )
 	{
 		return '';
@@ -2454,6 +2483,7 @@ sub process_line( $ )
 		# Don't add a delimiter on the last line if not -j and not the last line.
 		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'}  and ! ( $opt{'j'} and $LAST_LINE ) );
 	}
+	$PREVIOUS_LINE = $line;
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
 	{
@@ -2468,7 +2498,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '1:2:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:Pr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '1:2:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2604,6 +2634,11 @@ while ( @ALL_LINES )
 	my $line = shift @ALL_LINES;
 	$LAST_LINE = 1 if ( scalar( @ALL_LINES ) == 0 ); # last line of report.
 	printf "%s", process_line( $line );
+}
+if ( $opt{'Q'} and $IS_A_POST_MATCH ) # There was a match so dump the buffer, but we got to the EOF, there is no next line to view.
+{
+	printf STDERR "=>EOF\n";
+	$IS_A_POST_MATCH = 0;
 }
 table_output("FOOT") if ( $TABLE_OUTPUT );
 # Summary section.
