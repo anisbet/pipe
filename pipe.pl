@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.32.00 - July 20, 2016 Add -Q view matched search region.
+# 0.33.00 - August 03, 2016 Added -3 set increment step value.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.32.00};
+my $VERSION           = qq{0.33.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -58,6 +58,7 @@ my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
 my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED = {}; # Column and seed value to insert auto-increment columns into.
+my @INCR3_COLUMNS     = (); my $increment_ref = {};  # Stores increment values for each of the target columns.
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
 my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
@@ -99,6 +100,7 @@ my $SKIP_LINE         = 0; # Used for -L for alternate line output.
 my $PREVIOUS_LINE     = "BOF"; # For '-Q' region search display.
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 
+
 #
 # Message about this program and how to use it.
 #
@@ -109,6 +111,7 @@ sub usage()
     usage: cat file | pipe.pl [-ADHjLQtUVx]
        -Wh<delimiter>
        -1bBcovwzZ<c0,c1,...,cn>
+	   -3<c0:n,c1:m,...,cn:p>
        -nOtu<[any|c0,c1,...,cn]>
        -C<[any|cn]:(gt|lt|eq|ge|le)exp,...>
        -ds[-IRN]<c0,c1,...,cn> [-J[cn]]
@@ -145,11 +148,17 @@ All column references are 0 based.
 
  -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
+                  You can optionally change the increment step by a given value.
+                  '10' '-1c0:-1' => 9.
  -2<cn:[start]> : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
                   greater than, or equal to, the number of columns a given line.
+ -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
+                  Like '-1', but you can specify a given step value like '-2'.
+                  '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
+                  '-D' is used.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -303,6 +312,7 @@ The order of operations is as follows:
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
+  -3 - Increment value in specified columns by a specific step.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -1987,6 +1997,28 @@ sub inc_line( $ )
 	}
 }
 
+# Increments values in column data by a given step.
+# param:  Array reference of line's columns.
+# return: string with table formatting.
+sub inc_line_by_value( $ )
+{
+	my $line    = shift;
+	foreach my $colIndex ( @INCR3_COLUMNS )
+	{
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			if ( $increment_ref->{ $colIndex } =~ m/^(\-)?\d+(\.\d+)?$/ )
+			{
+				@{ $line }[ $colIndex ] += $increment_ref->{ $colIndex };
+			}
+			else
+			{
+				printf STDERR "* warning invalid increment value: '%s'\n", $increment_ref->{ $colIndex } if ( $opt{'D'} );
+			}
+		}
+	}
+}
+
 # Adds an auto-incremented field to the output line in the column position specified.
 # param:  Array reference of line's columns.
 # return: string with table formatting.
@@ -2434,6 +2466,7 @@ sub process_line( $ )
 		return '';
 	}
 	inc_line( \@columns  )              if ( $opt{'1'} );
+	inc_line_by_value( \@columns )      if ( $opt{'3'} );
 	execute_script_line( \@columns  )   if ( $opt{'k'} );
 	modify_case_line( \@columns  )      if ( $opt{'e'} );
 	replace_line( \@columns )           if ( $opt{'E'} );
@@ -2498,12 +2531,13 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '1:2:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
-	$X_UNTIL_Y         = 1 if ( $opt{'M'} );
+	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
 	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
+	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref, 0 )      if ( $opt{'3'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );

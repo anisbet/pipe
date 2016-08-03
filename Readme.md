@@ -52,6 +52,10 @@ Complete list of flags
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
                   greater than, or equal to, the number of columns a given line.
+ -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
+                  Like '-1', but you can specify a given step value like '-2'.
+                  '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
+                  '-D' is used.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -210,6 +214,7 @@ The order of operations is as follows:
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
+  -3 - Increment value in specified columns by a specific step.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -251,6 +256,24 @@ The order of operations is as follows:
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
+== Increment a column number by a given step
+The '-3' switch allows you to increment a given set of columns by a given step.
+```
+echo 10 | pipe.pl -3'c0:-1'
+9
+echo 10 | pipe.pl -3'c0:2'
+12
+echo 10 | pipe.pl -3'c0:2.1'
+12.1
+echo 10 | pipe.pl -3'c0:2.1.3'
+10
+echo 10 | pipe.pl -3'c0:2.1.3' -D
+columns requested: '0'
+* warning invalid increment value: '2.1.3'
+original: 0, modified: 0 fields at line number 1.
+10
+```
+
 Add an auto-increment column
 ----------------------------
 With '-2' you can add an auto-increment column with a default of '0' as an initial value.
