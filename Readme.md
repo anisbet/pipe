@@ -112,6 +112,10 @@ Complete list of flags
                   'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
+ -i             : Turns on virtual matching for -g, -G. Causes further processing on the line ONLY
+                  if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
+                  The -i flag will override that behaviour but suppress any additional processing of 
+                  the line unless the -g or -G flag succeeds.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
@@ -225,6 +229,7 @@ The order of operations is as follows:
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
+  -i - Output all lines, but process only if -g or -G match.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
@@ -256,7 +261,33 @@ The order of operations is as follows:
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
-== Increment a column number by a given step
+Using virtual matching with -i
+----------------------
+Sometimes you want to modify a column but only if some value in another column matches
+a given expression. For example, given the following file, 
+```
+cat test.lst
+ 86019|4|
+ 86020|9|
+ 86019|7|
+ 86020|0|
+ 86019|0|
+ 86022|1|
+```
+flip the value in c1 to an '8' but only if the value in c0 = '86019'.
+```
+cat test.lst | pipe.pl -g'c0:86019' -i -f'c1:0.8'
+86019|8
+86020|9
+86019|8
+86020|0
+86019|8
+86022|1
+```
+The -i flag tells -g and -G to continue to ouput, match or no, but only process other flags if -g or -G match.
+
+Increment a column number by a given step
+-----------------------------------------
 The '-3' switch allows you to increment a given set of columns by a given step.
 ```
 echo 10 | pipe.pl -3'c0:-1'

@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.33.01 - August 10, 2016 Fix -l to remove escaping characters.
+# 0.34.00 - August 10, 2016 Added -i set virtual match for -g.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.33.01};
+my $VERSION           = qq{0.34.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -108,7 +108,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADHjLQtUVx]
+    usage: cat file | pipe.pl [-ADHijLQtUVx]
        -Wh<delimiter>
        -1bBcovwzZ<c0,c1,...,cn>
 	   -3<c0:n,c1:m,...,cn:p>
@@ -215,6 +215,10 @@ All column references are 0 based.
                   'any' is used, all columns must fail the match to return true.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
+ -i             : Turns on virtual matching for -g, -G. Causes further processing on the line ONLY
+                  if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
+                  The -i flag will override that behaviour but suppress any additional processing of 
+                  the line unless the -g or -G flag succeeds.
  -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
@@ -2353,7 +2357,7 @@ sub table_output( $ )
 	}
 }
 
-# Formats the specified column to the desired base type.
+# Merges other columns' data into a specific column.
 # param:  Original line input.
 # return: <none>.
 sub merge_line( $ )
@@ -2386,6 +2390,9 @@ sub merge_line( $ )
 # return: Modified line.
 sub process_line( $ )
 {
+	# Always output if -g or -G match or not, but if matches additional processing will be done.
+	# We turn it on by default so if -g or -G not used the line will get processed as normal.
+	my $continue_to_process_match = 1; 
 	my $line = shift;
 	chomp $line;
 	# With -W the line will look like this; '11|abc{_PIPE_}def'
@@ -2441,17 +2448,41 @@ sub process_line( $ )
 		if ( $opt{'g'} and $opt{'G'} )
 		{
 			$PREVIOUS_LINE = $line;
-			return '' if ( ! ( is_match( \@columns ) and is_not_match( \@columns ) ) );
+			if ( ! ( is_match( \@columns ) and is_not_match( \@columns ) ) )
+			{
+				if ( $opt{'i'} )
+				{
+					$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+				}
+				else
+				{
+					return '';
+				}
+			}
 		}
 		elsif ( $opt{'g'} and ! is_match( \@columns ) )
 		{
 			$PREVIOUS_LINE = $line;
-			return '';
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0;
+			}
+			else
+			{
+				return '';
+			}
 		}
 		elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
 		{
 			$PREVIOUS_LINE = $line;
-			return '';
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0;
+			}
+			else
+			{
+				return '';
+			}
 		}
 		else # One of the above conditions matched.
 		{
@@ -2462,37 +2493,39 @@ sub process_line( $ )
 			}
 		}
 	}
-	
-	if ( $opt{'C'} and ! test_condition( \@columns ) )
+	if ( $continue_to_process_match )
 	{
-		return '';
+		if ( $opt{'C'} and ! test_condition( \@columns ) )
+		{
+			return '';
+		}
+		inc_line( \@columns  )              if ( $opt{'1'} );
+		inc_line_by_value( \@columns )      if ( $opt{'3'} );
+		execute_script_line( \@columns  )   if ( $opt{'k'} );
+		modify_case_line( \@columns  )      if ( $opt{'e'} );
+		replace_line( \@columns )           if ( $opt{'E'} );
+		flip_char_line( \@columns )         if ( $opt{'f'} );
+		format_radix( \@columns )           if ( $opt{'F'} );
+		url_encode_line( \@columns )        if ( $opt{'u'} );
+		translate_line( \@columns )         if ( $opt{'l'} );
+		mask_line( \@columns )              if ( $opt{'m'} );
+		sub_string_line( \@columns )        if ( $opt{'S'} );
+		normalize_line( \@columns )         if ( $opt{'n'} );
+		trim_line( \@columns )              if ( $opt{'t'} );
+		pad_line( \@columns )               if ( $opt{'p'} );
+		# Stop processing lines if the requested column(s) test empty.
+		return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
+		return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
+		return ''                           if ( $opt{'z'} and is_empty( \@columns ) );
+		return ''                           if ( $opt{'Z'} and is_not_empty( \@columns ) );
+		width( \@columns, $LINE_NUMBER )    if ( $opt{'w'} );
+		sum( \@columns )                    if ( $opt{'a'} );
+		count( \@columns )                  if ( $opt{'c'} );
+		average( \@columns )                if ( $opt{'v'} );
+		merge_line( \@columns )             if ( $opt{'O'} );
+		order_line( \@columns )             if ( $opt{'o'} );
+		add_auto_increment( \@columns )     if ( $opt{'2'} );
 	}
-	inc_line( \@columns  )              if ( $opt{'1'} );
-	inc_line_by_value( \@columns )      if ( $opt{'3'} );
-	execute_script_line( \@columns  )   if ( $opt{'k'} );
-	modify_case_line( \@columns  )      if ( $opt{'e'} );
-	replace_line( \@columns )           if ( $opt{'E'} );
-	flip_char_line( \@columns )         if ( $opt{'f'} );
-	format_radix( \@columns )           if ( $opt{'F'} );
-	url_encode_line( \@columns )        if ( $opt{'u'} );
-	translate_line( \@columns )         if ( $opt{'l'} );
-	mask_line( \@columns )              if ( $opt{'m'} );
-	sub_string_line( \@columns )        if ( $opt{'S'} );
-	normalize_line( \@columns )         if ( $opt{'n'} );
-	trim_line( \@columns )              if ( $opt{'t'} );
-	pad_line( \@columns )               if ( $opt{'p'} );
-	# Stop processing lines if the requested column(s) test empty.
-	return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
-	return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
-	return ''                           if ( $opt{'z'} and is_empty( \@columns ) );
-	return ''                           if ( $opt{'Z'} and is_not_empty( \@columns ) );
-	width( \@columns, $LINE_NUMBER )    if ( $opt{'w'} );
-	sum( \@columns )                    if ( $opt{'a'} );
-	count( \@columns )                  if ( $opt{'c'} );
-	average( \@columns )                if ( $opt{'v'} );
-	merge_line( \@columns )             if ( $opt{'O'} );
-	order_line( \@columns )             if ( $opt{'o'} );
-	add_auto_increment( \@columns )     if ( $opt{'2'} );
 	my $modified_line = '';
 	if ( $TABLE_OUTPUT )
 	{
@@ -2533,7 +2566,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
