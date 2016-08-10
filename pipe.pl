@@ -327,6 +327,7 @@ The order of operations is as follows:
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
+  -i - Output all lines, but process only if -g or -G match.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
