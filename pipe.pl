@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.33.00 - August 03, 2016 Added -3 set increment step value.
+# 0.33.01 - August 10, 2016 Fix -l to remove escaping characters.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.33.00};
+my $VERSION           = qq{0.33.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1742,6 +1742,8 @@ sub translate_line( $ )
 			printf STDERR "translate expression: '%s' \n", $trans_ref->{ $i } if ( $opt{'D'} );
 			my $exp = $trans_ref->{ $i };
 			my ( $token, $replacement ) = split( m/(?<!\\)\./, $exp );
+			# The $replacement string should be stripped of escaping characters.
+			$replacement =~ s/\\//g;
 			@{ $line }[ $i ] =~ s/($token)/$replacement/g;
 		}
 	}
