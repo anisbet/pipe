@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.34.00 - August 10, 2016 Added -i set virtual match for -g.
+# 0.34.00 - August 18, 2016 Added -0 to read in from a file.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.34.00};
+my $VERSION           = qq{0.35.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -109,6 +109,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-ADHijLQtUVx]
+       -0<file_name>
        -Wh<delimiter>
        -1bBcovwzZ<c0,c1,...,cn>
 	   -3<c0:n,c1:m,...,cn:p>
@@ -146,6 +147,7 @@ Example: cat file.lst | pipe.pl -c"c0"
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based.
 
+ -0<file_name>  : Name of a text file to use as input as alternative to taking input on STDIN.
  -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -312,6 +314,7 @@ All column references are 0 based.
 
 The order of operations is as follows:
   -x - Usage message, then exits.
+  -0 - Input from named file.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
@@ -2567,7 +2570,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '0:1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
@@ -2673,8 +2676,18 @@ sub init
 
 init();
 table_output("HEAD") if ( $TABLE_OUTPUT );
-# Only takes input on STDIN. All output is to STDOUT with the exception of errors.
-while (<>)
+my $ifh;
+my $is_stdin = 0;
+if ( defined $opt{'0'} )
+{
+	open $ifh, "<", $opt{'0'} or die $!;
+}
+else
+{
+	$ifh = *STDIN;
+	$is_stdin++;
+}
+while (<$ifh>)
 {
 	my $line = $_;
 	$LINE_NUMBER++;
@@ -2694,6 +2707,7 @@ while (<>)
 	}
 	last if ( $FAST_FORWARD );
 }
+close $ifh;
 push @ALL_LINES, @LINE_BUFF;
 # Print out all results now we have fully read the entire input file and processed it.
 finalize_full_read_functions() if ( $READ_FULL );
