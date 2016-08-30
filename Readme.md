@@ -32,6 +32,7 @@ Things pipe.pl can do
 * Add an auto-increment column.
 * Output alternate lines.
 * Show regional context of a match. See -g and -G.
+* Take input from named file (see -0).
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -45,6 +46,7 @@ cat file | pipe.pl -t'c0' | pipe.pl -o'c1,c0'
 Complete list of flags
 ----------------------
 ```
+ -0<file_name>  : Name of a text file to use as input as alternative to taking input on STDIN.
  -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
  -2<cn:[start]> : Adds a field to the data that auto increments starting at a given integer.
@@ -214,6 +216,7 @@ Order of operations
 The order of operations is as follows:
 ```
   -x - Usage message, then exits.
+  -0 - Input from named file.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
