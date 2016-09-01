@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.34.00 - August 18, 2016 Added -0 to read in from a file.
+# 0.34.01 - September 1, 2016 increased max records to 100,000,000.
 #
 ###########################################################################
 
@@ -35,11 +35,11 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.35.00};
+my $VERSION           = qq{0.35.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
-my $MAX_LINE          = 10000000;
+my $MAX_LINE          = 100000000;
 $LINE_RANGES->{'1'}   = $MAX_LINE;
 my $READ_FULL         = 0; # Set true to read the entire file before output as with -L'-n'.
 my $KEEP_LINES        = 10; # Number of lines to keep in buffer if -L'-n' is used.
