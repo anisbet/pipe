@@ -1102,7 +1102,6 @@ sub sub_string( $ )
 			}
 			elsif ( $start eq '' ) # If the '-' was the leading character. This will indicate the last characters of the string.
 			{
-				printf STDERR "I run %s has a length of %d\n", $input_string, length( $input_string );
 				$start = length( $input_string ) - $end;
 				$end = $start + $end;
 				# and if the user specified a value greater than the length of the string let's reset the start.
