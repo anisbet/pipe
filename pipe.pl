@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.34.01 - September 1, 2016 increased max records to 100,000,000.
+# 0.34.02 - September 3, Fixed -S to interpret '-n' to be the last 'n' chars of a substring.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.35.01};
+my $VERSION           = qq{0.35.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1059,11 +1059,12 @@ sub sub_string_line( $ )
 # return: string with table formatting.
 sub sub_string( $ )
 {
-	my @field       = split '', shift;
+	my $input_string= shift;
+	my @field       = split '', $input_string;
 	my $instruction = shift;
 	my @newField    = ();
 	my @indexes     = ();
-	printf "SUBS: '%s'.\n", $instruction if ( $opt{'D'} );
+	printf "SUBSTR: '%s'.\n", $instruction if ( $opt{'D'} );
 	# We will save all the indexes of characters we need. To do that we need to
 	# convert '-' to ranges.
 	my @subInstructions = split '\.', $instruction;
@@ -1075,40 +1076,45 @@ sub sub_string( $ )
 			push @indexes, $&;
 			next;
 		}
-		printf "got subinstr '%s' .\n", $sub_instruction if ( $opt{'D'} );
+		printf "got subinstruction string '%s' .\n", $sub_instruction if ( $opt{'D'} );
 		if ( $sub_instruction =~ m/\-/ )
 		{
 			my $start = $`,
 			my $end   = $';
 			printf "got value '%s' and '%s'.\n", $start, $end if ( $opt{'D'} );
-			if ( $start =~ m/\d+/ )
-			{
-				$start = $&; # strips out just the number.
-			}
-			elsif ( $start eq '' ) # If the '-' was the leading character. This will have precedence of selecting the entire start of string.
-			{
-				$start = 0;
-			}
-			else
-			{
-				printf "*** error invalid start of range specification at '%s'.\n", $start;
-				usage();
-			}
-			printf "got start value '%s'.\n", $start if ( $opt{'D'} );
+			# test end first, start depends on end in the case of a leading '-'.
 			if ( $end =~ m/\d+/ )
 			{
-				$end   = $&; # strips out just the number.
+				$end = sprintf "%d", $&; # strips out just the number.
 			}
 			elsif ( $end eq '' ) # If the '-' was the trailing character. This will have precedence to select the rest of the string.
 			{
-				$end = scalar @field;
+				$end = length $input_string;
 			}
 			else
 			{
 				printf "*** error invalid end of range specification at '%s'.\n", $end;
 				usage();
 			}
-			printf "got end value '%s'.\n", $end if ( $opt{'D'} );
+			if ( $start =~ m/\d+/ )
+			{
+				$start = sprintf "%d", $&; # strips out just the number.
+			}
+			elsif ( $start eq '' ) # If the '-' was the leading character. This will indicate the last characters of the string.
+			{
+				printf STDERR "I run %s has a length of %d\n", $input_string, length( $input_string );
+				$start = length( $input_string ) - $end;
+				$end = $start + $end;
+				# and if the user specified a value greater than the length of the string let's reset the start.
+				$start = 0 if ( $start < 0 );
+			}
+			else
+			{
+				printf "*** error invalid start of range specification at '%s'.\n", $start;
+				usage();
+			}
+			printf "computed start '%d'.\n", $start if ( $opt{'D'} );
+			printf "computed end   '%d'.\n", $end if ( $opt{'D'} );
 			# now pack the indices onto the array
 			my $i = 0;
 			if ( $start > $end )
