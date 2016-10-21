@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.34.02 - September 3, Fixed -S to interpret '-n' to be the last 'n' chars of a substring.
+# 0.36.00 - October 20, Add -4 delta previous line.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.35.02};
+my $VERSION           = qq{0.36.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -59,6 +59,7 @@ my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
 my @INCR_COLUMNS      = ();                          # Columns to increment.
 my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED = {}; # Column and seed value to insert auto-increment columns into.
 my @INCR3_COLUMNS     = (); my $increment_ref = {};  # Stores increment values for each of the target columns.
+my @DELTA4_COLUMNS    = (); my $delta_cols_ref= {};  # Stores columns we want deltas for, and previous lines value used in difference.
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
 my @SUM_COLUMNS       = (); my $sum_ref       = {};
 my @WIDTH_COLUMNS     = (); my $width_min_ref = {}; my $width_max_ref = {}; my $width_line_min_ref = {}; my $width_line_max_ref = {};
@@ -100,7 +101,6 @@ my $SKIP_LINE         = 0; # Used for -L for alternate line output.
 my $PREVIOUS_LINE     = "BOF"; # For '-Q' region search display.
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 
-
 #
 # Message about this program and how to use it.
 #
@@ -111,7 +111,7 @@ sub usage()
     usage: cat file | pipe.pl [-ADHijLQtUVx]
        -0<file_name>
        -Wh<delimiter>
-       -1bBcovwzZ<c0,c1,...,cn>
+       -14bBcovwzZ<c0,c1,...,cn>
 	   -3<c0:n,c1:m,...,cn:p>
        -nOtu<[any|c0,c1,...,cn]>
        -C<[any|cn]:(gt|lt|eq|ge|le)exp,...>
@@ -161,6 +161,8 @@ All column references are 0 based.
                   Like '-1', but you can specify a given step value like '-2'.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
                   '-D' is used.
+ -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
+                  line above are numerical the previous line is subtracted from the current line.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -320,6 +322,7 @@ The order of operations is as follows:
   -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
+  -4 - Output difference between this and previous line.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -2014,7 +2017,7 @@ sub inc_line( $ )
 
 # Increments values in column data by a given step.
 # param:  Array reference of line's columns.
-# return: string with table formatting.
+# return: <none>
 sub inc_line_by_value( $ )
 {
 	my $line    = shift;
@@ -2030,6 +2033,39 @@ sub inc_line_by_value( $ )
 			{
 				printf STDERR "* warning invalid increment value: '%s'\n", $increment_ref->{ $colIndex } if ( $opt{'D'} );
 			}
+		}
+	}
+}
+
+
+# Computes the difference between this line and the previous and outputs that difference.
+# param:  Array reference of line's columns.
+# return: <none>
+sub delta_previous_line( $ )
+{
+	# my @DELTA4_COLUMNS    = (); my $delta_cols_ref= {};
+	my $line    = shift;
+	foreach my $colIndex ( @DELTA4_COLUMNS )
+	{
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			# Guard against values that can't be subtracted.
+			if ( @{ $line }[ $colIndex ] !~ m/^(\-)?\d+(\.\d+)?$/ )
+			{
+				printf STDERR "* warning can't subtract '%s'\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
+				next;
+			}
+			# Save the first value 
+			if ( ! exists $delta_cols_ref->{ $colIndex } )
+			{
+				$delta_cols_ref->{ $colIndex } = @{ $line }[ $colIndex ];
+				last;
+			}
+			# Save this rows orginial value in this row for the next row's calculation.
+			my $tmp = @{ $line }[ $colIndex ];
+			# Compute the new value for this row.
+			@{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+			$delta_cols_ref->{ $colIndex } = $tmp; 
 		}
 	}
 }
@@ -2510,6 +2546,7 @@ sub process_line( $ )
 		}
 		inc_line( \@columns  )              if ( $opt{'1'} );
 		inc_line_by_value( \@columns )      if ( $opt{'3'} );
+		delta_previous_line( \@columns )    if ( $opt{'4'} );
 		execute_script_line( \@columns  )   if ( $opt{'k'} );
 		modify_case_line( \@columns  )      if ( $opt{'e'} );
 		replace_line( \@columns )           if ( $opt{'E'} );
@@ -2575,13 +2612,14 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
 	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
 	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref, 0 )      if ( $opt{'3'} );
+	@DELTA4_COLUMNS    = read_requested_columns( $opt{'4'}, 0 ) if ( $opt{'4'} );
 	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
 	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
 	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );

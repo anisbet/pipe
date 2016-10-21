@@ -33,6 +33,7 @@ Things pipe.pl can do
 * Output alternate lines.
 * Show regional context of a match. See -g and -G.
 * Take input from named file (see -0).
+* Compute the delta between lines.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -58,6 +59,8 @@ Complete list of flags
                   Like '-1', but you can specify a given step value like '-2'.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
                   '-D' is used.
+ -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
+                  line above are numerical the previous line is subtracted from the current line.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -222,6 +225,7 @@ The order of operations is as follows:
   -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
+  -4 - Output difference between this and previous line.
   -k - Run a series of scripted commands.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
@@ -264,6 +268,53 @@ The order of operations is as follows:
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
+Computing differences between one line and the next
+---------------------------------------------------
+One common problem I face is I have a column of values, but I want to output the difference
+between this lines value and the previous for a given column. To do that use '-4'. 
+Example:
+```
+cat d.lst
+1|10
+2|10
+3|10
+4|10
+5|10
+7|10
+9|10
+11|10
+15|10
+19|10
+23|10
+```
+Now try the following.
+```
+cat d.lst | pipe.pl -4'c0'
+1|10
+1|10
+1|10
+1|10
+1|10
+2|10
+2|10
+2|10
+4|10
+4|10
+4|10
+cat d.lst | pipe.pl -4'c1'
+1|10
+2|0
+3|0
+4|0
+5|0
+7|0
+9|0
+11|0
+15|0
+19|0
+23|0
+```
+
 Using virtual matching with -i
 ----------------------
 Sometimes you want to modify a column but only if some value in another column matches
