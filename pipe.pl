@@ -112,7 +112,7 @@ sub usage()
        -0<file_name>
        -Wh<delimiter>
        -14bBcovwzZ<c0,c1,...,cn>
-	 -3<c0:n,c1:m,...,cn:p>
+       -3<c0:n,c1:m,...,cn:p>
        -nOtu<[any|c0,c1,...,cn]>
        -C<[any|cn]:(gt|lt|eq|ge|le)exp,...>
        -ds[-IRN]<c0,c1,...,cn> [-J[cn]]
@@ -282,7 +282,7 @@ All column references are 0 based.
                   the last line the trailing match is ‘=>EOF’. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
- -R             : Reverse sort (-d and -s).
+ -R             : Reverse sort (-d, -4 and -s).
  -s<c0,c1,...cn>: Sort on the specified columns in the specified order.
  -S<c0:range>   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
