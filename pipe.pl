@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.36.00 - October 20, Add -4 delta previous line.
+# 0.36.01 - October 22, -4 flag can subtract current line from previous with -R.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.36.00};
+my $VERSION           = qq{0.36.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -112,7 +112,7 @@ sub usage()
        -0<file_name>
        -Wh<delimiter>
        -14bBcovwzZ<c0,c1,...,cn>
-	   -3<c0:n,c1:m,...,cn:p>
+	 -3<c0:n,c1:m,...,cn:p>
        -nOtu<[any|c0,c1,...,cn]>
        -C<[any|cn]:(gt|lt|eq|ge|le)exp,...>
        -ds[-IRN]<c0,c1,...,cn> [-J[cn]]
@@ -163,6 +163,7 @@ All column references are 0 based.
                   '-D' is used.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
+                  If the '-R' switch is used the current line is subtracted from the previous line.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -345,6 +346,7 @@ The order of operations is as follows:
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
+  -R - Reverse line order when -d, -4 or -s is used.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
@@ -2052,20 +2054,32 @@ sub delta_previous_line( $ )
 			# Guard against values that can't be subtracted.
 			if ( @{ $line }[ $colIndex ] !~ m/^(\-)?\d+(\.\d+)?$/ )
 			{
-				printf STDERR "* warning can't subtract '%s'\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
+				printf STDERR "* warning can't use '%s' for computation.\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
 				next;
 			}
 			# Save the first value 
 			if ( ! exists $delta_cols_ref->{ $colIndex } )
 			{
 				$delta_cols_ref->{ $colIndex } = @{ $line }[ $colIndex ];
-				last;
+				next;
 			}
-			# Save this rows orginial value in this row for the next row's calculation.
-			my $tmp = @{ $line }[ $colIndex ];
-			# Compute the new value for this row.
-			@{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
-			$delta_cols_ref->{ $colIndex } = $tmp; 
+                  # But if the '-R' reverse switch is used subtract this value from the previous line.
+                  if ( $opt{'R'} )
+                  {
+                        # Save this rows orginial value in this row for the next row's calculation.
+                        my $tmp = @{ $line }[ $colIndex ];
+                        # Compute the new value for this row.
+                        @{ $line }[ $colIndex ] = $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
+                        $delta_cols_ref->{ $colIndex } = $tmp;
+                  }
+                  else
+                  {
+                        # Save this rows orginial value in this row for the next row's calculation.
+                        my $tmp = @{ $line }[ $colIndex ];
+                        # Compute the new value for this row.
+                        @{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+                        $delta_cols_ref->{ $colIndex } = $tmp;
+                  } 
 		}
 	}
 }
