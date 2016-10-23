@@ -61,6 +61,7 @@ Complete list of flags
                   '-D' is used.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
+                  If the '-R' switch is used the current line is subtracted from the previous line.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -248,6 +249,7 @@ The order of operations is as follows:
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
+  -R - Reverse line order when -d, -4 or -s is used.
   -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
