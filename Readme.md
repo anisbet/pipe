@@ -180,7 +180,7 @@ Complete list of flags
                   the last line the trailing match is ‘=>EOF’. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
- -R             : Reverse sort (-d and -s).
+ -R             : Reverse sort (-d, -4, and -s).
  -s<c0,c1,...cn>: Sort on the specified columns in the specified order.
  -S<c0:range>   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
