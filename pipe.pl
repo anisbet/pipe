@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.36.01 - October 22, -4 flag can subtract current line from previous with -R.
+# 0.36.02 - October 27, Enforce input columns match output columns.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.36.01};
+my $VERSION           = qq{0.36.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1776,19 +1776,22 @@ sub translate_line( $ )
 sub validate( $$$ )
 {
 	my ( $original, $modified, $line_no ) = @_;
-	my $count = ( $original =~ tr/\|// );
-	my $final_count = ($modified =~ tr/\|//);
+	my $count       = ( $original =~ tr/\|// );
+	my $final_count = ( $modified =~ tr/\|// );
 	printf STDERR "original: %d, modified: %d fields at line number %s.\n", $count, $final_count, $line_no if ( $opt{'D'} );
-	if ( $opt{'V'} )
+	# if ( $opt{'V'} ) # Original
+	if ( $opt{'o'} ) # If you select -o this doesn't get done or extra fields are added even if you select 'V'
 	{
-		if ( $final_count < $count )
+		# But pad to the width of the columns selected -1, because pipe doesn't add a terminal pipe by default.
+		$count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
+	}
+	if ( $final_count < $count )
+	{
+		my $iterations = $count - $final_count;
+		my $i = 0;
+		for ( $i = 0; $i < $iterations; $i++ )
 		{
-			my $iterations = $count - $final_count;
-			my $i = 0;
-			for ( $i = 0; $i < $iterations; $i++ )
-			{
-				$modified .= '|';
-			}
+			$modified .= '|';
 		}
 	}
 	return $modified;
@@ -2593,24 +2596,23 @@ sub process_line( $ )
 		$modified_line = join '', @columns;
 		return $modified_line; # The rest of the computation is not relavent to tables.
 	}
-	else
+	if ( $opt{'W'} )
 	{
-		$modified_line = join "$DELIMITER", @columns;
+		foreach my $col ( @columns )
+		{
+			# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+			$col =~ s/\|/$SUB_DELIMITER/g;
+		}
 	}
+	$modified_line = join '|', @columns;
 	$line = validate( $line, $modified_line, $LINE_NUMBER );
 	chomp $line;
-	if ( $opt{'h'} )
-	{
-		$line =~ s/($DELIMITER)/\n/g if ( $opt{'K'} );
-		# Don't add a delimiter on the last line if not -j and not the last line.
-		$line .= "$DELIMITER" if ( trim( $line ) !~ m/($DELIMITER)$/ and $opt{'P'} and ! ( $opt{'j'} and $LAST_LINE ) );
-	}
-	else
-	{
-		$line =~ s/\|/\n/g if ( $opt{'K'} );
-		# Don't add a delimiter on the last line if not -j and not the last line.
-		$line .= "|" if ( trim( $line ) !~ m/\|$/ and $opt{'P'}  and ! ( $opt{'j'} and $LAST_LINE ) );
-	}
+	$line =~ s/\|/\n/g if ( $opt{'K'} );
+	# Don't add a delimiter on the last line if not -j and not the last line.
+	$line .= '|' if ( trim( $line ) !~ m/\|$/ and $opt{'P'}  and ! ( $opt{'j'} and $LAST_LINE ) );
+	$line =~ s/\|/$DELIMITER/g if ( $opt{'h'} );
+	# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+	$line =~ s/($SUB_DELIMITER)/\|/g if ( $opt{'W'} );
 	$PREVIOUS_LINE = $line;
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
