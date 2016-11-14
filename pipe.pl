@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.36.02 - October 27, Enforce input columns match output columns.
+# 0.36.02_a - November 14, 2016 Update documentation.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.36.02};
+my $VERSION           = qq{0.36.02_a};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -318,6 +318,10 @@ All column references are 0 based.
 The order of operations is as follows:
   -x - Usage message, then exits.
   -0 - Input from named file.
+  -d - De-duplicate selected columns.
+  -r - Randomize line output.
+  -s - Sort columns.
+  -v - Average numerical values in selected columns.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
@@ -344,10 +348,7 @@ The order of operations is as follows:
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
   -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
-  -d - De-duplicate selected columns.
-  -r - Randomize line output.
   -R - Reverse line order when -d, -4 or -s is used.
-  -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
@@ -355,7 +356,6 @@ The order of operations is as follows:
   -w - Output minimum an maximum width of column data.
   -a - Sum of numeric values in specific columns.
   -c - Count numeric values in specified columns.
-  -v - Average numerical values in selected columns.
   -T - Output in table form.
   -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
