@@ -188,7 +188,9 @@ Complete list of flags
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
- -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]>  : Output as a Wiki table or an HTML table. 
+ -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>  
+                : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
+                  CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag. 
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
  -u<any|c0,c1,...cn>: Encodes strings in specified columns into URL safe versions.
@@ -712,7 +714,7 @@ bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML'
 </table>
 ```
 
-You can add attributes to the outer table tag.
+You can add attributes to the outer table tag. 
 ```
 bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML:class="table table-hover"'
 <table class="table table-hover">
@@ -729,6 +731,15 @@ bash-3.2$ head holds_1411.lst | pipe.pl ... -T'HTML:class="table table-hover"'
   <tr><td>WMC</td><td>21221019655684</td><td>31221106815504</td><td>11172015</td></tr>
   </tbody>
 </table>
+```
+
+You can also create CSV output as follows.
+```
+cat z.lst | ./pipe.pl -T'CSV:User ID,Profile,Branch,Consent type,Email,Date of last activity'
+"User ID","Profile","Branch","Consent type","Email","Date of last activity"
+21221023942342,"EPL-ADU1FR","EPLMLW","ECONSENT","joseph.stewart@myldsmail.net",20150717
+21221023464206,"EPL-JUV","EPLMNA","EMAILCONV","",20150717
+21221024955293,"EPL-ADULT","EPLJPL","ENOCONSENT","",20150717
 ```
 
 Masking and tables

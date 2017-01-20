@@ -4,7 +4,7 @@
 # Perl source file for project pipe EXPERIMENTAL version.
 #
 # Pipe performs handy operations on pipe delimited files.
-#    Copyright (C) 2015 - 2016  Andrew Nisbet
+#    Copyright (C) 2015 - 2017  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.36.02_a - November 14, 2016 Update documentation.
+# 0.37.00 - January 20, 2017 Add CSV table output.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.36.02_a};
+my $VERSION           = qq{0.37.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -129,7 +129,7 @@ sub usage()
        -q<n-th> [-Q]
        -S<cn:[range],...>
        -2<cn:[start],...>
-       -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]
+       -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
        -X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -290,7 +290,9 @@ All column references are 0 based.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
  -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
- -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]>  : Output as a Wiki table or an HTML table. 
+ -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>
+                : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
+                  CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag. 
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
  -u<any|c0,c1,...cn>: Encodes strings in specified columns into URL safe versions.
@@ -983,6 +985,24 @@ sub prepare_table_data( $ )
 			push @newLine, ' | ';
 		}
 		# remove the last ' | '.
+		pop @newLine;
+		push @newLine, "\n";
+	}
+	elsif ( $TABLE_OUTPUT =~ m/CSV/i )
+	{
+		foreach my $value ( @{ $line } )
+		{
+			if ( $value =~ m/^\d{1,}$/ )
+			{
+				push @newLine, $value;
+			}
+			else
+			{
+				push @newLine, "\"".$value."\"";
+			}
+			push @newLine, ',';
+		}
+		# remove the last ','.
 		pop @newLine;
 		push @newLine, "\n";
 	}
@@ -2042,7 +2062,6 @@ sub inc_line_by_value( $ )
 	}
 }
 
-
 # Computes the difference between this line and the previous and outputs that difference.
 # param:  Array reference of line's columns.
 # return: <none>
@@ -2417,6 +2436,21 @@ sub table_output( $ )
 		}
 		# No footer for MarkDown.
 	}
+	elsif ( $TABLE_OUTPUT =~ m/CSV/ )
+	{
+		if ( $placement =~ m/HEAD/ )
+		{
+			my @titles = split ',', $TABLE_ATTR;
+			my $out_string = "";
+			for my $title ( @titles )
+			{
+				$out_string .= sprintf "\"%s\",", trim( $title );
+			}
+			chop( $out_string ); # Take the last ',' off the end of the string.
+			printf "%s\n", $out_string;
+		}
+		# No footer for CSV.
+	}
 }
 
 # Merges other columns' data into a specific column.
@@ -2724,6 +2758,10 @@ sub init
 		elsif ( $opt{'T'} =~ m/MD/i )
 		{
 			$TABLE_OUTPUT = "MD";
+		}
+		elsif ( $opt{'T'} =~ m/CSV/i )
+		{
+			$TABLE_OUTPUT = "CSV";
 		}
 		else
 		{
