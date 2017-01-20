@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.37.00 - January 20, 2017 Add CSV table output.
+# 0.37.01 - January 20, 2017 Fix CSV output for complex numbers.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.37.00};
+my $VERSION           = qq{0.37.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -992,7 +992,7 @@ sub prepare_table_data( $ )
 	{
 		foreach my $value ( @{ $line } )
 		{
-			if ( $value =~ m/^\d{1,}$/ )
+			if ( $value =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
 			{
 				push @newLine, $value;
 			}
