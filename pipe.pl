@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.37.01 - January 20, 2017 Fix CSV output for complex numbers.
+# 0.38.00 - February 2, 2017 Output -g 'any' matches to STDERR.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.37.01};
+my $VERSION           = qq{0.38.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -108,7 +108,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-ADHijLQtUVx]
+    usage: cat file | pipe.pl [-5ADHijLQtUVx]
        -0<file_name>
        -Wh<delimiter>
        -14bBcovwzZ<c0,c1,...,cn>
@@ -164,6 +164,8 @@ All column references are 0 based.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
                   If the '-R' switch is used the current line is subtracted from the previous line.
+ -5             : Modifier used with -g'any:<regex>', outputs the value that matched the regular
+                  expressionto STDERR.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -341,6 +343,7 @@ The order of operations is as follows:
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
   -i - Output all lines, but process only if -g or -G match.
+  -5 - Output all -g 'any' keyword matchs to STDERR.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
@@ -1184,11 +1187,19 @@ sub is_match( $ )
 		{
 			if ( $opt{'I'} ) # Ignore case on search
 			{
-				return 1 if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/i );
+				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/i )
+				{
+					printf STDERR "%s\n", @{ $line }[ $colIndex ] if ( $opt{'5'} );
+					return 1;
+				}
 			}
 			else
 			{
-				return 1 if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/ );
+				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/ )
+				{
+					printf STDERR "%s\n", @{ $line }[ $colIndex ] if ( $opt{'5'} );
+					return 1;
+				}
 			}
 		}
 		return 0;
@@ -2662,7 +2673,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
