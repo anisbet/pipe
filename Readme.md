@@ -62,6 +62,8 @@ Complete list of flags
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
                   If the '-R' switch is used the current line is subtracted from the previous line.
+ -5             : Modifier used with -g'any:<regex>', outputs the value that matched the regular
+                  expressionto STDERR.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -240,6 +242,7 @@ The order of operations is as follows:
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
   -i - Output all lines, but process only if -g or -G match.
+  -5 - Output all -g 'any' keyword matchs to STDERR.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
@@ -272,6 +275,7 @@ The order of operations is as follows:
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
+
 Computing differences between one line and the next
 ---------------------------------------------------
 One common problem I face is I have a column of values, but I want to output the difference
@@ -362,6 +366,33 @@ columns requested: '0'
 original: 0, modified: 0 fields at line number 1.
 10
 ```
+
+Using -5 to see the matching field with -g:any
+----------------------------------------------
+When using '-g' and the keyword 'any' for any column match adding -5 will output the match to STDERR. Consider the following data.
+```
+cat z.lst
+21221023942342|EPL-ADU1FR|EPLMLW|ECONSENT|john.smith@mymail.org|20150717|
+21221023464206|EPL-JUV|EPLMNA|EMAILCONV||20150717|
+21221024955293|EPL-ADULT|EPLJPL|ENOCONSENT||20150717|
+```
+```
+cat z.lst | pipe.pl -g"any:CONSENT" -5 >/dev/null
+ECONSENT
+ENOCONSENT
+```
+Another example.
+```
+cat z.lst | pipe.pl -g"any:CONSENT|2015" -5
+ECONSENT
+21221023942342|EPL-ADU1FR|EPLMLW|ECONSENT|john.smith@mymail.org|20150717|
+20150717
+21221023464206|EPL-JUV|EPLMNA|EMAILCONV||20150717|
+ENOCONSENT
+21221024955293|EPL-ADULT|EPLJPL|ENOCONSENT||20150717|
+```
+So you may notice that the 20150717 from first line didn't output. The reason is -g"any" returns immediately as soon as the regex matches, returning only the first match from the line. 
+
 
 Add an auto-increment column
 ----------------------------
