@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.00 - February 2, 2017 Output -g 'any' matches to STDERR.
+# 0.38.01 - February 6, 2017 Fix bug in -j.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.00};
+my $VERSION           = qq{0.38.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -2654,7 +2654,8 @@ sub process_line( $ )
 	chomp $line;
 	$line =~ s/\|/\n/g if ( $opt{'K'} );
 	# Don't add a delimiter on the last line if not -j and not the last line.
-	$line .= '|' if ( trim( $line ) !~ m/\|$/ and $opt{'P'}  and ! ( $opt{'j'} and $LAST_LINE ) );
+	$line .= '|' if ( trim( $line ) !~ m/\|$/ and $opt{'P'} );
+	chop $line if ( $opt{'j'} and $LAST_LINE and $opt{'P'} );
 	$line =~ s/\|/$DELIMITER/g if ( $opt{'h'} );
 	# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
 	$line =~ s/($SUB_DELIMITER)/\|/g if ( $opt{'W'} );
