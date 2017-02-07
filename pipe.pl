@@ -164,8 +164,8 @@ All column references are 0 based.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
                   If the '-R' switch is used the current line is subtracted from the previous line.
- -5             : Modifier used with -g'any:<regex>', outputs the value that matched the regular
-                  expressionto STDERR.
+ -5             : Modifier used with -g'any:<regex>', outputs all the values that match the regular
+                  expression to STDERR.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
