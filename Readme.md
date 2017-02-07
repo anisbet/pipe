@@ -393,6 +393,11 @@ ENOCONSENT
 ```
 So you may notice that the 20150717 from first line didn't output. The reason is -g"any" returns immediately as soon as the regex matches, returning only the first match from the line. 
 
+Another example with multiple matches. Using a line from a history log, find all NQ fields, all 'aA' fields, and all fields that start with 'S7', outputing all matches - but just the matches.
+```
+echo "E201405271803190011R ^S75FVFFADMIN^FEEPLMNA^FcNONE^NQ31221079015892^NOY^NSEPLJPL^IUa554837^tJ554837^aA(OCoLC)56729751^^O00099" | pipe.pl -W'\^' -g"any:IU|aA|S7" -5 >/dev/null
+S75FVFFADMIN|IUa554837|aA(OCoLC)56729751
+```
 
 Add an auto-increment column
 ----------------------------
@@ -1215,6 +1220,17 @@ Here is another example that shows how you can reverse a string.
 ```
 echo 12345 | pipe.pl -Sc0:4-0
 54321
+```
+For extra points, how do you reverse a line?
+--------------------------------------------
+```
+echo "NQ31221079015892" | pipe.pl -S'c0:30-0'
+29851097012213QN
+```
+How to trim the last character of an entry?
+```
+echo "NQ31221079015892" | pipe.pl -S'c0:30-0' | pipe.pl -m'c0:_#' | pipe.pl -S'c0:30-0'
+NQ3122107901589
 ```
 
 Using '-f' to flip a character
