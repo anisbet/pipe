@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.01 - February 6, 2017 Fix bug in -j.
+# 0.38.02 - February 7, 2017 allow all matches with -5 to be output.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.01};
+my $VERSION           = qq{0.38.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1183,26 +1183,45 @@ sub is_match( $ )
 	if ( $MATCH_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
 	{
 		printf STDERR "regex: '%s' \n", $match_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		my $return_value = 0;
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
 		{
 			if ( $opt{'I'} ) # Ignore case on search
 			{
 				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/i )
 				{
-					printf STDERR "%s\n", @{ $line }[ $colIndex ] if ( $opt{'5'} );
-					return 1;
+					if ( $return_value > 0 and $opt{'5'} )
+					{
+						printf STDERR "%s%s", $DELIMITER, @{ $line }[ $colIndex ];
+					}
+					elsif ( $opt{'5'} )
+					{
+						printf STDERR "%s", @{ $line }[ $colIndex ];
+					}
+					$return_value = 1;
 				}
 			}
 			else
 			{
 				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/ )
 				{
-					printf STDERR "%s\n", @{ $line }[ $colIndex ] if ( $opt{'5'} );
-					return 1;
+					if ( $return_value > 0 and $opt{'5'} ) # Add a pipe to the output if matched.
+					{
+						printf STDERR "%s%s", $DELIMITER, @{ $line }[ $colIndex ];
+					}
+					elsif ( $opt{'5'} )
+					{
+						printf STDERR "%s", @{ $line }[ $colIndex ];
+					}
+					$return_value = 1;
 				}
 			}
+			# Quick exit if -g match and -5 not selected.
+			# printf STDERR "%d", $return_value;
+			last if ( $return_value and ! $opt{'5'} );
 		}
-		return 0;
+		printf STDERR "\n" if ( $return_value > 0 and $opt{'5'} ); # print return cuase we found at least 1 match on this line.
+		return $return_value;
 	}
 	foreach my $colIndex ( @MATCH_COLUMNS )
 	{
