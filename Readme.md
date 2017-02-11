@@ -467,11 +467,10 @@ To remove extraneous columns use '-o' to order the column(s) output.
 
 Quoted strings
 --------------
-Pipe can be used to quote strings or specific column data for consumption of other applications.
-For example, data can be easily converted into CSV as show below, but use '''-T"CVS:Optional,Column,Titles"''' 
+Data can be easily converted into CSV as show below, but use '''-T"CVS:Optional,Column,Titles"''' 
 to do this automatically.
 ```
-cat data.lst | pipe.pl -q'c1'
+cat data.lst | pipe.pl -TCVS
 911677,"J 927.824 SWI, RYA"
 612856,"E HAR"
 1442211,"EGA"
