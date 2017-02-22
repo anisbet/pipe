@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.02 - February 7, 2017 allow all matches with -5 to be output.
+# 0.38.03 - February 22, 2017 Fix bug in -b.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.02};
+my $VERSION           = qq{0.38.03};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1374,22 +1374,18 @@ sub contain_same_value( $$ )
 	printf STDERR "CMP_LINE: " if ( $opt{'D'} );
 	my $lastValue = '';
 	my $matchCount = 0;
-	my $isInitialLoop = 1;
 	foreach my $colIndex ( @{$wantedColumns} )
 	{
-		next if ( ! defined @{ $line }[ $colIndex ] );
-		printf STDERR "'%s', ", @{ $line }[ $colIndex ] if ( $opt{'D'} );
-		if ( $isInitialLoop )
+		if ( ! $lastValue )
 		{
-			$lastValue = @{ $line }[ $colIndex ];
-			$isInitialLoop = 0;
-			$matchCount++; # If there is only one column selected it matches.
+			$lastValue = @{ $line }[ $colIndex ] if ( defined @{ $line }[ $colIndex ] && @{ $line }[ $colIndex ] );
 			next;
 		}
-		$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/^($lastValue)$/ );
+		printf STDERR "IS_MATCHED: '%s' cmp '%s' \n", $lastValue, @{ $line }[ $colIndex ] if ( $opt{'D'} );
+		return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/ );
 	}
-	printf STDERR "MATCHES: '%d'\n", $matchCount if ( $opt{'D'} );
-	return $matchCount == scalar( @{$wantedColumns} );
+	printf STDERR "IS_MATCHED: '%d'\n", $matchCount if ( $opt{'D'} );
+	return 1;
 }
 
 # Applies padding to a given field.
