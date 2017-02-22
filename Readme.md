@@ -124,7 +124,7 @@ Complete list of flags
                   if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
                   The -i flag will override that behaviour but suppress any additional processing of 
                   the line unless the -g or -G flag succeeds.
- -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -251,7 +251,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
-  -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
+  -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -R - Reverse line order when -d, -4 or -s is used.

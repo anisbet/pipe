@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.03 - February 22, 2017 Fix bug in -b.
+# 0.38.04 - February 21, 2017 Added -I control to -b, -B.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.03};
+my $VERSION           = qq{0.38.04};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -226,7 +226,7 @@ All column references are 0 based.
                   if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
                   The -i flag will override that behaviour but suppress any additional processing of 
                   the line unless the -g or -G flag succeeds.
- -I             : Ignore case on operations -d, -E, -f, -g, -G, -n and -s.
+ -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -352,7 +352,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
-  -I - Ingnore case on '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
+  -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
@@ -1382,7 +1382,14 @@ sub contain_same_value( $$ )
 			next;
 		}
 		printf STDERR "IS_MATCHED: '%s' cmp '%s' \n", $lastValue, @{ $line }[ $colIndex ] if ( $opt{'D'} );
-		return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/ );
+		if ( $opt{'I'} )
+		{
+			return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/i );
+		}
+		else
+		{
+			return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/ );
+		}
 	}
 	printf STDERR "IS_MATCHED: '%d'\n", $matchCount if ( $opt{'D'} );
 	return 1;
