@@ -2111,23 +2111,23 @@ sub delta_previous_line( $ )
 				$delta_cols_ref->{ $colIndex } = @{ $line }[ $colIndex ];
 				next;
 			}
-                  # But if the '-R' reverse switch is used subtract this value from the previous line.
-                  if ( $opt{'R'} )
-                  {
-                        # Save this rows orginial value in this row for the next row's calculation.
-                        my $tmp = @{ $line }[ $colIndex ];
-                        # Compute the new value for this row.
-                        @{ $line }[ $colIndex ] = $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
-                        $delta_cols_ref->{ $colIndex } = $tmp;
-                  }
-                  else
-                  {
-                        # Save this rows orginial value in this row for the next row's calculation.
-                        my $tmp = @{ $line }[ $colIndex ];
-                        # Compute the new value for this row.
-                        @{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
-                        $delta_cols_ref->{ $colIndex } = $tmp;
-                  } 
+			# But if the '-R' reverse switch is used subtract this value from the previous line.
+			if ( $opt{'R'} )
+			{
+				# Save this rows orginial value in this row for the next row's calculation.
+				my $tmp = @{ $line }[ $colIndex ];
+				# Compute the new value for this row.
+				@{ $line }[ $colIndex ] = $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
+				$delta_cols_ref->{ $colIndex } = $tmp;
+			}
+			else
+			{
+				# Save this rows orginial value in this row for the next row's calculation.
+				my $tmp = @{ $line }[ $colIndex ];
+				# Compute the new value for this row.
+				@{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+				$delta_cols_ref->{ $colIndex } = $tmp;
+			} 
 		}
 	}
 }
