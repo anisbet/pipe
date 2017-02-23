@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.04 - February 21, 2017 Added -I control to -b, -B.
+# 0.38.05 - February 23, 2017 Added -I control -n.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.04};
+my $VERSION           = qq{0.38.05};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -264,6 +264,7 @@ All column references are 0 based.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
  -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and remove white space.
+                  If '-I' is used the function makes all word characters lower case.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
@@ -606,7 +607,14 @@ sub normalize( $ )
 {
 	my $line = shift;
 	$line =~ s/\s+//g;
-	$line = uc $line;
+	if ( $opt{'I'} )
+	{
+		$line = lc $line;
+	}
+	else
+	{
+		$line = uc $line;
+	}
 	return $line;
 }
 

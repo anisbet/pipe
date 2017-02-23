@@ -162,6 +162,7 @@ Complete list of flags
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
  -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and remove white space.
+                  If '-I' is used the function makes all word characters lower case.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
                   Output is not normalized. For that see (-n).
