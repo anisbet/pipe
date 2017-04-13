@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.05 - February 23, 2017 Added -I control -n.
+# 0.38.06 - April 13, 2017 Fix comparison of string values in -C.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.05};
+my $VERSION           = qq{0.38.06};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1489,7 +1489,7 @@ sub test_condition_cmp( $$$ )
 	my $cmpValue    = shift;
 	my $value       = shift;
 	my $result      = 0;
-	if ( $value =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
+	if ( $value =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ && $cmpValue =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
 	{
 		if ( $cmpOperator eq 'eq' )
 		{
@@ -1516,7 +1516,7 @@ sub test_condition_cmp( $$$ )
 	{
 		if ( $opt{'U'} ) # request comparison on numbers 'U' only so ignore this one.
 		{
-			printf STDERR "* comparison fails on non-numeric value: '%s' \n", $value if ( $opt{'D'} );
+			printf STDERR "* comparison fails on non-numeric value: '%s' and '%s' \n", $value, $cmpValue if ( $opt{'D'} );
 			return 0;
 		}
 		if ( $cmpOperator eq 'eq' )
