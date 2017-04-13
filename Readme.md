@@ -1,4 +1,14 @@
-Usage notes for pipe.pl. This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. The count function (-c), for example counts the number of non-empty values in the specified columns. Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). Those operations will be done first then just before output the remaining operations are performed.
+
+Usage notes for pipe.pl
+-----------------------
+This application is a accumulation of helpful scripts that performs common tasks on pipe-delimited files. 
+The count function (-c), for example counts the number of non-empty values in the specified columns. 
+Other functions work similarly. Stacked functions are operated on in alphabetical order by flag letter, 
+that is, if you elect to order columns and trim columns, the columns are first ordered, then the columns 
+are trimmed, because -o comes before -t. The exceptions to this rule are those commands that require 
+the entire file to be read before operations can proceed (-d dedup, -r random, and -s sort). 
+Those operations will be done first then just before output the remaining operations are performed.
+
 Example:
 cat file.lst | pipe.pl -c'c0'
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
