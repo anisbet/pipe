@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.06 - April 13, 2017 Fix comparison of string values in -C.
+# 0.38.07 - April 15, 2017 Added '(n-m)' syntax to -S to substring from end of line.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.06};
+my $VERSION           = qq{0.38.07};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -291,7 +291,10 @@ All column references are 0 based.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
-                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
+                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'. Removal of characters
+                  from the end of data can be specified with syntax (n -m), where 'n' is a literal
+                  and represents the length of the data, and '-m' represents the number of characters
+                  to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
  -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
  -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
@@ -1100,7 +1103,7 @@ sub sub_string( $ )
 	my $instruction = shift;
 	my @newField    = ();
 	my @indexes     = ();
-	printf "SUBSTR: '%s'.\n", $instruction if ( $opt{'D'} );
+	printf STDERR "SUBSTR: '%s'.\n", $instruction if ( $opt{'D'} );
 	# We will save all the indexes of characters we need. To do that we need to
 	# convert '-' to ranges.
 	my @subInstructions = split '\.', $instruction;
@@ -1112,12 +1115,23 @@ sub sub_string( $ )
 			push @indexes, $&;
 			next;
 		}
-		printf "got subinstruction string '%s' .\n", $sub_instruction if ( $opt{'D'} );
+		printf STDERR "got subinstruction string '%s' .\n", $sub_instruction if ( $opt{'D'} );
+		my $last_n_chars_exp = '';
+		if ( $sub_instruction =~ m/\(n\s?\-\s?\d{1,}\)$/i ) # does the expression end with '(n -int)'?
+		{                                                                  # chop the -int number of characters.
+			$last_n_chars_exp = $&;
+			$sub_instruction  = $`;
+			# Find how many characters to chop from the end of the line.
+			$last_n_chars_exp =~ m/\d{1,}/;
+			my $trailing_char_count = sprintf "%d", $&;
+			$input_string = substr( $input_string, 0, (length($input_string) - $trailing_char_count ));
+			printf STDERR "\$last_n_chars_exp='%s', \$input_string='%s'\n", $last_n_chars_exp, $input_string if ( $opt{'D'} );
+		}
 		if ( $sub_instruction =~ m/\-/ )
 		{
 			my $start = $`,
 			my $end   = $';
-			printf "got value '%s' and '%s'.\n", $start, $end if ( $opt{'D'} );
+			printf STDERR "got value '%s' and '%s'.\n", $start, $end if ( $opt{'D'} );
 			# test end first, start depends on end in the case of a leading '-'.
 			if ( $end =~ m/\d+/ )
 			{
@@ -1129,7 +1143,7 @@ sub sub_string( $ )
 			}
 			else
 			{
-				printf "*** error invalid end of range specification at '%s'.\n", $end;
+				printf STDERR "*** error invalid end of range specification at '%s'.\n", $end;
 				usage();
 			}
 			if ( $start =~ m/\d+/ )
@@ -1145,11 +1159,11 @@ sub sub_string( $ )
 			}
 			else
 			{
-				printf "*** error invalid start of range specification at '%s'.\n", $start;
+				printf STDERR "*** error invalid start of range specification at '%s'.\n", $start;
 				usage();
 			}
-			printf "computed start '%d'.\n", $start if ( $opt{'D'} );
-			printf "computed end   '%d'.\n", $end if ( $opt{'D'} );
+			printf STDERR "computed start '%d'.\n", $start if ( $opt{'D'} );
+			printf STDERR "computed end   '%d'.\n", $end if ( $opt{'D'} );
 			# now pack the indices onto the array
 			my $i = 0;
 			if ( $start > $end )
@@ -1169,7 +1183,7 @@ sub sub_string( $ )
 		}
 		else # not expected format.
 		{
-			printf "*** error invalid range specification at '%s'.\n", $sub_instruction;
+			printf STDERR "*** error invalid range specification at '%s'.\n", $sub_instruction;
 			usage();
 		}
 	}

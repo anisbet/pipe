@@ -199,7 +199,10 @@ Complete list of flags
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
-                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'.
+                  '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'. Removal of characters
+                  from the end of data can be specified with syntax (n -m), where 'n' is a literal
+                  and represents the length of the data, and '-m' represents the number of characters
+                  to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
  -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
  -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>  
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
