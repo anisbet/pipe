@@ -139,14 +139,13 @@ Complete list of flags
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).  
- -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
-                  where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
-                  and the result would be put in field c1, clobbering any value there. To
-                  preserve the results, place it at the end of the expected output with a very
-                  large column number.
-                  '20151110|Andrew' -k"c100:(-f'c0:3?5.6.4'),c0:(-S'c1:0-3')" => 'Andr|20161110'
-                  '20151110' -k"c100:(-Sc0:0-4(-fc0:3?5.6.4)) => '20151110|2016'
-                  '20151110' -k'c0:(-tc0(-pc0:20 ))' => '20151110', pad upto 20 chars left, then trim.
+ -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -k'cn:(script)'
+                  The existing value of the column is stored in an internal variable called '\$value'
+                  and can be manipulated and output as per these examples.
+                  "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
+                  "hello|worle" => -kc1:'\$value++;'
+                  Note use single quotes around your script.
+                  If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
  -l<c0:exp,... >: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
@@ -245,7 +244,7 @@ The order of operations is as follows:
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
-  -k - Run a series of scripted commands.
+  -k - Run perl script on column data.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
@@ -1350,35 +1349,16 @@ An entry that has no value in 'c0', you can add a default value with:
 echo "|Catkey|8488248|has|134|T024's" | pipe.pl -l'c0:^$.NA'
 NA|Catkey|8488248|has|134|T024's
 ```
-Simple scripting with -k
+Scripting with -k
 ------------------------
-You can add a new column anywhere within a line, with content taken and processed from another column.
-Given a line of data
-```
-'1234|abcd    |789'
-```
-Replace field 1 with the substring of field 1, from character 1 to the end of the field.
-```
-echo '1234|abcd    |789' | pipe.pl -k"c1:-Sc1:1-"
-1234|bcd    |789
-```
-Replace field 1 with the substring of field 1, from character 1 to the end of the field, then trim the trailing whitespace.
-```
-echo '1234|abcd    |789' | pipe.pl -k"c1:-tc1(-Sc1:1-)"
-1234|bcd|789
-```
-The inner ```-Sc1:1-``` indicates that we want the substring from character 1 to the end of the field.
-The result is passed up to ```-tc1``` then replaces the value in ```c1``` as described in the expression ```-k"c1:```.
-The ```-t``` flag requires a column descriptor ```c1``` in this case, but the column descriptor of most inner call is the
-column that continues to be operated on for the remainder of the column's computation.
+You can run any arbitrary perl script against an arbitrary, but specific column of data. The script should be 
+enclosed in single quotes. The current value of the column can be accessed via a built in variable called '$value'.
 
-Here is another example.
-
+The -k switch can be turned off, and when off, pipe.pl's execution will be halted. Even when turned on 'rm', 'del', 'erase', or 'unlink' commands are never permitted to run.
 ```
-echo 'abcdefg|12345678|xyz|987' | pipe.pl -k"c0:-Sc1:2-4,c1:-Sc0:0-2,c2:-Sc3:0-9,c3:-Sc2:9-0"
-34|ab|987|zyx
+echo "hello|world" | ./p.exp.pl -kc0:'$a = 3; $b=10; my $c = $b + $a;$value=$c;',c1:'$value++;'
+13|worle
 ```
-The examples use ```-S```, but any pipe switch can be used, although some switches make no sense.
 
 Suppress new line on output
 ---------------------------

@@ -25,7 +25,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.38.07 - April 15, 2017 Added '(n-m)' syntax to -S to substring from end of line.
+# 0.39.00 - April 26, 2017 Refactored -k switch.
 #
 ###########################################################################
 
@@ -35,7 +35,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.38.07};
+my $VERSION           = qq{0.39.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -50,11 +50,9 @@ my @ALL_LINES         = ();
 # for that operation; in that way we can have multiple operations on different
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
-my $PIPE              = "pipe.pl";
-# my $PIPE              = "./p.exp.pl";
 my $DELIMITER         = '|';
 my $SUB_DELIMITER     = "{_PIPE_}";
-my @SCRIPT_COLUMNS    = (); my $script_ref    = {}; my @CMD_STACK = ();
+my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
 my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED = {}; # Column and seed value to insert auto-increment columns into.
@@ -100,6 +98,9 @@ my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
 my $PREVIOUS_LINE     = "BOF"; # For '-Q' region search display.
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
+my $FALSE             = 1;
+my $TRUE              = 0;
+my $ALLOW_SCRIPTING   = $TRUE;
 
 #
 # Message about this program and how to use it.
@@ -121,7 +122,7 @@ sub usage()
        -f[c0:n.p[?p.q[.r]],...>
        -F[c0:[x|b|d],...>
        -gG<[any|cn]:regex,...>
-       -kcn:(expr_n[(expr_n-1[(...)])])
+       -k<cn:expr,(...)>
        -l<c0:n.p,...>
        -L<[[+|-]n[[,|-]n]?|skip n]>
        -m<cn:*[_|#]*,...>
@@ -231,14 +232,13 @@ All column references are 0 based.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).  
- -kcn:(expr_n(expr_n-1(...))): Use scripting command to add field. Syntax: -k'cn:(script)'
-                  where [script] are pipe commands defined like (-f'c0:0?p.q.r' -> -S'c0:0-3')
-                  and the result would be put in field c1, clobbering any value there. To
-                  preserve the results, place it at the end of the expected output with a very
-                  large column number.
-                  '20151110|Andrew' -k"c100:(-f'c0:3?5.6.4'),c0:(-S'c1:0-3')" => 'Andr|20161110'
-                  '20151110' -k"c100:(-Sc0:0-4(-fc0:3?5.6.4)) => '20151110|2016'
-                  '20151110' -k'c0:(-tc0(-pc0:20 ))' => '20151110', pad upto 20 chars left, then trim.
+ -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
+                  The existing value of the column is stored in an internal variable called '\$value'
+                  and can be manipulated and output as per these examples.
+                  "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
+                  "hello|worle" => -kc1:'\$value++;'
+                  Note use single quotes around your script.
+                  If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
  -l<c0:exp,... >: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
@@ -336,7 +336,7 @@ The order of operations is as follows:
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
-  -k - Run a series of scripted commands.
+  -k - Run perl script on column data.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
@@ -1976,107 +1976,42 @@ sub format_radix( $ )
 	}
 }
 
-# Executes a command in the format '(expression)'.
-# param:  input line.
-# param:  expression.
-# return: modified input line.
-# TODO: the first call operates on the entire line but returns only the modified field which is then passed in again as the entire line,
-# so indexes get thrown out of whack.
-sub parse_cmd( $$ )
-{
-	my $line_in     = shift;
-	my $expression  = shift;
-	my @cmd_string  = split '', $expression;
-	my $token       = '';
-	my $token_count = 0;
-	while ( @cmd_string )
-	{
-		my $char = shift @cmd_string;
-		if ( $char eq ')' )
-		{
-			push @CMD_STACK, $token if ( $token );
-			$token = '';
-			$token_count--;
-			next;
-		}
-		if ( $char eq '(' )
-		{
-			push @CMD_STACK, $token if ( $token );
-			$token = '';
-			$token_count++;
-			next;
-		}
-		$token .= $char;
-	}
-	if ( $token_count )
-	{
-		printf STDERR "*** syntax error parse_cmd(): '%s'.\n", $expression;
-		usage();
-	}
-	# Push the last command that was parsed, because there are no parens around the outer command.
-	push @CMD_STACK, $token if ( $token );
-	# Do each of the commands but return only the column value from the computation, that is,
-	# Don't return the entire line, just the part that changed. It will be incorporated into
-	# the final resultant line later by execute_script_line().
-	# We save the field because nested calls must necessarily operate on the same field.
-    # The inner most column is the one used for all the nested commands.
-	my $field = '';
-	while ( @CMD_STACK )
-	{
-		my $cmd = pop @CMD_STACK;
-		printf STDERR "expression='%s'::", $cmd if ( $opt{'D'} );
-		if ( ! $field )
-		{
-            if ( ! $field and $cmd =~ m/(c|C)\d{1,}/ )
-            {
-                $field = $&;
-            }
-            else
-            {
-                printf STDERR "*** syntax error: couldn't find the requested field to edit in expression '%s'\n", $cmd;
-                usage();
-            }
-            printf STDERR "=> echo '%s' | %s %s -o'%s'\n", $line_in, $PIPE, $cmd, $field if ( $opt{'D'} );
-            $line_in = `echo "$line_in" | $PIPE $cmd -o"$field"`;
-            $field = "c0"; # reset the field for all additional nested calls, they all will operate on the first columnn after the initial computation.
-        }
-        else
-        {
-            $cmd =~ s/(c|C)\d{1,}/c0/;
-            printf STDERR "=> echo '%s' | %s %s -o'%s'\n", $line_in, $PIPE, $cmd, $field if ( $opt{'D'} );
-            $line_in = `echo "$line_in" | $PIPE $cmd -o"$field"`;
-            # Stop recursive calls to the script from adding additional end of line chars.
-        }
-		chomp $line_in ;
-		printf STDERR "==> '%s'\n", $line_in if ( $opt{'D'} );
-	}
-	return $line_in;
-}
-
 # Executes script listed in '-k'.
 # param:  line input.
 # return: <none>.
 # throws: exits on syntax error.
 sub execute_script_line( $ )
 {
-	my $line       = shift;
-	my $result_ref = {};
-	my $index      = 0;
-	# Process the requested fields, save the results.
-	foreach my $key ( keys %$script_ref )
+	if ( $ALLOW_SCRIPTING == $FALSE )
 	{
-        # Increment the index for each additional change to ensure the correct field gets replaced with splice().
-        $result_ref->{ $key } = parse_cmd( join( '|', @{ $line } ), $script_ref->{ $key } );
-        printf STDERR "--> key '%s' = '%s'\n", $key, $result_ref->{ $key } if ( $opt{'D'} );
-        $key += $index++;
+		printf STDERR "* warning scripting not allowed, ask an administrator for assistance.\n";
+		exit( 99 );
 	}
-	# Put the results back in context.
-	foreach my $key ( keys %$result_ref )
+	my $line = shift;
+	foreach my $colIndex ( @SCRIPT_COLUMNS )
 	{
-        my $index = $key;
-        # Prevent message of out of range index on array.
-        $index = scalar @{ $line } if ( $key > scalar @{ $line } );
-        splice @{ $line }, $index, 1, $result_ref->{ $key };
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			if ( $script_ref->{ $colIndex } !~ m/(rm|unlink|erase|del)/i )
+			{
+				my $value = @{ $line }[ $colIndex ]; # Reference name for the executing script.
+				printf STDERR "\$value = '%s', script: '%s'\n", $value, $script_ref->{ $colIndex } if ( $opt{'D'} );
+				eval $script_ref->{ $colIndex };
+				if ( $@ )
+				{
+					print "Warning: error during evaluation, no changes made. $@";
+				}
+				else
+				{
+					@{ $line }[ $colIndex ] = $value;
+					printf STDERR "\@{ \$line }[ \$colIndex ] = '%s'\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
+				}
+			}
+			else
+			{
+				printf STDERR "* warning refusing to execute: '%s'\n", $script_ref->{ $colIndex };
+			}
+		}
 	}
 }
 
