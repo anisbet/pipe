@@ -1,10 +1,12 @@
 #!/usr/bin/perl -w
 ###########################################################################
 #
-# Perl source file for project pipe EXPERIMENTAL version.
+# Perl source file for project pipe.
 #
 # Pipe performs handy operations on pipe delimited files.
 #    Copyright (C) 2015 - 2017  Andrew Nisbet
+# The Edmonton Public Library respectfully acknowledges that we sit on
+# Treaty 6 territory, traditional lands of First Nations and Metis people.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.39.00 - April 26, 2017 Refactored -k switch.
+# 0.39.01 - May 19, 2017 Output floats with -A and -J flags.
 #
 ###########################################################################
 
@@ -35,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.39.00};
+my $VERSION           = qq{0.39.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -2203,11 +2205,17 @@ sub dedup_list( $ )
 			my $summary = '';
 			if ( $opt{'P'} )
 			{
-				$summary = sprintf "%d|", $count->{ $key };
+				if ( $count->{ $key } =~ /^[+-]?\d+\z/ )
+					{ $summary = sprintf "%d|", $count->{ $key }; }
+				elsif ( $count->{ $key } =~ /^-?(?:\d+\.?|\.\d)\d*\z/ )
+					{ $summary = sprintf "%.2f|", $count->{ $key }; }
 			}
 			else
 			{
-				$summary = sprintf " %3d ", $count->{ $key };
+				if ( $count->{ $key } =~ /^[+-]?\d+\z/ )
+					{ $summary = sprintf " %3d ", $count->{ $key }; }
+				elsif ( $count->{ $key } =~ /^-?(?:\d+\.?|\.\d)\d*\z/ )
+					{ $summary = sprintf " %.2f ", $count->{ $key }; }
 			}
 			push @ALL_LINES, $summary . $ddup_ref->{ $key };
 		}
