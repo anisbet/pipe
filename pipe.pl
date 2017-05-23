@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.39.02 - May 23, 2017 Output floats with -A and -J flags.
+# 0.39.03 - May 23, 2017 Output floats with -A and -J flags.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.39.02};
+my $VERSION           = qq{0.39.03};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -651,30 +651,6 @@ sub print_summary( $$$ )
 		my $value = 0;
 		$value = $hash_ref->{ 'c'.$column } if ( defined $hash_ref->{ 'c'.$column } );
 		printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value );
-	}
-}
-
-# Prints the contents of the argument hash reference as float values.
-# param:  title of output.
-# param:  hash reference of data.
-# param:  List of columns requested by user.
-# return: <none>
-sub print_float_summary( $$$ )
-{
-	my $title    = shift;
-	my $hash_ref = shift;
-	my $columns  = shift;
-	printf STDERR "== %9s\n", $title;
-	foreach my $column ( sort @{$columns} )
-	{
-		if ( defined $hash_ref->{ 'c'.$column } and keys( %{$hash_ref} ) > 0 )
-		{
-			printf STDERR " %2s: %7.2f\n", 'c'.$column, $hash_ref->{ 'c'.$column };
-		}
-		else
-		{
-			printf STDERR " %2s: %7.2f\n", 'c'.$column, 0;
-		}
 	}
 }
 
@@ -2845,7 +2821,7 @@ if ( $opt{'v'} )
 			$avg_ref->{ $key } = 0.0;
 		}
 	}
-	print_float_summary( "average", $avg_ref, \@AVG_COLUMNS );
+	print_summary( "average", $avg_ref, \@AVG_COLUMNS );
 }
 if ( $opt{'w'} )
 {
