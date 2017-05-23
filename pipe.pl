@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.39.03 - May 23, 2017 Output floats with -A and -J flags.
+# 0.39.03 - May 23, 2017 Output floats with -A, -J, -a, -v, flags.
 #
 ###########################################################################
 
