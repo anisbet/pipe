@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.39.01 - May 19, 2017 Output floats with -A and -J flags.
+# 0.39.02 - May 23, 2017 Output floats with -A and -J flags.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.39.01};
+my $VERSION           = qq{0.39.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -648,14 +648,9 @@ sub print_summary( $$$ )
 	printf STDERR "== %9s\n", $title if ( $title );
 	foreach my $column ( sort @{$columns} )
 	{
-		if ( defined $hash_ref->{ 'c'.$column } )
-		{
-			printf STDERR " %2s: %7d\n", 'c'.$column, $hash_ref->{ 'c'.$column };
-		}
-		else
-		{
-			printf STDERR " %2s: %7d\n", 'c'.$column, 0;
-		}
+		my $value = 0;
+		$value = $hash_ref->{ 'c'.$column } if ( defined $hash_ref->{ 'c'.$column } );
+		printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value );
 	}
 }
 
@@ -2148,6 +2143,24 @@ sub get_column_value( $$ )
 	return 0;
 }
 
+# Formats a value into a string suitable for display. In the case of a float it provides 
+# 2 decimal place precision, and if the value is an integer, no decimals places are added.
+# param:  value, which is tested against various number formats and returns a string
+#         version of the argument value.
+# return: Formatted string value of the argument.
+sub get_number_format( $ )
+{
+	my $input     = shift;
+	# my $precision = "";
+	my $summary   = '';
+	if ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
+	elsif ( $input =~ /^-?\d+\.?\d*\z/ ){ $summary = sprintf "%.2f", $input; }
+	elsif ( $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ ) { $summary = sprintf "%.2f", $input; }
+	elsif ( $input =~ /^([+-]?)(?=\d&\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?\z/ ){ $summary = $input; }
+	else { $summary = "NaN"; }
+	return $summary;
+}
+
 # Dedups the ALL_LINES array using (O)1 space.
 # param:  list of columns to sort on.
 # return: <none> - removes duplicate values from the ALL_LINES list.
@@ -2205,17 +2218,11 @@ sub dedup_list( $ )
 			my $summary = '';
 			if ( $opt{'P'} )
 			{
-				if ( $count->{ $key } =~ /^[+-]?\d+\z/ )
-					{ $summary = sprintf "%d|", $count->{ $key }; }
-				elsif ( $count->{ $key } =~ /^-?(?:\d+\.?|\.\d)\d*\z/ )
-					{ $summary = sprintf "%.2f|", $count->{ $key }; }
+				$summary = sprintf "%s|", get_number_format( $count->{ $key } );
 			}
 			else
 			{
-				if ( $count->{ $key } =~ /^[+-]?\d+\z/ )
-					{ $summary = sprintf " %3d ", $count->{ $key }; }
-				elsif ( $count->{ $key } =~ /^-?(?:\d+\.?|\.\d)\d*\z/ )
-					{ $summary = sprintf " %.2f ", $count->{ $key }; }
+				$summary = sprintf " %3s ", get_number_format( $count->{ $key } );
 			}
 			push @ALL_LINES, $summary . $ddup_ref->{ $key };
 		}
