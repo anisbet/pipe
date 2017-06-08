@@ -60,6 +60,8 @@ Complete list of flags
  -0<file_name>  : Name of a text file to use as input as alternative to taking input on STDIN.
  -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
+                  You can optionally change the increment step by a given value.
+                  '10' '-1c0:-1' => 9.
  -2<cn:[start]> : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
                   function occurs last in the order of operations. The auto-increment value
@@ -139,7 +141,7 @@ Complete list of flags
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).  
- -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -k'cn:(script)'
+ -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
                   "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
@@ -154,7 +156,7 @@ Complete list of flags
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
                   requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
-				  The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
+                  The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the '-L' flag.
  -m<c0:*[_|#]*> : Mask specified column with the mask defined after a ':', and where '_'
@@ -184,6 +186,8 @@ Complete list of flags
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
+                  This has the effect of joining n-number of lines into one line. 
  -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match 
@@ -192,7 +196,7 @@ Complete list of flags
                   the last line the trailing match is ‘=>EOF’. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
- -R             : Reverse sort (-d, -4, and -s).
+ -R             : Reverse sort (-d, -4 and -s).
  -s<c0,c1,...cn>: Sort on the specified columns in the specified order.
  -S<c0:range>   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
@@ -203,7 +207,7 @@ Complete list of flags
                   and represents the length of the data, and '-m' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
  -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
- -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>  
+ -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag. 
@@ -238,6 +242,10 @@ The order of operations is as follows:
 ```
   -x - Usage message, then exits.
   -0 - Input from named file.
+  -d - De-duplicate selected columns.
+  -r - Randomize line output.
+  -s - Sort columns.
+  -v - Average numerical values in selected columns.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
@@ -265,10 +273,7 @@ The order of operations is as follows:
   -n - Remove white space and upper case specified columns.
   -t - Trim selected columns.
   -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
-  -d - De-duplicate selected columns.
-  -r - Randomize line output.
   -R - Reverse line order when -d, -4 or -s is used.
-  -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
@@ -276,7 +281,6 @@ The order of operations is as follows:
   -w - Output minimum an maximum width of column data.
   -a - Sum of numeric values in specific columns.
   -c - Count numeric values in specified columns.
-  -v - Average numerical values in selected columns.
   -T - Output in table form.
   -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
@@ -285,8 +289,27 @@ The order of operations is as follows:
   -2 - Add an auto-increment field to output.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
+  -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
+```
+
+Joining n-number of lines with '-q' and '-H'
+--------------------------------------------
+Sometimes you would like lines to be joined on output. The '-H' will join all lines into one big
+line, but if you want odd-numbered lines to be appended to the end of even-numbered lines use '-q' as well.
+Example:
+```
+cat q.lst
+1|a
+2|b
+3|c
+4|d
+5|e
+cat q.lst | pipe.pl -H -P -q2
+1|a|2|b|
+3|c|4|d|
+5|e| 
 ```
 
 Computing differences between one line and the next

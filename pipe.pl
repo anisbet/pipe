@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.39.03 - May 23, 2017 Output floats with -A, -J, -a, -v, flags.
+# 0.40.00 - June 9, 2017 Join lines on output with -q if -H used.
 #
 ###########################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.39.03};
+my $VERSION           = qq{0.40.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -103,6 +103,7 @@ my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
+my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 
 #
 # Message about this program and how to use it.
@@ -111,7 +112,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-5ADHijLQtUVx]
+    usage: cat file | pipe.pl [-5ADijLQtUVx]
        -0<file_name>
        -Wh<delimiter>
        -14bBcovwzZ<c0,c1,...,cn>
@@ -124,6 +125,7 @@ sub usage()
        -f[c0:n.p[?p.q[.r]],...>
        -F[c0:[x|b|d],...>
        -gG<[any|cn]:regex,...>
+       -H[-q<positive integer>]
        -k<cn:expr,(...)>
        -l<c0:n.p,...>
        -L<[[+|-]n[[,|-]n]?|skip n]>
@@ -249,7 +251,7 @@ All column references are 0 based.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
                   requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
-				  The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
+                  The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the '-L' flag.
  -m<c0:*[_|#]*> : Mask specified column with the mask defined after a ':', and where '_'
@@ -279,6 +281,8 @@ All column references are 0 based.
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
+                  This has the effect of joining n-number of lines into one line. 
  -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match 
@@ -375,6 +379,7 @@ The order of operations is as follows:
   -2 - Add an auto-increment field to output.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
+  -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 
@@ -2123,13 +2128,19 @@ sub get_column_value( $$ )
 # 2 decimal place precision, and if the value is an integer, no decimals places are added.
 # param:  value, which is tested against various number formats and returns a string
 #         version of the argument value.
+# param:  Expected values 0=any, 1=whole number.
 # return: Formatted string value of the argument.
-sub get_number_format( $ )
+sub get_number_format
 {
-	my $input     = shift;
-	# my $precision = "";
-	my $summary   = '';
-	if ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
+	my $input       = shift @_;
+	# my $precision = '';
+	my $number_type = shift @_ if ( @_ );
+	my $summary     = '';
+	if ( $number_type )
+	{
+		if ( $input && $input =~ /^[+]?\d+\z/ ){ $summary = sprintf "%d", $input; }
+	}	
+	elsif ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
 	elsif ( $input =~ /^-?\d+\.?\d*\z/ ){ $summary = sprintf "%.2f", $input; }
 	elsif ( $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ ) { $summary = sprintf "%.2f", $input; }
 	elsif ( $input =~ /^([+-]?)(?=\d&\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?\z/ ){ $summary = $input; }
@@ -2635,8 +2646,28 @@ sub process_line( $ )
 	{
 		return sprintf "%3d %s\n", $LINE_NUMBER, $line;
 	}
-	return $line if ( $opt{'H'} );
+	if ( $opt{'H'} )
+	{
+		if ( $opt{'q'} && $LINE_NUMBER % $JOIN_COUNT == 0 ) # Join lines until -q number of lines is emitted.
+		{
+			return $line . "\n";
+		}
+		return $line;
+	}
 	return $line . "\n";
+}
+
+# Tests if argument is a whole number and returns it if is, and exits if not.
+# param:  string value of a numeric value.
+# return: number, or exits with warning if the value isn't a whole number.
+sub read_whole_number( $ )
+{
+	my $input = shift;
+	my $value = get_number_format( $input, 1 );
+	printf STDERR "argument to read_whole_number()='%s' \n", $value if ( $opt{'D'} );
+	return $value if ( $value );
+	printf STDERR "*** error: invalid argument, expected a whole number, but got '%s' \n", $input;
+	exit( -1 );
 }
 
 # Kicks off the setting of various switches.
@@ -2644,11 +2675,12 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:PQr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
+	$JOIN_COUNT        = read_whole_number( $opt{'q'} ) if ( $opt{'q'} );
 	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
 	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref, 0 )      if ( $opt{'3'} );
 	@DELTA4_COLUMNS    = read_requested_columns( $opt{'4'}, 0 ) if ( $opt{'4'} );
