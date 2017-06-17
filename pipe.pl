@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.6 - June 17, 2017 Let -g compare other fields.
+# 0.40.8 - June 17, 2017 Let -g, -G, and -X compare other fields.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.7};
+my $VERSION           = qq{0.40.8};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -125,7 +125,7 @@ sub usage()
        -E[c0:[r|?c.r[.e]],...>
        -f[c0:n.p[?p.q[.r]],...>
        -F[c0:[x|b|d],...>
-       -gG<[any|cn]:regex,...>
+       -gG<any|cn:[regex],...>
        -H[-q<positive integer>]
        -k<cn:expr,(...)>
        -l<c0:n.p,...>
@@ -137,7 +137,7 @@ sub usage()
        -y<precision>
        -2<cn:[start],...>
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
-       -X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]
+       -X<any|cn:[regex],...> [-Y<any|cn:regex,...> [-M]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -332,6 +332,7 @@ All column references are 0 based.
  -X<any|c0:regex,...>: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
                   If the keyword 'any' is used the first column to match will return true.
+                  Also allows comparisons across columns.
  -y<precision>  : Controls precision of computed floating point number output (example '-v').
  -Y<any|c0:regex,...>: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
@@ -1315,14 +1316,43 @@ sub is_x_match( $$$ )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $regex_hash_ref->{ $colIndex } )
 		{
-			printf STDERR "extended regex: '%s' \n", $regex_hash_ref->{$colIndex} if ( $opt{'D'} );
-			if ( $opt{'I'} ) # Ignore case on search
+			printf STDERR "regex: '%s' \n", $regex_hash_ref->{$colIndex} if ( $opt{'D'} );
+			if ( $regex_hash_ref->{$colIndex} )
 			{
-				$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $colIndex })/i );
+				if ( $opt{'I'} ) # Ignore case on search
+				{
+					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $colIndex })/i );
+				}
+				else
+				{
+					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $colIndex })/ );
+				}
 			}
-			else
+			else ### If the regex is empty imply the first specified column regex should be tested on
+			     ### this column's data.
 			{
-				$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $colIndex })/ );
+				if ( $regex_hash_ref->{ @{ $match_columns }[0] } )
+				{
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ @{ $match_columns }[0] })/i );
+					}
+					else
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ @{ $match_columns }[0] })/ );
+					}
+				}
+				else ### If the first regex is empty then compare the defined columns value to the other columns.
+				{
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/i );
+					}
+					else
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/ );
+					}
+				}
 			}
 		}
 	}

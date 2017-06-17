@@ -235,6 +235,7 @@ Complete list of flags
  -X<any|c0:regex,...>: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
                   If the keyword 'any' is used the first column to match will return true.
+                  Also allows comparisons across columns.
  -y<precision>  : Controls precision of computed floating point number output (example '-v').
  -Y<any|c0:regex,...>: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
