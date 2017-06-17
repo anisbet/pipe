@@ -119,7 +119,7 @@ Complete list of flags
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F<c0:[x|b|d],...>: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g<[any|c0:regex,...>: Searches the specified field for the regular (Perl) expression.
+ -g<[any|c0:regex,...>: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
@@ -127,9 +127,15 @@ Complete list of flags
                   for the line to be output. The behaviour of -g turns into OR if the
                   keyword 'any' is used. In that case all other column specifications
                   are ignored and any successful match will return true.
+                  Comparisons across columns is also possible, by omitting the regex for a given column.
+                  Columns with empty regular expressions will be compared to the first regex specified.
+                  Example: "a|b|c|b|d" '-gc1:b,c3:' => "a|b|c|b|d" succeeds because c3 matches 
+                  c1 as specified in the first expression 'c1:b', while
+                  "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
  -G<[any|c0:regex,...>: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
-                  'any' is used, all columns must fail the match to return true.
+                  'any' is used, all columns must fail the match to return true. Empty regular
+                  expressions are permitted. See '-g' for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
  -i             : Turns on virtual matching for -g, -G. Causes further processing on the line ONLY
@@ -403,6 +409,37 @@ columns requested: '0'
 * warning invalid increment value: '2.1.3'
 original: 0, modified: 0 fields at line number 1.
 10
+```
+
+The behaviour of '-g' over multiple columns performs an AND operation, that is, all columns must match all criteria for the line to be output. in the case of '-G' none of the lines must have 'already' in either column for the data to be output. 
+ 
+``` console
+$ cat g.lst | pipe.pl -gc1:already,c0:already
+already OVERDUE|20120506 already called.
+$ cat g.lst | pipe.pl -Gc1:already,c0:already
+OVERDUE|20120506=Date
+OVERDUE|20120718
+```
+
+If a regular expression is ommitted, the value of the specified column is compared to the first regular expression defined.
+
+In this first example the match succeeds because 'T' can be found in 'c0', just like it was specified in 'c1'. Of course 'c1' must match the regular expression as well.
+``` console
+$ echo "MCNT|TMCN1" | pipe.pl -gc1:T,c0:
+MCNT|TMCN1
+```
+
+In the next example there must be a match for 'T' in c1, which there is, but then columns c0, c3, and c2 must succeed for the entire expression to succeed, and the line to be output.
+``` console 
+$ echo "MCNT|TMCN1|Toronto|Ice Tea" | pipe.pl -gc1:T,c0:,c3:,c2:
+MCNT|TMCN1|Toronto|Ice Tea
+```
+
+The next example fails because, while there is a 'T' in c0, column c3 does not match, so the line is suppressed.
+``` console
+$ echo "MCNT|TMCN1|Toronto|Ice Pea" | pipe.pl -gc0:T,c1:,c3:,c2: 
+
+$ 
 ```
 
 Using -5 to see the matching field with -g:any
