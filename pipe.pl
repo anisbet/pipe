@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.6};
+my $VERSION           = qq{0.40.7};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -229,6 +229,9 @@ All column references are 0 based.
                   Example: "a|b|c|b|d" '-gc1:b,c3:' => "a|b|c|b|d" succeeds because c3 matches 
                   c1 as specified in the first expression 'c1:b', while
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
+                  If the first column's regex is empty, the value of the first column is used 
+                  as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
+				  succeeds because the value in c1 matches the value in c3.
  -G<[any|c0:regex,...>: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
@@ -1252,13 +1255,27 @@ sub is_match( $ )
 			else ### If the regex is empty imply the first specified column regex should be tested on
 			     ### this column's data.
 			{
-				if ( $opt{'I'} ) # Ignore case on search
+				if ( $match_ref->{ $MATCH_COLUMNS[0] } )
 				{
-					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/i );
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/i );
+					}
+					else
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/ );
+					}
 				}
-				else
+				else ### If the first regex is empty then compare the defined columns value to the other columns.
 				{
-					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/ );
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/i );
+					}
+					else
+					{
+						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/ );
+					}
 				}
 			}
 		}
@@ -1340,8 +1357,8 @@ sub is_not_match( $ )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $not_match_ref->{ $colIndex } )
 		{
-			printf STDERR "regex: '%s' \n", $not_match_ref->{$colIndex} if ( $opt{'D'} );
-			if ( $match_ref->{$colIndex} )
+			printf STDERR "regex: '%s' \n", $not_match_ref->{ $colIndex } if ( $opt{'D'} );
+			if ( $match_ref->{ $colIndex } )
 			{
 				if ( $opt{'I'} ) # Ignore case on search
 				{
@@ -1355,13 +1372,28 @@ sub is_not_match( $ )
 			else ### If the regex is empty imply the first specified column regex should be tested on
 			     ### this column's data.
 			{
-				if ( $opt{'I'} ) # Ignore case on search
+				if ( $match_ref->{ $NOT_MATCH_COLUMNS[0] } )
 				{
-					return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $NOT_MATCH_COLUMNS[0] })/i );
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $NOT_MATCH_COLUMNS[0] })/i );
+					}
+					else
+					{
+						return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $NOT_MATCH_COLUMNS[0] })/ );
+					}
 				}
-				else
+				elsif ( $colIndex > 0 ) ### If the first regex is empty then compare the defined columns value to the other columns. But don't compare the first column with the first column because that always succeeds!
 				{
-					return 0 if ( @{ $line }[ $colIndex ] =~ m/($not_match_ref->{ $NOT_MATCH_COLUMNS[0] })/ );
+					if ( $opt{'I'} ) # Ignore case on search
+					{
+						return 0 if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/i );
+					}
+					else
+					{
+						printf STDERR "-G '%s' CMP '%s'\n", @{ $line }[ $colIndex ], @{$line}[0]  if ( $opt{'D'} );
+						return 0 if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/ );
+					}
 				}
 			}
 		}
