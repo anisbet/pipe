@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-###########################################################################
+#####################################################################################
 #
 # Perl source file for project pipe.
 #
@@ -27,9 +27,9 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.00 - June 9, 2017 Join lines on output with -q if -H used.
+# 0.40.5 - June 17, 2017 Added -y flag for Dynamic precision on computed variables.
 #
-###########################################################################
+####################################################################################
 
 use strict;
 use warnings;
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.00};
+my $VERSION           = qq{0.40.5};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -81,7 +81,7 @@ my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instruct
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my $IS_X_MATCH        = 0;                          # True if -X matched. Turns on -y or -Y.
-my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -y or -Y.
+my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
 my @MATCH_LA_COLUMNS  = (), my $match_la_ref  = {}; # Look ahead -Y test conditions supplied by user.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my @MERGE_COLUMNS     = (); # List of columns to merge. The first is the anchor column.
@@ -104,6 +104,7 @@ my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
+my $PRECISION         = 2; # Default precision of computed floating point number output.
 
 #
 # Message about this program and how to use it.
@@ -133,6 +134,7 @@ sub usage()
        -p<cn:[+|-]countChar+,...>
        -q<n-th> [-Q]
        -S<cn:[range],...>
+       -y<precision>
        -2<cn:[start],...>
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
        -X<any|cn:regex,...> [-Y<any|cn:regex,...> [-M]]
@@ -321,6 +323,7 @@ All column references are 0 based.
  -X<any|c0:regex,...>: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
                   If the keyword 'any' is used the first column to match will return true.
+ -y<precision>  : Controls precision of computed floating point number output (example '-v').
  -Y<any|c0:regex,...>: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
                   If the keyword 'any' is used the first column to match will return true.
@@ -331,6 +334,7 @@ All column references are 0 based.
 
 The order of operations is as follows:
   -x - Usage message, then exits.
+  -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
@@ -655,7 +659,7 @@ sub print_summary( $$$ )
 	{
 		my $value = 0;
 		$value = $hash_ref->{ 'c'.$column } if ( defined $hash_ref->{ 'c'.$column } );
-		printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value );
+		printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value, 0, $PRECISION );
 	}
 }
 
@@ -2128,21 +2132,22 @@ sub get_column_value( $$ )
 # 2 decimal place precision, and if the value is an integer, no decimals places are added.
 # param:  value, which is tested against various number formats and returns a string
 #         version of the argument value.
-# param:  Expected values 0=any, 1=whole number.
+# param:  Expected values 0=any, 1=whole number (optional).
+# param:  Precision of decimal places in floating values (optional).
 # return: Formatted string value of the argument.
 sub get_number_format
 {
 	my $input       = shift @_;
-	# my $precision = '';
 	my $number_type = shift @_ if ( @_ );
+	my $precision   = shift @_ if ( @_ );
 	my $summary     = '';
 	if ( $number_type )
 	{
 		if ( $input && $input =~ /^[+]?\d+\z/ ){ $summary = sprintf "%d", $input; }
 	}	
 	elsif ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
-	elsif ( $input =~ /^-?\d+\.?\d*\z/ ){ $summary = sprintf "%.2f", $input; }
-	elsif ( $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ ) { $summary = sprintf "%.2f", $input; }
+	elsif ( $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
+	{ $summary = eval("sprintf \"%.".$precision."f\", $input"); }
 	elsif ( $input =~ /^([+-]?)(?=\d&\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?\z/ ){ $summary = $input; }
 	else { $summary = "NaN"; }
 	return $summary;
@@ -2473,6 +2478,19 @@ sub merge_line( $ )
 	}
 }
 
+# Tests if argument is a whole number and returns it if is, and exits if not.
+# param:  string value of a numeric value.
+# return: number, or exits with warning if the value isn't a whole number.
+sub read_whole_number( $ )
+{
+	my $input = shift;
+	my $value = get_number_format( $input, 1 );
+	printf STDERR "argument to read_whole_number()='%s' \n", $value if ( $opt{'D'} );
+	return $value if ( $value );
+	printf STDERR "*** error: invalid argument, expected a whole number, but got '%s' \n", $input;
+	exit( -1 );
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -2517,8 +2535,8 @@ sub process_line( $ )
         {
             $IS_X_MATCH = is_x_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
             printf STDERR "Setting X match '%d'.\n", $IS_X_MATCH if ( $opt{'D'} );
+			return '';
         }
-        return '' if ( ! $IS_X_MATCH );
 	}
 	# if the line isn't to be selected for output by '-L skip' return early.
 	return '' if ( $SKIP_LINE > 0 and $LINE_NUMBER % $SKIP_LINE != 0 );
@@ -2657,27 +2675,15 @@ sub process_line( $ )
 	return $line . "\n";
 }
 
-# Tests if argument is a whole number and returns it if is, and exits if not.
-# param:  string value of a numeric value.
-# return: number, or exits with warning if the value isn't a whole number.
-sub read_whole_number( $ )
-{
-	my $input = shift;
-	my $value = get_number_format( $input, 1 );
-	printf STDERR "argument to read_whole_number()='%s' \n", $value if ( $opt{'D'} );
-	return $value if ( $value );
-	printf STDERR "*** error: invalid argument, expected a whole number, but got '%s' \n", $input;
-	exit( -1 );
-}
-
 # Kicks off the setting of various switches.
 # param:
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
+	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
 	$JOIN_COUNT        = read_whole_number( $opt{'q'} ) if ( $opt{'q'} );

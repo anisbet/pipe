@@ -226,6 +226,7 @@ Complete list of flags
  -X<any|c0:regex,...>: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
                   If the keyword 'any' is used the first column to match will return true.
+ -y<precision>  : Controls precision of computed floating point number output (example '-v').
  -Y<any|c0:regex,...>: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
                   If the keyword 'any' is used the first column to match will return true.
@@ -241,6 +242,7 @@ Order of operations
 The order of operations is as follows:
 ```
   -x - Usage message, then exits.
+  -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
