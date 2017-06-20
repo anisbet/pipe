@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.9 - June 20, 2017 Output -X on match.
+# 0.40.9 - June 20, 2017 Output -X on match. Refactored -g to use same function.
 #
 ####################################################################################
 
@@ -82,7 +82,7 @@ my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my $IS_X_MATCH        = 0;                          # True if -X matched. Turns on -y or -Y.
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
-my @MATCH_LA_COLUMNS  = (), my $match_la_ref  = {}; # Look ahead -Y test conditions supplied by user.
+my @MATCH_Y_COLUMNS   = (), my $match_y_ref   = {}; # Look ahead -Y test conditions supplied by user.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
 my @MERGE_COLUMNS     = (); # List of columns to merge. The first is the anchor column.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
@@ -171,7 +171,7 @@ All column references are 0 based.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
                   If the '-R' switch is used the current line is subtracted from the previous line.
- -5             : Modifier used with -g'any:<regex>', outputs all the values that match the regular
+ -5             : Modifier used with -[g|X|Y]'any:<regex>', outputs all the values that match the regular
                   expression to STDERR.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
@@ -297,9 +297,9 @@ All column references are 0 based.
  -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match 
-                  is denoted by ‘<=’, the line after by ‘=>’. If the match occurs on the first line 
-                  the preceding match is ‘<=BOF’, beginning of file, and if the match occurs on 
-                  the last line the trailing match is ‘=>EOF’. 
+                  is denoted by '<=', the line after by '=>'. If the match occurs on the first line 
+                  the preceding match is '<=BOF', beginning of file, and if the match occurs on 
+                  the last line the trailing match is '=>EOF'. 
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).
@@ -1189,20 +1189,24 @@ sub sub_string( $ )
 
 # Greps specific columns for a given Perl pattern. See usage().
 # param:  String of line data - pipe-delimited.
-# return: line if the patterns match on all fields and nothing if it didn't.
-sub is_match( $ )
+# param:  Hash reference of regular expressions.
+# param:  List of columns to test.
+# return: 1 if match found in column data and 0 otherwise.
+sub is_match( $$$ )
 {
-	my $line       = shift;
-	my $matchCount = 0;
-	if ( $MATCH_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	my $line           = shift;
+	my $regex_hash_ref = shift;  # Can be -X or -Y reference of regular expressions.
+	my $match_columns  = shift;
+	my $matchCount     = 0;
+	if ( @{ $match_columns }[0] =~ m/($KEYWORD_ANY)/i )
 	{
-		printf STDERR "regex: '%s' \n", $match_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		printf STDERR "regex: '%s' \n", $regex_hash_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
 		my $return_value = 0;
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
 		{
 			if ( $opt{'I'} ) # Ignore case on search
 			{
-				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/i )
+				if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/i )
 				{
 					if ( $return_value > 0 and $opt{'5'} )
 					{
@@ -1217,7 +1221,7 @@ sub is_match( $ )
 			}
 			else
 			{
-				if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $KEYWORD_ANY })/ )
+				if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/ )
 				{
 					if ( $return_value > 0 and $opt{'5'} ) # Add a pipe to the output if matched.
 					{
@@ -1236,81 +1240,6 @@ sub is_match( $ )
 		}
 		printf STDERR "\n" if ( $return_value > 0 and $opt{'5'} ); # print return because we found at least 1 match on this line.
 		return $return_value;
-	}
-	foreach my $colIndex ( @MATCH_COLUMNS )
-	{
-		if ( defined @{ $line }[ $colIndex ] and exists $match_ref->{ $colIndex } )
-		{
-			printf STDERR "regex: '%s' \n", $match_ref->{$colIndex} if ( $opt{'D'} );
-			if ( $match_ref->{$colIndex} )
-			{
-				if ( $opt{'I'} ) # Ignore case on search
-				{
-					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $colIndex })/i );
-				}
-				else
-				{
-					$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $colIndex })/ );
-				}
-			}
-			else ### If the regex is empty imply the first specified column regex should be tested on
-			     ### this column's data.
-			{
-				if ( $match_ref->{ $MATCH_COLUMNS[0] } )
-				{
-					if ( $opt{'I'} ) # Ignore case on search
-					{
-						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/i );
-					}
-					else
-					{
-						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/($match_ref->{ $MATCH_COLUMNS[0] })/ );
-					}
-				}
-				else ### If the first regex is empty then compare the defined columns value to the other columns.
-				{
-					if ( $opt{'I'} ) # Ignore case on search
-					{
-						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/i );
-					}
-					else
-					{
-						$matchCount++ if ( @{ $line }[ $colIndex ] =~ m/(@{$line}[0])/ );
-					}
-				}
-			}
-		}
-	}
-	return 1 if ( $matchCount == scalar @MATCH_COLUMNS ); # Count of matches should match count of column match requests.
-	return 0;
-}
-
-# Greps specific columns for a given Perl pattern. See usage().
-# param:  String of line data - pipe-delimited.
-# param:  Hash reference of regular expressions.
-# param:  List of columns to test.
-# return: 1 if match found in column data and 0 otherwise.
-sub is_x_match( $$$ )
-{
-	my $line           = shift;
-	my $regex_hash_ref = shift;  # Can be -X or -Y reference of regular expressions.
-	my $match_columns  = shift;
-	my $matchCount     = 0;
-	if ( @{ $match_columns }[0] =~ m/($KEYWORD_ANY)/i )
-	{
-		printf STDERR "regex: '%s' \n", $regex_hash_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
-		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
-		{
-			if ( $opt{'I'} ) # Ignore case on search
-			{
-				return 1 if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/i );
-			}
-			else
-			{
-				return 1 if ( @{ $line }[ $colIndex ] =~ m/($regex_hash_ref->{ $KEYWORD_ANY })/ );
-			}
-		}
-		return 0;
 	}
 	foreach my $colIndex ( @{ $match_columns } )
 	{
@@ -2612,34 +2541,29 @@ sub process_line( $ )
 	if ( $opt{'X'} )
 	{
 		# If IS_X_MATCH is turned on we found the anchor now test for the -Y.
-        if ( $IS_X_MATCH and $opt{'Y'} )
+        if ( $IS_X_MATCH )
         {
-            if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) )
+			if ( $opt{'Y'} )
 			{
-				if ( ! $X_UNTIL_Y )
+				if ( ! is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
 				{
-					return '';
+					if ( ! $X_UNTIL_Y )
+					{
+						return '';
+					}
 				}
-			}
-			else # Turn off continuous search -- we found the 'Y' search.
-			{
-				$X_UNTIL_Y = 0;
+				else # Turn off continuous search -- we found the 'Y' search.
+				{
+					$X_UNTIL_Y = 0;
+				}
 			}
         }
         # if not '-Y', then once we match on '-X', start outputting lines from there on.
         # But if no match found, try and turn it on by matching this line if no match, suppress output.
         if ( ! $IS_X_MATCH )
         {
-            $IS_X_MATCH = is_x_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
-			if ( $opt{'D'} )
-			{
-				printf STDERR "Setting X match '%d' ", $IS_X_MATCH;
-				foreach my $v ( @columns )
-				{
-					printf STDERR "%s ", $v;
-				}
-				printf STDERR "\n";
-			}
+            $IS_X_MATCH = is_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
+			printf STDERR "Setting X match '%d' ", $IS_X_MATCH if ( $opt{'D'} );
 			# Retest b/c you didn't match to get here but do we match now, if we do it's the first match
 			# which we want to display which lets the line fall through to the following processes. 
 			# If it is not a match return nothing.
@@ -2662,7 +2586,7 @@ sub process_line( $ )
 		if ( $opt{'g'} and $opt{'G'} )
 		{
 			$PREVIOUS_LINE = $line;
-			if ( ! ( is_match( \@columns ) and is_not_match( \@columns ) ) )
+			if ( ! ( is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) and is_not_match( \@columns ) ) )
 			{
 				if ( $opt{'i'} )
 				{
@@ -2674,7 +2598,7 @@ sub process_line( $ )
 				}
 			}
 		}
-		elsif ( $opt{'g'} and ! is_match( \@columns ) )
+		elsif ( $opt{'g'} and ! is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
 			$PREVIOUS_LINE = $line;
 			if ( $opt{'i'} )
@@ -2813,7 +2737,7 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
 	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref, $KEYWORD_ANY ) if ( $opt{'X'} );
-	@MATCH_LA_COLUMNS  = read_requested_qualified_columns( $opt{'Y'}, $match_la_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
+	@MATCH_Y_COLUMNS  = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
 	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref, 0 )      if ( $opt{'k'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref, 0 )        if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref, 0 )        if ( $opt{'S'} );
