@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.8 - June 17, 2017 Let -g, -G, and -X compare other fields.
+# 0.40.9 - June 20, 2017 Output -X on match.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.8};
+my $VERSION           = qq{0.40.9};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -2611,10 +2611,9 @@ sub process_line( $ )
 	}
 	if ( $opt{'X'} )
 	{
-		# If IS_X_MATCH is turned on we found the anchor now test for the -y and -Y.
+		# If IS_X_MATCH is turned on we found the anchor now test for the -Y.
         if ( $IS_X_MATCH and $opt{'Y'} )
         {
-            # return '' if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) );
             if ( ! is_x_match( \@columns, $match_la_ref, \@MATCH_LA_COLUMNS ) )
 			{
 				if ( ! $X_UNTIL_Y )
@@ -2632,8 +2631,19 @@ sub process_line( $ )
         if ( ! $IS_X_MATCH )
         {
             $IS_X_MATCH = is_x_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
-            printf STDERR "Setting X match '%d'.\n", $IS_X_MATCH if ( $opt{'D'} );
-			return '';
+			if ( $opt{'D'} )
+			{
+				printf STDERR "Setting X match '%d' ", $IS_X_MATCH;
+				foreach my $v ( @columns )
+				{
+					printf STDERR "%s ", $v;
+				}
+				printf STDERR "\n";
+			}
+			# Retest b/c you didn't match to get here but do we match now, if we do it's the first match
+			# which we want to display which lets the line fall through to the following processes. 
+			# If it is not a match return nothing.
+			return '' if ( ! $IS_X_MATCH );
         }
 	}
 	# if the line isn't to be selected for output by '-L skip' return early.
