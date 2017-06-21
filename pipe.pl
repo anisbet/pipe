@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.9 - June 20, 2017 Output -X on match. Refactored -g to use same function.
+# 0.40.10 - June 21, 2017 Bug fix for -G selection error.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.9};
+my $VERSION           = qq{0.40.10};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -1200,7 +1200,17 @@ sub is_match( $$$ )
 	my $matchCount     = 0;
 	if ( @{ $match_columns }[0] =~ m/($KEYWORD_ANY)/i )
 	{
-		printf STDERR "regex: '%s' \n", $regex_hash_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		if ( $opt{'D'} )
+		{
+			if ( exists $regex_hash_ref->{ $KEYWORD_ANY } && $regex_hash_ref->{ $KEYWORD_ANY } )
+			{
+				printf STDERR "regex: '%s' \n", $regex_hash_ref->{ $KEYWORD_ANY };
+			}
+			else
+			{
+				printf STDERR "regex: '[unset]' \n";
+			}
+		}
 		my $return_value = 0;
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
 		{
@@ -1243,10 +1253,20 @@ sub is_match( $$$ )
 	}
 	foreach my $colIndex ( @{ $match_columns } )
 	{
-		if ( defined @{ $line }[ $colIndex ] and exists $regex_hash_ref->{ $colIndex } )
+		if ( defined @{ $line }[ $colIndex ] )
 		{
-			printf STDERR "regex: '%s' \n", $regex_hash_ref->{$colIndex} if ( $opt{'D'} );
-			if ( $regex_hash_ref->{$colIndex} )
+			if ( $opt{'D'} )
+			{
+				if ( exists $regex_hash_ref->{ $colIndex } && $regex_hash_ref->{ $colIndex } )
+				{
+					printf STDERR "regex: '%s' \n", $regex_hash_ref->{ $colIndex };
+				}
+				else
+				{
+					printf STDERR "regex: '[unset]' \n";
+				}
+			}
+			if ( $regex_hash_ref->{ $colIndex } )
 			{
 				if ( $opt{'I'} ) # Ignore case on search
 				{
@@ -1298,7 +1318,17 @@ sub is_not_match( $ )
 	my $line = shift;
 	if ( $NOT_MATCH_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
 	{
-		printf STDERR "regex: '%s' \n", $not_match_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
+		if ( $opt{'D'} )
+		{
+			if ( exists $not_match_ref->{ $KEYWORD_ANY } && $not_match_ref->{ $KEYWORD_ANY } )
+			{
+				printf STDERR "regex: '%s' \n", $not_match_ref->{ $KEYWORD_ANY };
+			}
+			else
+			{
+				printf STDERR "regex: '[unset]' \n";
+			}
+		}
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
 		{
 			if ( $opt{'I'} ) # Ignore case on search
@@ -1314,10 +1344,20 @@ sub is_not_match( $ )
 	}
 	foreach my $colIndex ( @NOT_MATCH_COLUMNS )
 	{
-		if ( defined @{ $line }[ $colIndex ] and exists $not_match_ref->{ $colIndex } )
+		if ( defined @{ $line }[ $colIndex ] )
 		{
-			printf STDERR "regex: '%s' \n", $not_match_ref->{ $colIndex } if ( $opt{'D'} );
-			if ( $match_ref->{ $colIndex } )
+			if ( $opt{'D'} )
+			{
+				if ( exists $not_match_ref->{ $colIndex } && $not_match_ref->{ $colIndex } )
+				{
+					printf STDERR "regex: '%s' \n", $not_match_ref->{ $colIndex };
+				}
+				else
+				{
+					printf STDERR "regex: '[unset]' \n";
+				}
+			}
+			if ( $not_match_ref->{ $colIndex } )
 			{
 				if ( $opt{'I'} ) # Ignore case on search
 				{
@@ -1331,7 +1371,7 @@ sub is_not_match( $ )
 			else ### If the regex is empty imply the first specified column regex should be tested on
 			     ### this column's data.
 			{
-				if ( $match_ref->{ $NOT_MATCH_COLUMNS[0] } )
+				if ( $not_match_ref->{ $NOT_MATCH_COLUMNS[0] } )
 				{
 					if ( $opt{'I'} ) # Ignore case on search
 					{
