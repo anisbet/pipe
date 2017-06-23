@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.10 - June 21, 2017 Bug fix for -G selection error.
+# 0.40.11 - June 23, 2017 Bug fix for -n to remove all non-word characters.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.10};
+my $VERSION           = qq{0.40.11};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -278,7 +278,8 @@ All column references are 0 based.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
- -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and remove white space.
+ -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and removes all
+                  non-word characters (non-alphanumeric and '_' characters).
                   If '-I' is used the function makes all word characters lower case.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
@@ -630,7 +631,7 @@ sub read_requested_columns( $$ )
 sub normalize( $ )
 {
 	my $line = shift;
-	$line =~ s/\s+//g;
+	$line =~ s/\W+//g;
 	if ( $opt{'I'} )
 	{
 		$line = lc $line;

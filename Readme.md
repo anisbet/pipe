@@ -181,7 +181,8 @@ Complete list of flags
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
- -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and remove white space.
+ -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and removes all
+                  non-word characters (non-alphanumeric and '_' characters).
                   If '-I' is used the function makes all word characters lower case.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Makes the keys upper case and remove white space before comparison.
