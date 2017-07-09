@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.11 - June 23, 2017 Bug fix for -n to remove all non-word characters.
+# 0.40.5 - July 08, 2017 Change '-n' to preserve case if '-I' is used, otherwise 
+#          make the value upper case by default.
 #
 ####################################################################################
 
@@ -37,7 +38,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.11};
+my $VERSION           = qq{0.40.5};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -278,13 +279,13 @@ All column references are 0 based.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
- -n<any|c0,c1,...cn>: Normalize the selected columns, that is, make upper case and removes all
-                  non-word characters (non-alphanumeric and '_' characters).
-                  If '-I' is used the function makes all word characters lower case.
+ -n<any|c0,c1,...cn>: Normalize the selected columns, that is, removes all non-word characters
+                  (non-alphanumeric and '_' characters). The '-I' switch leaves the value's case
+                  unchanged. However the default is to change the case to upper case. See '-N',
+                  '-I' switches for more information.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
-                  Makes the keys upper case and remove white space before comparison.
-                  Output is not normalized. For that see (-n).
-                  See also (-I) for case insensitive comparisons.
+                  Normalization removes all non-word characters before comparison. Use the '-I'
+                  switch to preserve keys' case during comparison. See '-n', and '-I'.
  -o<c0,c1,...cn>: Order the columns in a different order. Only the specified columns are output.
  -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
@@ -375,7 +376,7 @@ The order of operations is as follows:
   -m - Mask specified column values.
   -S - Sub string column values.
   -l - Translate character sequence.
-  -n - Remove white space and upper case specified columns.
+  -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
   -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
   -R - Reverse line order when -d, -4 or -s is used.
@@ -632,19 +633,17 @@ sub normalize( $ )
 {
 	my $line = shift;
 	$line =~ s/\W+//g;
-	if ( $opt{'I'} )
-	{
-		$line = lc $line;
-	}
-	else
-	{
-		$line = uc $line;
-	}
-	return $line;
+      if ( $opt{'I'} )
+      {
+            return $line;
+      }
+      else
+      {
+            return uc $line;
+      }	
 }
 
 # Trim function to remove white space from the start and end of the string.
-# This version also will normalize the string if '-n' flag is selected.
 # param:  string to trim.
 # return: string without leading or trailing spaces.
 sub trim( $ )
@@ -792,9 +791,8 @@ sub trim_line( $ )
 	}
 }
 
-# Normalizes of specified columns, removing white space
-# and changing lower case letters to upper case.
-# param:  line to pull out columns from.
+# Normalizes of specified columns, removing non-word characters.
+# param:  line of columns of data.
 # return: <none>.
 sub normalize_line( $ )
 {
