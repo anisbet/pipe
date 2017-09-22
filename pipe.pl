@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.40.5 - July 08, 2017 Change '-n' to preserve case if '-I' is used, otherwise 
-#          make the value upper case by default.
+# 0.41.0 - September 21, 2017 Implement histogram function.
 #
 ####################################################################################
 
@@ -38,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.40.5};
+my $VERSION           = qq{0.41.0};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -58,7 +57,8 @@ my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
-my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED = {}; # Column and seed value to insert auto-increment columns into.
+my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED= {};  # Column and seed value to insert auto-increment columns into.
+my @HISTOGRAM_COLUMN  = (); my $hist_ref      = {};  # Column for histogram and character to use.
 my @INCR3_COLUMNS     = (); my $increment_ref = {};  # Stores increment values for each of the target columns.
 my @DELTA4_COLUMNS    = (); my $delta_cols_ref= {};  # Stores columns we want deltas for, and previous lines value used in difference.
 my @COUNT_COLUMNS     = (); my $count_ref     = {};
@@ -137,6 +137,7 @@ sub usage()
        -S<cn:[range],...>
        -y<precision>
        -2<cn:[start],...>
+       -6<cn:[char],...>
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
        -X<any|cn:[regex],...> [-Y<any|cn:regex,...> [-M]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
@@ -174,6 +175,8 @@ All column references are 0 based.
                   If the '-R' switch is used the current line is subtracted from the previous line.
  -5             : Modifier used with -[g|X|Y]'any:<regex>', outputs all the values that match the regular
                   expression to STDERR.
+ -6<cn:[char]>  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
+                  If the column doesn't contain a whole number pipe.pl will issue an error and exit.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -393,6 +396,7 @@ The order of operations is as follows:
   -O - Merge selected columns.
   -o - Order selected columns.
   -2 - Add an auto-increment field to output.
+  -6 - Histogram column(s) value.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
   -q - Selectively allow new line output of '-H'.
@@ -2161,6 +2165,28 @@ sub add_auto_increment( $ )
 	}
 }
 
+# Shows histogram of columns value.
+# param:  Array reference of line's columns.
+# return: character(s) to be used for graphing.
+sub histogram( $ )
+{
+	my $line = shift; 
+	foreach my $colIndex ( @HISTOGRAM_COLUMN )
+	{
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			printf STDERR "stored column:%s\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
+			my $range_whole_number = read_whole_number( @{ $line }[ $colIndex ] );
+			my @new_string = ();
+			foreach my $i ( 1..$range_whole_number )
+			{
+				push @new_string, $hist_ref->{ $colIndex };
+			}
+			@{ $line }[ $colIndex ] = join '', @new_string;
+		}
+	}
+}
+
 # Computes and returns a value based on whether -A (count) or -J (sum) is used.
 # param:  column to select within line. Like 'c2'.
 # param:  line of input.
@@ -2546,6 +2572,7 @@ sub merge_line( $ )
 
 # Tests if argument is a whole number and returns it if is, and exits if not.
 # param:  string value of a numeric value.
+# param:  do not exit if defined.
 # return: number, or exits with warning if the value isn't a whole number.
 sub read_whole_number( $ )
 {
@@ -2703,6 +2730,7 @@ sub process_line( $ )
 		merge_line( \@columns )             if ( $opt{'O'} );
 		order_line( \@columns )             if ( $opt{'o'} );
 		add_auto_increment( \@columns )     if ( $opt{'2'} );
+		histogram( \@columns )              if ( $opt{'6'} );
 	}
 	my $modified_line = '';
 	if ( $TABLE_OUTPUT )
@@ -2751,7 +2779,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:5a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:56:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
@@ -2776,7 +2804,7 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
 	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref, $KEYWORD_ANY ) if ( $opt{'X'} );
-	@MATCH_Y_COLUMNS  = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
+	@MATCH_Y_COLUMNS   = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
 	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref, 0 )      if ( $opt{'k'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref, 0 )        if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref, 0 )        if ( $opt{'S'} );
@@ -2791,6 +2819,7 @@ sub init
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	($AUTO_INCR_COLUMN, $AUTO_INCR_SEED) = parse_single_column_single_argument( $opt{'2'} ) if ( $opt{'2'} );
+	@HISTOGRAM_COLUMN  = read_requested_qualified_columns( $opt{'6'}, $hist_ref, 0 )        if ( $opt{'6'} );
 	if ( $opt{'v'} )
 	{
 		@AVG_COLUMNS   = read_requested_columns( $opt{'v'}, 0 ) if ( $opt{'v'} );
