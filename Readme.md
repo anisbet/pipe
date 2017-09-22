@@ -44,6 +44,7 @@ Things pipe.pl can do
 * Show regional context of a match. See -g and -G.
 * Take input from named file (see -0).
 * Compute the delta between lines.
+* Histogram values within columns.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -74,6 +75,8 @@ Complete list of flags
                   If the '-R' switch is used the current line is subtracted from the previous line.
  -5             : Modifier used with -g'any:<regex>', outputs all the values that match the regular
                   expression to STDERR.
+ -6<cn:[char]>  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
+                  If the column doesn't contain a whole number pipe.pl will issue an error and exit.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -239,14 +242,19 @@ Order of operations
 The order of operations is as follows:
 ```
   -x - Usage message, then exits.
+  -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file.
+  -d - De-duplicate selected columns.
+  -r - Randomize line output.
+  -s - Sort columns.
+  -v - Average numerical values in selected columns.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
-  -k - Run a series of scripted commands.
+  -k - Run perl script on column data.
   -L - Output only specified lines, or range of lines.
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
@@ -267,10 +275,7 @@ The order of operations is as follows:
   -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
   -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
-  -d - De-duplicate selected columns.
-  -r - Randomize line output.
   -R - Reverse line order when -d, -4 or -s is used.
-  -s - Sort columns.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
@@ -278,19 +283,38 @@ The order of operations is as follows:
   -w - Output minimum an maximum width of column data.
   -a - Sum of numeric values in specific columns.
   -c - Count numeric values in specified columns.
-  -v - Average numerical values in selected columns.
   -T - Output in table form.
   -V - Ensure output and input have same number of columns.
   -K - Output everything as a single column.
   -O - Merge selected columns.
   -o - Order selected columns.
   -2 - Add an auto-increment field to output.
+  -6 - Histogram column(s) value.
   -P - Add additional delimiter if required.
   -H - Suppress new line on output.
+  -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
-
+Displaying histogram of a columns value.
+---
+Shows a histogram of the column's value. If the value in the column
+is not a whole, positive number, pipe.pl will issue an error message
+and exit.
+```
+$ cat 6.lst
+2017-09-22|1
+2017-09-23|2
+2017-09-24|3
+2017-09-25|4
+2017-09-26|5
+$ cat 6.lst | pipe.pl -6c1:*
+2017-09-22|*
+2017-09-23|**
+2017-09-24|***
+2017-09-25|****
+2017-09-26|*****
+```
 Computing differences between one line and the next
 ---------------------------------------------------
 One common problem I face is I have a column of values, but I want to output the difference
