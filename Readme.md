@@ -77,6 +77,7 @@ Complete list of flags
                   expression to STDERR.
  -6<cn:[char]>  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
+ -7<nth-match>  : Return after 'n'th line match of a search. See '-g', '-G', '-X', '-Y'.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -264,6 +265,7 @@ The order of operations is as follows:
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
+  -7 - Stop search after n-th match.
   -i - Output all lines, but process only if -g or -G match.
   -5 - Output all -g 'any' keyword matchs to STDERR.
   -G - Inverse grep specified columns.
@@ -296,6 +298,28 @@ The order of operations is as follows:
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
 ```
+
+
+Exit searches after 'n' matches
+---
+Works like '-m' in modern grep, stops searches after 'n'-th successful match. Works with '-g', '-G', '-X', '-Y', and has precidence over '-i'.
+```
+$ cat Y.lst
+1|a
+2|b
+3|c
+4|d
+5|e
+1|f
+2|g
+3|h
+4|i
+5|j
+$ cat Y.lst | pipe.pl -71 -gc0:5
+5|e
+```
+
+
 Displaying histogram of a columns value.
 ---
 Shows a histogram of the column's value. If the value in the column
