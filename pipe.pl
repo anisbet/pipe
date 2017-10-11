@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.41.0 - September 21, 2017 Implement histogram function.
+# 0.42.0 - October 11, 2017 Return from search on nth match.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.41.0};
+my $VERSION           = qq{0.42.0};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -106,6 +106,7 @@ my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
+my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
 
 #
 # Message about this program and how to use it.
@@ -125,6 +126,7 @@ sub usage()
        -e[c0:[uc|lc|mc|us],...>
        -E[c0:[r|?c.r[.e]],...>
        -f[c0:n.p[?p.q[.r]],...>
+	   -7<n-th match>
        -F[c0:[x|b|d],...>
        -gG<any|cn:[regex],...>
        -H[-q<positive integer>]
@@ -177,6 +179,7 @@ All column references are 0 based.
                   expression to STDERR.
  -6<cn:[char]>  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
+ -7<nth-match>  : Return after 'n'th line match of a search. See '-g', '-G', '-X', '-Y'.
  -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -371,6 +374,7 @@ The order of operations is as follows:
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
+  -7 - Stop search after n-th match.
   -i - Output all lines, but process only if -g or -G match.
   -5 - Output all -g 'any' keyword matchs to STDERR.
   -G - Inverse grep specified columns.
@@ -2690,6 +2694,7 @@ sub process_line( $ )
 		}
 		else # One of the above conditions matched.
 		{
+			$MATCH_COUNT++;
 			if ( $opt{'Q'} ) # There was a match so dump the buffer if we have been filling it.
 			{
 				printf STDERR "<=%s\n", $PREVIOUS_LINE;
@@ -2779,10 +2784,11 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:56:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
+	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
 	$JOIN_COUNT        = read_whole_number( $opt{'q'} ) if ( $opt{'q'} );
@@ -2935,6 +2941,7 @@ while ( @ALL_LINES )
 	my $line = shift @ALL_LINES;
 	$LAST_LINE = 1 if ( scalar( @ALL_LINES ) == 0 ); # last line of report.
 	printf "%s", process_line( $line );
+	last if ( $opt{'7'} && $MATCH_COUNT >= $MATCH_LIMIT );
 }
 if ( $opt{'Q'} and $IS_A_POST_MATCH ) # There was a match so dump the buffer, but we got to the EOF, there is no next line to view.
 {
