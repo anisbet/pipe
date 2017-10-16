@@ -242,7 +242,7 @@ All column references are 0 based.
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
                   If the first column's regex is empty, the value of the first column is used 
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
-				  succeeds because the value in c1 matches the value in c3.
+                  succeeds because the value in c1 matches the value in c3.
  -G<[any|c0:regex,...>: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
