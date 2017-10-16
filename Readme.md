@@ -490,6 +490,14 @@ cat p.lst | pipe.pl -2c100:a
 1|2|4|c
 1|2|3|d
 ```
+You may also reset the counting in a column with adding an additional parameter separated by a comma ("'").
+```
+$ cat p.lst | pipe.pl -2c100:a,b
+1|2|3|a
+1|2|4|b
+1|2|4|a
+1|2|3|b
+```
 
 Incrementing values in a column
 -------------------------------
