@@ -61,11 +61,13 @@ Complete list of flags
  -0<file_name>  : Name of a text file to use as input as alternative to taking input on STDIN.
  -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
- -2<cn:[start]> : Adds a field to the data that auto increments starting at a given integer.
+ -2<cn:[start,[end]]> : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
-                  greater than, or equal to, the number of columns a given line.
+                  greater than, or equal to, the number of columns a given line. A value
+				  can be entered as a reset value to start incrementing again.
+                  Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
  -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
                   Like '-1', but you can specify a given step value like '-2'.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 

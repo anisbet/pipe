@@ -140,7 +140,7 @@ sub usage()
        -q<n-th> [-Q]
        -S<cn:[range],...>
        -y<precision>
-       -2<cn:[start],...>
+       -2<cn:[start,[end]],...>
        -6<cn:[char],...>
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
        -X<any|cn:[regex],...> [-Y<any|cn:regex,...> [-M]]
@@ -165,7 +165,7 @@ All column references are 0 based.
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
                   '10' '-1c0:-1' => 9.
- -2<cn:start,[end]> : Adds a field to the data that auto increments starting at a given integer.
+ -2<cn:[start,[end]]> : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
