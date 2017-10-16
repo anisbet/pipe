@@ -170,7 +170,7 @@ All column references are 0 based.
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
                   greater than, or equal to, the number of columns a given line. A value
-				  can be entered as a reset value to start incrementing again.
+                  can be entered as a reset value to start incrementing again.
                   Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
  -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
                   Like '-1', but you can specify a given step value like '-2'.
