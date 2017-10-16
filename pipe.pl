@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.42.0 - October 11, 2017 Return from search on nth match.
+# 0.42.5 - October 16, 2017 Allow reset of -2 switch.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.42.0};
+my $VERSION           = qq{0.42.5};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -57,7 +57,9 @@ my $SUB_DELIMITER     = "{_PIPE_}";
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
-my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED= {};  # Column and seed value to insert auto-increment columns into.
+# Column and seed value to insert auto-increment columns into.
+my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED= {};  my $AUTO_INCR_RESET = {};
+my $AUTO_INCR_ORIG_VALUE = 0; # Used if a reset value is selected.
 my @HISTOGRAM_COLUMN  = (); my $hist_ref      = {};  # Column for histogram and character to use.
 my @INCR3_COLUMNS     = (); my $increment_ref = {};  # Stores increment values for each of the target columns.
 my @DELTA4_COLUMNS    = (); my $delta_cols_ref= {};  # Stores columns we want deltas for, and previous lines value used in difference.
@@ -163,11 +165,13 @@ All column references are 0 based.
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
                   '10' '-1c0:-1' => 9.
- -2<cn:[start]> : Adds a field to the data that auto increments starting at a given integer.
+ -2<cn:start,[end]> : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
-                  greater than, or equal to, the number of columns a given line.
+                  greater than, or equal to, the number of columns a given line. A value
+				  can be entered as a reset value to start incrementing again.
+                  Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
  -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
                   Like '-1', but you can specify a given step value like '-2'.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
@@ -413,7 +417,7 @@ EOF
 }
 
 # Takes a single argument from the command line in pipe.pl style input and returns a list of the column index and the value supplied.
-# Looks like this: -2c1:1000, where '-2' is the flag, c1 is the column requested, and 1000 the additional input for the column.
+# Looks like this: -2c1:1000, where '-2' is the flag, c1 is the column requested, and 1000 the additional input for the column. A reset value is also allowed as in -2c1:1000,1200, which resets the increment to 1000 after 1200 is reached.
 # param:  string argument from the command line.
 # return: List of 2 values, the column index and the requested value. In the example above the return values are (1, 1000).
 sub parse_single_column_single_argument( $ )
@@ -422,17 +426,25 @@ sub parse_single_column_single_argument( $ )
 	if ( $input =~ m/^[C|c]\d{1,}/ )
 	{
 		my ( $colNum, $value ) = split ':', $input;
+		my $reset = '';    # might not be used if user doesn't specify a reset value.
 		$colNum =~ s/c//i; # get rid of the 'c' because it causes problems later.
 		# There may be an additional value after the column specifier (or not).
 		if ( $input =~ m/:/ )
 		{
 			$value = $';
+			if ( $input =~ m/,/ )
+			{
+				( $value, $reset ) = split ',', $value;
+				$value = trim( $value );
+				$reset = trim( $reset );
+			}
+			printf STDERR "increment start='%s', end='%s'\n", $value, $reset if ( $opt{'D'} );
 		}
 		if ( ! $value )
 		{
 			$value = 0;
 		}
-		return ( $colNum, $value );
+		return ( $colNum, $value, $reset );
 	}
 	printf STDERR "** error parsing column specification in '%s'\n", $input;
 	exit( 0 );
@@ -2167,6 +2179,16 @@ sub add_auto_increment( $ )
 	{
 		splice @{ $line }, $AUTO_INCR_COLUMN, 0, $AUTO_INCR_SEED++;
 	}
+	# The start and end range are inclusive, so we have to increment the AUTO_INCR_RESET by 1 with the post increment
+	# code above.
+	if ( $AUTO_INCR_RESET =~ m/^\d+$/ && $AUTO_INCR_SEED =~ m/^\d+$/ )
+	{
+		$AUTO_INCR_SEED = $AUTO_INCR_ORIG_VALUE if ( $AUTO_INCR_RESET && $AUTO_INCR_SEED >= $AUTO_INCR_RESET + 1 );
+	}
+	else
+	{
+		$AUTO_INCR_SEED = $AUTO_INCR_ORIG_VALUE if ( $AUTO_INCR_RESET && $AUTO_INCR_SEED gt $AUTO_INCR_RESET );
+	}
 }
 
 # Shows histogram of columns value.
@@ -2824,7 +2846,11 @@ sub init
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
-	($AUTO_INCR_COLUMN, $AUTO_INCR_SEED) = parse_single_column_single_argument( $opt{'2'} ) if ( $opt{'2'} );
+	if ( $opt{'2'} )
+	{
+		($AUTO_INCR_COLUMN, $AUTO_INCR_SEED, $AUTO_INCR_RESET) = parse_single_column_single_argument( $opt{'2'} );
+		$AUTO_INCR_ORIG_VALUE = $AUTO_INCR_SEED;
+	}
 	@HISTOGRAM_COLUMN  = read_requested_qualified_columns( $opt{'6'}, $hist_ref, 0 )        if ( $opt{'6'} );
 	if ( $opt{'v'} )
 	{
