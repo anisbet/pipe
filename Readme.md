@@ -184,6 +184,7 @@ Complete list of flags
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the '-I'
                   switch to preserve keys' case during comparison. See '-n', and '-I'.
+                  Outputs absolute value of -a, -v, -1, -3, -4 results.
  -o<c0,c1,...cn>: Order the columns in a different order. Only the specified columns are output.
  -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
@@ -299,6 +300,7 @@ The order of operations is as follows:
   -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
+  -N - Normalize keys before comparisons, summaries to STDOUT, abs(result).
 ```
 
 

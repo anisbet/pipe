@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.42.5 - October 16, 2017 Allow reset of -2 switch.
+# 0.43.0 - October 26, 2017 -N causes -4 to output absolute value. Summaries to 
+#          print delimited values only to STDERR.
 #
 ####################################################################################
 
@@ -37,7 +38,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.42.5};
+my $VERSION           = qq{0.43.0};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -117,7 +118,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-5ADijLQtUVx]
+    usage: cat file | pipe.pl [-5ADijLNQtUVx]
        -0<file_name>
        -Wh<delimiter>
        -14bBcovwzZ<c0,c1,...,cn>
@@ -166,7 +167,7 @@ All column references are 0 based.
                   You can optionally change the increment step by a given value.
                   '10' '-1c0:-1' => 9.
  -2<cn:[start,[end]]> : Adds a field to the data that auto increments starting at a given integer.
-                  Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This 
+                  Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
                   greater than, or equal to, the number of columns a given line. A value
@@ -174,7 +175,7 @@ All column references are 0 based.
                   Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
  -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
                   Like '-1', but you can specify a given step value like '-2'.
-                  '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless 
+                  '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless
                   '-D' is used.
  -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
@@ -203,7 +204,7 @@ All column references are 0 based.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is '-C' is logically AND across columns. This behaviour changes
-                  if the keyword 'any' is used, in that case test returns true as soon  
+                  if the keyword 'any' is used, in that case test returns true as soon
                   as any column comparison matches successfully.
  -d<c0,c1,...cn>: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
@@ -237,10 +238,10 @@ All column references are 0 based.
                   are ignored and any successful match will return true.
                   Comparisons across columns is also possible, by omitting the regex for a given column.
                   Columns with empty regular expressions will be compared to the first regex specified.
-                  Example: "a|b|c|b|d" '-gc1:b,c3:' => "a|b|c|b|d" succeeds because c3 matches 
+                  Example: "a|b|c|b|d" '-gc1:b,c3:' => "a|b|c|b|d" succeeds because c3 matches
                   c1 as specified in the first expression 'c1:b', while
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
-                  If the first column's regex is empty, the value of the first column is used 
+                  If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
                   succeeds because the value in c1 matches the value in c3.
  -G<[any|c0:regex,...>: Inverse of '-g', and can be used together to perform AND operation as
@@ -251,13 +252,13 @@ All column references are 0 based.
  -H             : Suppress new line on output.
  -i             : Turns on virtual matching for -g, -G. Causes further processing on the line ONLY
                   if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
-                  The -i flag will override that behaviour but suppress any additional processing of 
+                  The -i flag will override that behaviour but suppress any additional processing of
                   the line unless the -g or -G flag succeeds.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
-                  (see -A).  
+                  (see -A).
  -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
@@ -271,7 +272,7 @@ All column references are 0 based.
                   produces 'abcPefP'.
  -L<[[+|-]?n-?m?|skip n]>: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
-                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
+                  '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple
                   requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
@@ -296,6 +297,8 @@ All column references are 0 based.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the '-I'
                   switch to preserve keys' case during comparison. See '-n', and '-I'.
+                  Outputs absolute value of -a, -v, -1, -3, -4 results.
+                  Causes summaries to be output with delimiter to STDERR on last line.
  -o<c0,c1,...cn>: Order the columns in a different order. Only the specified columns are output.
  -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
@@ -305,13 +308,13 @@ All column references are 0 based.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
-                  This has the effect of joining n-number of lines into one line. 
- -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
+                  This has the effect of joining n-number of lines into one line.
+ -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to
                   view the context around a match, that is, the line before the match and the line after.
-                  The lines are written to STDERR, and are immutable. The line preceding a match 
-                  is denoted by '<=', the line after by '=>'. If the match occurs on the first line 
-                  the preceding match is '<=BOF', beginning of file, and if the match occurs on 
-                  the last line the trailing match is '=>EOF'. 
+                  The lines are written to STDERR, and are immutable. The line preceding a match
+                  is denoted by '<=', the line after by '=>'. If the match occurs on the first line
+                  the preceding match is '<=BOF', beginning of file, and if the match occurs on
+                  the last line the trailing match is '=>EOF'.
  -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).
@@ -328,7 +331,7 @@ All column references are 0 based.
  -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
-                  HTML also allows for adding CSS or other HTML attributes to the <table> tag. 
+                  HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
  -u<any|c0,c1,...cn>: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
@@ -410,6 +413,7 @@ The order of operations is as follows:
   -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
+  -N - Normalize summaries, keys before comparisons, abs(result).
 
 Version: $VERSION
 EOF
@@ -560,7 +564,7 @@ sub parse_line_ranges( $ )
 		# Clear the default of all lines, or else all lines will be considered.
 		# Parse the ranges from the input strings.
 		# Set the start (key) and end (value) to a specific value.
-		if ( $range =~ m/^\-\d+$/ ) # parses from line 'n' to the end of the file. 
+		if ( $range =~ m/^\-\d+$/ ) # parses from line 'n' to the end of the file.
 		{
 			$READ_FULL = 1; # Set true to read the entire file before output as with -L'-n'.
 			# get rid of the previous rule that outputs all lines.
@@ -569,7 +573,7 @@ sub parse_line_ranges( $ )
 			$LINE_RANGES->{ (0 -$num) } = $MAX_LINE;
 			$KEEP_LINES  = $num; # Number of lines to keep in buffer if -L'-n' is used.
 		}
-		elsif ( $range =~ m/^\+\d+$/ ) # parses from beginning of file upto the given range. 
+		elsif ( $range =~ m/^\+\d+$/ ) # parses from beginning of file upto the given range.
 		{
 			# The rule for line 1 is automatically over written.
 			my $num = substr $range, 1;
@@ -660,7 +664,7 @@ sub normalize( $ )
       else
       {
             return uc $line;
-      }	
+      }
 }
 
 # Trim function to remove white space from the start and end of the string.
@@ -684,12 +688,19 @@ sub print_summary( $$$ )
 	my $title    = shift;
 	my $hash_ref = shift;
 	my $columns  = shift;
-	printf STDERR "== %9s\n", $title if ( $title );
+	printf STDERR "== %9s\n", $title if ( $title and ! $opt{'N'} );
 	foreach my $column ( sort @{$columns} )
 	{
 		my $value = 0;
 		$value = $hash_ref->{ 'c'.$column } if ( defined $hash_ref->{ 'c'.$column } );
-		printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value, 0, $PRECISION );
+		if ( $opt{'N'} )
+		{
+			printf STDERR "%s%s%s\n", 'c'.$column, $DELIMITER, get_number_format( $value, 0, $PRECISION );
+		}
+		else
+		{
+			printf STDERR " %2s: %7s\n", 'c'.$column, get_number_format( $value, 0, $PRECISION );
+		}
 	}
 }
 
@@ -2137,7 +2148,7 @@ sub delta_previous_line( $ )
 				printf STDERR "* warning can't use '%s' for computation.\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
 				next;
 			}
-			# Save the first value 
+			# Save the first value
 			if ( ! exists $delta_cols_ref->{ $colIndex } )
 			{
 				$delta_cols_ref->{ $colIndex } = @{ $line }[ $colIndex ];
@@ -2149,7 +2160,14 @@ sub delta_previous_line( $ )
 				# Save this rows orginial value in this row for the next row's calculation.
 				my $tmp = @{ $line }[ $colIndex ];
 				# Compute the new value for this row.
-				@{ $line }[ $colIndex ] = $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
+				if ( $opt{'N'} )
+				{
+					@{ $line }[ $colIndex ] = abs $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
+				}
+				else
+				{
+					@{ $line }[ $colIndex ] = $delta_cols_ref->{ $colIndex } - @{ $line }[ $colIndex ];
+				}
 				$delta_cols_ref->{ $colIndex } = $tmp;
 			}
 			else
@@ -2157,9 +2175,16 @@ sub delta_previous_line( $ )
 				# Save this rows orginial value in this row for the next row's calculation.
 				my $tmp = @{ $line }[ $colIndex ];
 				# Compute the new value for this row.
-				@{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+				if ( $opt{'N'} )
+				{
+					@{ $line }[ $colIndex ] = abs @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+				}
+				else
+				{
+					@{ $line }[ $colIndex ] = @{ $line }[ $colIndex ] - $delta_cols_ref->{ $colIndex };
+				}
 				$delta_cols_ref->{ $colIndex } = $tmp;
-			} 
+			}
 		}
 	}
 }
@@ -2196,7 +2221,7 @@ sub add_auto_increment( $ )
 # return: character(s) to be used for graphing.
 sub histogram( $ )
 {
-	my $line = shift; 
+	my $line = shift;
 	foreach my $colIndex ( @HISTOGRAM_COLUMN )
 	{
 		if ( defined @{ $line }[ $colIndex ] )
@@ -2242,11 +2267,11 @@ sub get_column_value( $$ )
 			printf STDERR "* warning value in column not numeric: '%s'.\n", $columns[ $wantedColumn ] if ( $opt{'D'} );
 		}
 	}
-	
+
 	return 0;
 }
 
-# Formats a value into a string suitable for display. In the case of a float it provides 
+# Formats a value into a string suitable for display. In the case of a float it provides
 # 2 decimal place precision, and if the value is an integer, no decimals places are added.
 # param:  value, which is tested against various number formats and returns a string
 #         version of the argument value.
@@ -2262,7 +2287,7 @@ sub get_number_format
 	if ( $number_type )
 	{
 		if ( $input && $input =~ /^[+]?\d+\z/ ){ $summary = sprintf "%d", $input; }
-	}	
+	}
 	elsif ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
 	elsif ( $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
 	{ $summary = eval("sprintf \"%.".$precision."f\", $input"); }
@@ -2581,7 +2606,7 @@ sub merge_line( $ )
 		@{ $line }[ 0 ] = join '', @{ $line };
 		return;
 	}
-	if ( ! defined $MERGE_COLUMNS[ 0 ] or ! defined @{ $line }[ $MERGE_COLUMNS[ 0 ] ] ) 
+	if ( ! defined $MERGE_COLUMNS[ 0 ] or ! defined @{ $line }[ $MERGE_COLUMNS[ 0 ] ] )
 	{
 		printf STDERR "** warning: merge target 'c%s' doesn't exist in line '%s...'.\n", $MERGE_COLUMNS[ 0 ], @{ $line }[0] if ( $opt{'D'} );
 	}
@@ -2617,7 +2642,7 @@ sub process_line( $ )
 {
 	# Always output if -g or -G match or not, but if matches additional processing will be done.
 	# We turn it on by default so if -g or -G not used the line will get processed as normal.
-	my $continue_to_process_match = 1; 
+	my $continue_to_process_match = 1;
 	my $line = shift;
 	chomp $line;
 	# With -W the line will look like this; '11|abc{_PIPE_}def'
@@ -2657,7 +2682,7 @@ sub process_line( $ )
             $IS_X_MATCH = is_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
 			printf STDERR "Setting X match '%d' ", $IS_X_MATCH if ( $opt{'D'} );
 			# Retest b/c you didn't match to get here but do we match now, if we do it's the first match
-			# which we want to display which lets the line fall through to the following processes. 
+			# which we want to display which lets the line fall through to the following processes.
 			# If it is not a match return nothing.
 			return '' if ( ! $IS_X_MATCH );
         }
@@ -2896,7 +2921,7 @@ sub init
 	if ( $opt{'T'} )
 	{
 		my @attrs     = split ':', $opt{'T'};
-		shift @attrs; 
+		shift @attrs;
 		# Shift of 'HTML' or 'WIKI' and re-join the rest of the string to account for ':' separators in both CSS AND Wiki attributes.
 		$TABLE_ATTR   = ' ' . join ':', @attrs if ( scalar( @attrs ) > 0 );
 		if ( $opt{'T'} =~ m/HTML/i )
@@ -2996,23 +3021,44 @@ if ( $opt{'v'} )
 }
 if ( $opt{'w'} )
 {
-	printf STDERR "== width\n";
+	printf STDERR "== width\n" if ( ! $opt{'N'} );
 	foreach my $column ( sort @WIDTH_COLUMNS )
 	{
 		if ( defined $width_max_ref->{ 'c'.$column } )
 		{
-			printf STDERR " %2s: min: %2d at line %d, max: %2d at line %d, mid: %2.1f\n",
-			'c'.$column,
-			$width_min_ref->{ 'c'.$column },
-			$width_line_min_ref->{ 'c'.$column },
-			$width_max_ref->{ 'c'.$column },
-			$width_line_max_ref->{ 'c'.$column },
-			($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
+			if ( $opt{'N'} )
+			{
+				printf STDERR "%s%s%d%s%d%s%d%s%d%s%2.1f\n",
+					'c'.$column, $DELIMITER,
+					$width_min_ref->{ 'c'.$column }, $DELIMITER,
+					$width_line_min_ref->{ 'c'.$column }, $DELIMITER,
+					$width_max_ref->{ 'c'.$column }, $DELIMITER,
+					$width_line_max_ref->{ 'c'.$column }, $DELIMITER,
+					($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
+			}
+			else
+			{
+				printf STDERR " %2s: min: %2d at line %d, max: %2d at line %d, mid: %2.1f\n",
+					'c'.$column,
+					$width_min_ref->{ 'c'.$column },
+					$width_line_min_ref->{ 'c'.$column },
+					$width_max_ref->{ 'c'.$column },
+					$width_line_max_ref->{ 'c'.$column },
+					($width_max_ref->{ 'c'.$column } + $width_min_ref->{ 'c'.$column }) / 2;
+			}
 		}
 		else
 		{
-			printf STDERR " %2s: min: %2d at line -, max: %2d at line -, mid: %2.1f\n",
-			'c'.$column, 0, 0, 0;
+			if ( $opt{'N'} )
+			{
+				printf STDERR " %s%s0%s-%s0%s-%s0\n",
+					'c'.$column, $DELIMITER, $DELIMITER, $DELIMITER, $DELIMITER, $DELIMITER;
+			}
+			else
+			{
+				printf STDERR " %2s: min: %2d at line -, max: %2d at line -, mid: %2.1f\n",
+					'c'.$column, 0, 0, 0;
+			}
 		}
 	}
 	if ( %{$WIDTHS_COLUMNS} )
@@ -3025,14 +3071,31 @@ if ( $opt{'w'} )
 		push @keys, $metric;
 		if ( $min == $metric )
 		{
-			printf STDERR " number of columns: min, max: %d, ", $metric;
-			printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			if ( $opt{'N'} )
+			{
+				printf STDERR "%d\n", $metric;
+				printf STDERR "%d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			}
+			else
+			{
+				printf STDERR " number of columns: min and max: %d, ", $metric;
+				printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			}
 		}
 		else
 		{
-			printf STDERR " number of columns:  min: %d at line: %d, ", $min, $WIDTHS_COLUMNS->{ $min };
-			printf STDERR "max: %d at line: %d, ", $metric, $WIDTHS_COLUMNS->{ $metric };
-			printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			if ( $opt{'N'} )
+			{
+				printf STDERR "%d%s%d%s ", $min, $DELIMITER, $WIDTHS_COLUMNS->{ $min }, $DELIMITER;
+				printf STDERR "%d%s%d%s", $metric, $DELIMITER, $WIDTHS_COLUMNS->{ $metric }, $DELIMITER;
+				printf STDERR "%d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			}
+			else
+			{
+				printf STDERR " number of columns:  min: %d at line: %d, ", $min, $WIDTHS_COLUMNS->{ $min };
+				printf STDERR "max: %d at line: %d, ", $metric, $WIDTHS_COLUMNS->{ $metric };
+				printf STDERR "variance: %d\n", (scalar( keys %{$WIDTHS_COLUMNS} ) -1);
+			}
 		}
 	}
 }
