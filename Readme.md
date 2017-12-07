@@ -302,6 +302,37 @@ The order of operations is as follows:
   -j - Remove last delimiter on the last line of data output.
   -N - Normalize keys before comparisons, summaries to STDOUT, abs(result).
 ```
+## Some performance data.
+Running on a virtualized Ubuntu machine where the native ```wc``` runs at:
+```
+$ time cat sva.csv | wc -l
+3168027
+
+real    0m0.472s
+user    0m0.028s
+sys     0m0.260s
+```
+Running the filtering commands:
+```
+$ time cat sva_all_logs.log | pipe.pl -W'\s+|Ntc\s|dxxx' -oc0,c1,c3,c4,c5 -mc1:#####_ >sva.csv.pipe     
+real    1m57.515s
+user    1m52.612s
+sys     0m1.881s
+```
+Then sorting the output of that file into a CSV.
+```
+$ time cat sva.csv.pipe | pipe.pl -sc0,c1 -TCSV:"Date,Time,Channel,Code,Txt" -zc0 -cc0 >sva.csv
+==     count
+ c0: 3168026
+
+real    4m13.818s
+user    1m30.786s
+sys     1m8.059s
+```
+
+
+
+
 
 
 Exit searches after 'n' matches
