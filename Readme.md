@@ -193,6 +193,8 @@ Complete list of flags
                   maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
+ -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
+                  This has the effect of joining n-number of lines into one line.
  -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to 
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match 
