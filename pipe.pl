@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.43.0 - October 26, 2017 -N causes -4 to output absolute value. Summaries to 
-#          print delimited values only to STDERR.
+# 0.43.01 - Dec 29, 2017 Fix -p to allow literal digits.
 #
 ####################################################################################
 
@@ -38,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.43.0};
+my $VERSION           = qq{0.43.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -303,8 +302,10 @@ All column references are 0 based.
  -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
- -p<c0:exp,... >: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
-                  maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
+ -p<c0:exp,... >: Pad fields left or right with arbitrary characters. The expression is separated by an
+                  optional '.' character. '123' -pc0:-5, -pc0:-5. both do the same thing: '123  '. Literal
+                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. 
+                  Use '123' -pc0:-5.\\. => '123..'.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -1508,11 +1509,10 @@ sub apply_padding( $$ )
 	printf "PAD: '%s'.\n", $instruction if ( $opt{'D'} );
 	my $count = 0;
 	my $character = '';
-	if ( $instruction =~ m/^[+|-]?\d{1,}/ )
+	if ( $instruction =~ m/^[+|-]?\d{1,}\.?/ )
 	{
 		$count = $&;
 		$character = $';
-		$character = ' ' if ( ! $character );
 		printf STDERR "padding '$count' char '$character'\n" if ( $opt{'D'} );
 	}
 	else

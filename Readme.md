@@ -189,8 +189,10 @@ Complete list of flags
  -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
- -p<c0:exp,... >: Pad fields left or right with white spaces. 'c0:-10.,c1:14 ' pads 'c0' with a
-                  maximum of 10 trailing '.' characters, and c1 with upto 14 leading spaces.
+ -p<c0:exp,... >: Pad fields left or right with arbitrary characters. The expression is separated by an
+                  optional '.' character. '123' -pc0:-5, -pc0:-5. both do the same thing: '123  '. Literal
+                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'.
+                  Use '123' -pc0:-5.\. => '123..'.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -1103,13 +1105,13 @@ cat pad.lst
 123
 1234
 12345
-cat pad.lst | pipe.pl -pc0:5.
+cat pad.lst | pipe.pl -pc0:5.\.
 ....1
 ...12
 ..123
 .1234
 12345
-cat pad.lst | pipe.pl -pc0:-5.
+cat pad.lst | pipe.pl -pc0:-5.\.
 1....
 12...
 123..
@@ -1125,6 +1127,11 @@ and
 ```
 echo 21221012345678 | pipe.pl -p'c0:-17dot'
 21221012345678dotdotdot
+```
+The '.' character is optional, but required if you want to specify digits as padding. For example.
+```
+$ echo '123|abc' | pipe.pl -pc0:-5.1
+12311|abc
 ```
 
 See also **-m** for additional formatting features.
