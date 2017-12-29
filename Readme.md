@@ -140,7 +140,7 @@ Complete list of flags
                   if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
                   The -i flag will override that behaviour but suppress any additional processing of 
                   the line unless the -g or -G flag succeeds.
- -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -n and -s.
+ -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -156,7 +156,9 @@ Complete list of flags
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
  -l<c0:exp,... >: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
-                  produces 'abcPefP'.
+                  produces 'abcPefP'. 3 white space characters are supported '\s', '\t',
+                  and '\n'. "Hello" -lc0:e.\t => 'H       llo'
+                  Can be made case insensitive with '-I'.
  -L<[[+|-]?n-?m?|skip n]>: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple 
@@ -283,7 +285,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
-  -I - Ingnore case on '-b', '-B', '-d', '-E', '-f', '-s', '-g', '-G', and '-n'.
+  -I - Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
