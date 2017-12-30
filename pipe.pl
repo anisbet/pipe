@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.43.02 - Dec 29, 2017 Fix -l to allow white space.
+# 0.43.03 - Dec 30, 2017 Allow 'n' lines of buffering with -Q.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.43.02};
+my $VERSION           = qq{0.43.03};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -101,7 +101,8 @@ my $WIDTHS_COLUMNS    = {};
 my $X_UNTIL_Y         = 0;
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
-my $PREVIOUS_LINE     = "BOF"; # For '-Q' region search display.
+my @PREVIOUS_LINES    = (); # Display the 'n' lines before the match.
+push @PREVIOUS_LINES, "BOF";
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 my $FALSE             = 1;
 my $TRUE              = 0;
@@ -2708,12 +2709,13 @@ sub process_line( $ )
 		if ( $opt{'Q'} and $IS_A_POST_MATCH ) # There was a match so dump the buffer if we have been filling it.
 		{
 			printf STDERR "=>%s\n", $line;
-			$IS_A_POST_MATCH = 0;
+			$IS_A_POST_MATCH -= 1;
 		}
 		# Grep comes first because it assumes that non-matching lines don't require additional operations.
 		if ( $opt{'g'} and $opt{'G'} )
 		{
-			$PREVIOUS_LINE = $line;
+			unshift @PREVIOUS_LINES, $line;
+			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
 			if ( ! ( is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) and is_not_match( \@columns ) ) )
 			{
 				if ( $opt{'i'} )
@@ -2728,7 +2730,8 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'g'} and ! is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
-			$PREVIOUS_LINE = $line;
+			unshift @PREVIOUS_LINES, $line;
+			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
 			if ( $opt{'i'} )
 			{
 				$continue_to_process_match = 0;
@@ -2740,7 +2743,10 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
 		{
-			$PREVIOUS_LINE = $line;
+			# my $PREVIOUS_LINE_COUNT = 1; # For '-Q' how many lines to display.
+			# my @PREVIOUS_LINES    = ();
+			unshift @PREVIOUS_LINES, $line;
+			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} ); 
 			if ( $opt{'i'} )
 			{
 				$continue_to_process_match = 0;
@@ -2755,8 +2761,11 @@ sub process_line( $ )
 			$MATCH_COUNT++;
 			if ( $opt{'Q'} ) # There was a match so dump the buffer if we have been filling it.
 			{
-				printf STDERR "<=%s\n", $PREVIOUS_LINE;
-				$IS_A_POST_MATCH = 1;
+				while ( @PREVIOUS_LINES )
+				{
+					printf STDERR "<=%s\n", pop @PREVIOUS_LINES;
+				}
+				$IS_A_POST_MATCH = $opt{'Q'};
 			}
 		}
 	}
@@ -2820,7 +2829,8 @@ sub process_line( $ )
 	$line =~ s/\|/$DELIMITER/g if ( $opt{'h'} );
 	# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
 	$line =~ s/($SUB_DELIMITER)/\|/g if ( $opt{'W'} );
-	$PREVIOUS_LINE = $line;
+	unshift @PREVIOUS_LINES, $line;
+	pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
 	{
@@ -2842,7 +2852,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Qr:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
