@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.43.03 - Dec 30, 2017 Allow 'n' lines of buffering with -Q.
+# 0.44.00 - Dec 30, 2017 Allow 'n' lines of buffering with -Q.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.43.03};
+my $VERSION           = qq{0.44.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -118,33 +118,33 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-5ADijLNQtUVx]
-       -0<file_name>
-       -Wh<delimiter>
-       -14bBcovwzZ<c0,c1,...,cn>
-       -3<c0:n,c1:m,...,cn:p>
-       -nOtu<[any|c0,c1,...,cn]>
-       -C<[any|cn]:(gt|lt|eq|ge|le)exp,...>
-       -ds[-IRN]<c0,c1,...,cn> [-J[cn]]
-       -e[c0:[uc|lc|mc|us],...>
-       -E[c0:[r|?c.r[.e]],...>
-       -f[c0:n.p[?p.q[.r]],...>
-	   -7<n-th match>
-       -F[c0:[x|b|d],...>
-       -gG<any|cn:[regex],...>
-       -H[-q<positive integer>]
-       -k<cn:expr,(...)>
-       -l<c0:n.p,...>
-       -L<[[+|-]n[[,|-]n]?|skip n]>
-       -m<cn:*[_|#]*,...>
-       -p<cn:[+|-]countChar+,...>
-       -q<n-th> [-Q]
-       -S<cn:[range],...>
-       -y<precision>
-       -2<cn:[start,[end]],...>
-       -6<cn:[char],...>
+    usage: cat file | pipe.pl [-5ADijLNtUVx]
+       -0{file_name}
+       -W{delimiter}
+       -14bBcovwzZ{c0,c1,...,cn}
+       -3{c0:n,c1:m,...,cn:p}
+       -nOtu{[any|c0,c1,...,cn]}
+       -C{[any|cn]:(gt|lt|eq|ge|le)exp,...}
+       -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
+       -e[c0:[uc|lc|mc|us],...}
+       -E[c0:[r|?c.r[.e]],...}
+       -f[c0:n.p[?p.q[.r]],...}
+	   -7{n-th match}
+       -F[c0:[x|b|d],...}
+       -gG{any|cn:[regex],...}
+       -H[-q{positive integer}]
+       -k{cn:expr,(...)}
+       -l{c0:n.p,...}
+       -L{[[+|-]n[[,|-]n]?|skip n]}
+       -m{cn:*[_|#]*,...}
+       -p{cn:[+|-]countChar+,...}
+       -q{n-th} [-Q{n}]
+       -S{cn:[range],...}
+       -y{precision}
+       -2{cn:[start,[end]],...}
+       -6{cn:[char],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
-       -X<any|cn:[regex],...> [-Y<any|cn:regex,...> [-M]]
+       -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-M]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -159,33 +159,33 @@ remaining operations are performed.
 Example: cat file.lst | pipe.pl -c"c0"
 
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
-All column references are 0 based.
+All column references are 0 based. Line numbers start at 1.
 
- -0<file_name>  : Name of a text file to use as input as alternative to taking input on STDIN.
- -1<c0,c1,...cn>: Increment the value stored in given column(s). Works on both integers and
+ -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
+ -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
                   '10' '-1c0:-1' => 9.
- -2<cn:[start,[end]]> : Adds a field to the data that auto increments starting at a given integer.
+ -2{cn:[start,[end]]} : Adds a field to the data that auto increments starting at a given integer.
                   Example: a|b|c -2'c1:100' => a|100|b|c, a|101|b|c, a|102|b|c, etc. This
                   function occurs last in the order of operations. The auto-increment value
                   will be appended to the end of the line if the specified column index is
                   greater than, or equal to, the number of columns a given line. A value
                   can be entered as a reset value to start incrementing again.
                   Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
- -3<c0[:n],c1,...cn>: Increment the value stored in given column(s) by a given step.
+ -3{c0[:n],c1,...cn}: Increment the value stored in given column(s) by a given step.
                   Like '-1', but you can specify a given step value like '-2'.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless
                   '-D' is used.
- -4<c0,c1,...cn>: Compute difference between value in previous column. If the values in the
+ -4{c0,c1,...cn}: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
                   If the '-R' switch is used the current line is subtracted from the previous line.
- -5             : Modifier used with -[g|X|Y]'any:<regex>', outputs all the values that match the regular
+ -5             : Modifier used with -[g|X|Y]'any:{regex}', outputs all the values that match the regular
                   expression to STDERR.
- -6<cn:[char]>  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
+ -6{cn:[char]}  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
- -7<nth-match>  : Return after 'n'th line match of a search. See '-g', '-G', '-X', '-Y'.
- -a<c0,c1,...cn>: Sum the non-empty values in given column(s).
+ -7{nth-match}  : Return after 'n'th line match of a search. See '-g', '-G', '-X', '-Y'.
+ -a{c0,c1,...cn}: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
                   for a line that was duplicated 4 times on a given key. If
@@ -193,12 +193,12 @@ All column references are 0 based.
                   are output. If the last 10 lines of a file are selected, the output
                   are numbered from 1 to 10 but if other match functions like -g -G -X or -Y
                   are used, the successful matched line is reported.
- -b<c0,c1,...cn>: Compare fields and output if each is equal to one-another.
- -B<c0,c1,...cn>: Compare fields and output if columns differ.
- -c<c0,c1,...cn>: Count the non-empty values in given column(s), that is
+ -b{c0,c1,...cn}: Compare fields and output if each is equal to one-another.
+ -B{c0,c1,...cn}: Compare fields and output if columns differ.
+ -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C<any|c0:<gt|lt|eq|ge|le]value,... >: Compare column and output line if value in column
+ -C{any|c0:{gt|lt|eq|ge|le]value,... }: Compare column and output line if value in column
                   is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
@@ -206,13 +206,13 @@ All column references are 0 based.
                   true, that is '-C' is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
                   as any column comparison matches successfully.
- -d<c0,c1,...cn>: Dedups file by creating a key from specified column values
+ -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e<c0:[uc|lc|mc|us],...>: Change the case of a value in a column to upper case (uc),
+ -e{c0:[uc|lc|mc|us],...}: Change the case of a value in a column to upper case (uc),
                   lower case (lc), mixed case (mc), or underscore (us).
- -E<c0:[r|?c.r[.e]],...>: Replace an entire field conditionally, if desired. Similar
+ -E{c0:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
                   value the field must have to be replaced by r, and optionally
@@ -220,15 +220,15 @@ All column references are 0 based.
                   Example: '111|222|333' '-E'c1:nnn' => '111|nnn|333'
                   '111|222|333' '-E'c1:?222.444'     => '111|444|333'
                   '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
- -f<c0:n[.p|?p.q[.r]],...>: Flips an arbitrary but specific character conditionally,
+ -f{c0:n[.p|?p.q[.r]],...}: Flips an arbitrary but specific character conditionally,
                   where 'n' is the 0-based index of the target character. A '?' means
                   test the character equals p before changing it to q, and optionally change
                   to r if the test fails. Works like an if statement.
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F<c0:[x|b|d],...>: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g<[any|c0:regex,...>: Searches the specified field for the Perl regular expression.
+ -F{c0:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -g{[any|c0:regex,...}: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
@@ -244,7 +244,7 @@ All column references are 0 based.
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
                   succeeds because the value in c1 matches the value in c3.
- -G<[any|c0:regex,...>: Inverse of '-g', and can be used together to perform AND operation as
+ -G{[any|c0:regex,...}: Inverse of '-g', and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See '-g' for more information.
@@ -256,10 +256,10 @@ All column references are 0 based.
                   the line unless the -g or -G flag succeeds.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
- -J<cn>         : Sums the numeric values in a given column during the dedup process (-d)
+ -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).
- -k<cn:expr,(...)>: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
+ -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
                   "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
@@ -268,18 +268,18 @@ All column references are 0 based.
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
- -l<c0:exp,... >: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+ -l{c0:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
                   and '\\n'. "Hello" -lc0:e.\\t => 'H       llo'
                   Can be made case insensitive with '-I'.
- -L<[[+|-]?n-?m?|skip n]>: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
+ -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple
                   requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the '-L' flag.
- -m<c0:*[_|#]*> : Mask specified column with the mask defined after a ':', and where '_'
+ -m{c0:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
                   If the last character is either '_' or '#', then it will be repeated until
@@ -292,7 +292,7 @@ All column references are 0 based.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
- -n<any|c0,c1,...cn>: Normalize the selected columns, that is, removes all non-word characters
+ -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The '-I' switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See '-N',
                   '-I' switches for more information.
@@ -301,29 +301,29 @@ All column references are 0 based.
                   switch to preserve keys' case during comparison. See '-n', and '-I'.
                   Outputs absolute value of -a, -v, -1, -3, -4 results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o<c0,c1,...cn>: Order the columns in a different order. Only the specified columns are output.
- -O<any|c0,c1,...cn>: Merge columns. The first column is the anchor column, any others are appended to it
+ -o{c0,c1,...cn}: Order the columns in a different order. Only the specified columns are output.
+ -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
- -p<c0:exp,... >: Pad fields left or right with arbitrary characters. The expression is separated by an
+ -p{c0:exp,... }: Pad fields left or right with arbitrary characters. The expression is separated by an
                   optional '.' character. '123' -pc0:-5, -pc0:-5. both do the same thing: '123  '. Literal
                   digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. 
                   Use '123' -pc0:-5.\\. => '123..'.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
- -q<lines>      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
+ -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
                   This has the effect of joining n-number of lines into one line.
- -Q             : Output the line before and line after a '-g', or '-G' match to STDERR. Used to
+ -Q{lines}      : Output 'n' lines before and line after a '-g', or '-G' match to STDERR. Used to
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match
                   is denoted by '<=', the line after by '=>'. If the match occurs on the first line
                   the preceding match is '<=BOF', beginning of file, and if the match occurs on
                   the last line the trailing match is '=>EOF'.
- -r<percent>    : Output a random percentage of records, ie: -r100 output all lines in random
+ -r{percent}    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).
- -s<c0,c1,...cn>: Sort on the specified columns in the specified order.
- -S<c0:range>   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
+ -s{c0,c1,...cn}: Sort on the specified columns in the specified order.
+ -S{c0:range}   : Sub string function. Like mask, but controlled by 0-based index in the columns' strings.
                   Use '.' to separate discontinuous indexes, and '-' to specify ranges.
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
@@ -331,35 +331,35 @@ All column references are 0 based.
                   from the end of data can be specified with syntax (n -m), where 'n' is a literal
                   and represents the length of the data, and '-m' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t<any|c0,c1,...cn>: Trim the specified columns of white space front and back.
- -T<HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]>
+ -t{any|c0,c1,...cn}: Trim the specified columns of white space front and back.
+ -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
- -u<any|c0,c1,...cn>: Encodes strings in specified columns into URL safe versions.
+ -u{any|c0,c1,...cn}: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison. With -C, non-numeric value tests always fail, that is
                   '12345a' -C'c0:ge12345' => '12345a' but '12345a' -C'c0:ge12345' -U fails.
- -v<c0,c1,...cn>: Average over non-empty values in specified columns.
+ -v{c0,c1,...cn}: Average over non-empty values in specified columns.
  -V             : Validate that the output has the same number of columns as the input.
- -w<c0,c1,...cn>: Report min and max number of characters in specified columns, and reports
+ -w{c0,c1,...cn}: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W<delimiter>  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
+ -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X<any|c0:regex,...>: Like the '-g' flag, grep columns for values, and if matched, either
+ -X{any|c0:regex,...}: Like the '-g' flag, grep columns for values, and if matched, either
                   start outputting lines, or output '-Y' matches if selected. See '-Y'.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
- -y<precision>  : Controls precision of computed floating point number output (example '-v').
- -Y<any|c0:regex,...>: Like the '-g', search for matches on columns after initial match(es)
+ -y{precision}  : Controls precision of computed floating point number output (example '-v').
+ -Y{any|c0:regex,...}: Like the '-g', search for matches on columns after initial match(es)
                   of '-X' (required). See '-X'.
                   If the keyword 'any' is used the first column to match will return true.
                   The default behaviour is to output the X and Y matches only, but can be changed.
                   See '-M' for more details.
- -z<c0,c1,...cn>: Suppress line if the specified column(s) are empty, or don't exist.
- -Z<c0,c1,...cn>: Show line if the specified column(s) are empty, or don't exist.
+ -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
+ -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 
 The order of operations is as follows:
   -x - Usage message, then exits.
@@ -390,7 +390,7 @@ The order of operations is as follows:
   -5 - Output all -g 'any' keyword matchs to STDERR.
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
-  -Q - Output the line before and line after a '-g', or '-G' match to STDERR.
+  -Q - Output 'n' lines before and after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.
   -S - Sub string column values.
   -l - Translate character sequence.
