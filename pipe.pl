@@ -2714,9 +2714,12 @@ sub process_line( $ )
 		# Grep comes first because it assumes that non-matching lines don't require additional operations.
 		if ( $opt{'g'} and $opt{'G'} )
 		{
-			# no match but save the line in case there is a match some time within the next '-Q' lines.
-			unshift @PREVIOUS_LINES, $line;
-			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+			if ( $opt{'Q'} )
+			{
+				# no match but save the line in case there is a match some time within the next '-Q' lines.
+				unshift @PREVIOUS_LINES, $line;
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+			}
 			if ( ! ( is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) and is_not_match( \@columns ) ) )
 			{
 				if ( $opt{'i'} )
@@ -2731,9 +2734,12 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'g'} and ! is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
-			# no match but save the line in case there is a match some time within the next '-Q' lines.
-			unshift @PREVIOUS_LINES, $line;
-			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+			if ( $opt{'Q'} )
+			{
+				# no match but save the line in case there is a match some time within the next '-Q' lines.
+				unshift @PREVIOUS_LINES, $line;
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+			}
 			if ( $opt{'i'} )
 			{
 				$continue_to_process_match = 0;
@@ -2745,9 +2751,12 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
 		{
-			# no match but save the line in case there is a match some time within the next '-Q' lines.
-			unshift @PREVIOUS_LINES, $line;
-			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} ); 
+			if ( $opt{'Q'} )
+			{
+				# no match but save the line in case there is a match some time within the next '-Q' lines.
+				unshift @PREVIOUS_LINES, $line;
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+			} 
 			if ( $opt{'i'} )
 			{
 				$continue_to_process_match = 0;
@@ -2830,8 +2839,12 @@ sub process_line( $ )
 	$line =~ s/\|/$DELIMITER/g if ( $opt{'h'} );
 	# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
 	$line =~ s/($SUB_DELIMITER)/\|/g if ( $opt{'W'} );
-	unshift @PREVIOUS_LINES, $line;
-	pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+	if ( $opt{'Q'} )
+	{
+		# no match but save the line in case there is a match some time within the next '-Q' lines.
+		unshift @PREVIOUS_LINES, $line;
+		pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
 	{
