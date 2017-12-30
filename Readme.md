@@ -215,7 +215,7 @@ Complete list of flags
                   The lines are written to STDERR, and are immutable. The line preceding a match
                   is denoted by '<=', the line after by '=>'. If the match occurs on the first line
                   the preceding match is '<=BOF', beginning of file, and if the match occurs on
-                  the last line the trailing match is '=>EOF'.
+                  the last line the trailing match is '=>EOF'. The arrows can be suppressed with '-N'.
  -r{percent}    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).

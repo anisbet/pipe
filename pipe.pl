@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.44.00 - Dec 30, 2017 Allow 'n' lines of buffering with -Q.
+# 0.44.01 - Dec 30, 2017 Suppress '<=', and '=>' on output with '-N'.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.44.00};
+my $VERSION           = qq{0.44.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -299,7 +299,7 @@ All column references are 0 based. Line numbers start at 1.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the '-I'
                   switch to preserve keys' case during comparison. See '-n', and '-I'.
-                  Outputs absolute value of -a, -v, -1, -3, -4 results.
+                  Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
  -o{c0,c1,...cn}: Order the columns in a different order. Only the specified columns are output.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
@@ -318,7 +318,7 @@ All column references are 0 based. Line numbers start at 1.
                   The lines are written to STDERR, and are immutable. The line preceding a match
                   is denoted by '<=', the line after by '=>'. If the match occurs on the first line
                   the preceding match is '<=BOF', beginning of file, and if the match occurs on
-                  the last line the trailing match is '=>EOF'.
+                  the last line the trailing match is '=>EOF'. The arrows can be suppressed with '-N'.
  -r{percent}    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).
@@ -417,7 +417,7 @@ The order of operations is as follows:
   -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
-  -N - Normalize summaries, keys before comparisons, abs(result).
+  -N - Normalize summaries, keys before comparisons, abs(result). Strips formatting.
 
 Version: $VERSION
 EOF
@@ -2708,7 +2708,14 @@ sub process_line( $ )
 	{
 		if ( $opt{'Q'} and $IS_A_POST_MATCH ) # There was a match so dump the buffer if we have been filling it.
 		{
-			printf STDERR "=>%s\n", $line;
+			if ( $opt{'N'} )
+			{
+				printf STDERR "%s\n", $line;
+			}
+			else
+			{
+				printf STDERR "=>%s\n", $line;
+			}
 			$IS_A_POST_MATCH -= 1;
 		}
 		# Grep comes first because it assumes that non-matching lines don't require additional operations.
@@ -2773,7 +2780,14 @@ sub process_line( $ )
 			{
 				while ( @PREVIOUS_LINES )
 				{
-					printf STDERR "<=%s\n", pop @PREVIOUS_LINES;
+					if ( $opt{'N'} )
+					{
+						printf STDERR "%s\n", pop @PREVIOUS_LINES;
+					}
+					else
+					{
+						printf STDERR "<=%s\n", pop @PREVIOUS_LINES;
+					}
 				}
 				$IS_A_POST_MATCH = $opt{'Q'};
 			}
