@@ -2714,6 +2714,7 @@ sub process_line( $ )
 		# Grep comes first because it assumes that non-matching lines don't require additional operations.
 		if ( $opt{'g'} and $opt{'G'} )
 		{
+			# no match but save the line in case there is a match some time within the next '-Q' lines.
 			unshift @PREVIOUS_LINES, $line;
 			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
 			if ( ! ( is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) and is_not_match( \@columns ) ) )
@@ -2730,6 +2731,7 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'g'} and ! is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
+			# no match but save the line in case there is a match some time within the next '-Q' lines.
 			unshift @PREVIOUS_LINES, $line;
 			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
 			if ( $opt{'i'} )
@@ -2743,8 +2745,7 @@ sub process_line( $ )
 		}
 		elsif ( $opt{'G'} and ! is_not_match( \@columns ) )
 		{
-			# my $PREVIOUS_LINE_COUNT = 1; # For '-Q' how many lines to display.
-			# my @PREVIOUS_LINES    = ();
+			# no match but save the line in case there is a match some time within the next '-Q' lines.
 			unshift @PREVIOUS_LINES, $line;
 			pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} ); 
 			if ( $opt{'i'} )
