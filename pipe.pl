@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.44.01 - Dec 30, 2017 Suppress '<=', and '=>' on output with '-N'.
+# 0.44.02 - Dec 31, 2017 '-C' works with '-i' as it does with '-g', and '-G'.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.44.01};
+my $VERSION           = qq{0.44.02};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -2652,9 +2652,9 @@ sub read_whole_number( $ )
 # return: Modified line.
 sub process_line( $ )
 {
-	# Always output if -g or -G match or not, but if matches additional processing will be done.
+	# Always output if -g, -C, or -G match or not, but if matches additional processing will be done.
 	# We turn it on by default so if -g or -G not used the line will get processed as normal.
-	my $continue_to_process_match = 1;
+	my ( $continue_to_process_match, $continue_to_process_match_C ) = 1;
 	my $line = shift;
 	chomp $line;
 	# With -W the line will look like this; '11|abc{_PIPE_}def'
@@ -2793,12 +2793,19 @@ sub process_line( $ )
 			}
 		}
 	}
-	if ( $continue_to_process_match )
+	if ( $opt{'C'} and ! test_condition( \@columns ) )
 	{
-		if ( $opt{'C'} and ! test_condition( \@columns ) )
+		if ( $opt{'i'} )
+		{
+			$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+		}
+		else
 		{
 			return '';
 		}
+	}
+	if ( $continue_to_process_match )
+	{
 		inc_line( \@columns  )              if ( $opt{'1'} );
 		inc_line_by_value( \@columns )      if ( $opt{'3'} );
 		delta_previous_line( \@columns )    if ( $opt{'4'} );
