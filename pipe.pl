@@ -101,7 +101,7 @@ my $WIDTHS_COLUMNS    = {};
 my $X_UNTIL_Y         = 0;
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
-my @PREVIOUS_LINES    = (); # Display the 'n' lines before the match.
+my @PREVIOUS_LINES    = (); my $BUFF_SIZE = 0; # Display the 'n' lines before the match.
 push @PREVIOUS_LINES, "BOF";
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
 my $FALSE             = 1;
@@ -2726,7 +2726,7 @@ sub process_line( $ )
 			{
 				# no match but save the line in case there is a match some time within the next '-Q' lines.
 				unshift @PREVIOUS_LINES, $line;
-				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
 			}
 			if ( ! ( is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) and is_not_match( \@columns ) ) )
 			{
@@ -2746,7 +2746,7 @@ sub process_line( $ )
 			{
 				# no match but save the line in case there is a match some time within the next '-Q' lines.
 				unshift @PREVIOUS_LINES, $line;
-				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
 			}
 			if ( $opt{'i'} )
 			{
@@ -2763,7 +2763,7 @@ sub process_line( $ )
 			{
 				# no match but save the line in case there is a match some time within the next '-Q' lines.
 				unshift @PREVIOUS_LINES, $line;
-				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+				pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
 			} 
 			if ( $opt{'i'} )
 			{
@@ -2777,7 +2777,7 @@ sub process_line( $ )
 		else # One of the above conditions matched.
 		{
 			$MATCH_COUNT++;
-			if ( $opt{'Q'} ) # There was a match so dump the buffer if we have been filling it.
+			if ( $opt{'Q'} && $BUFF_SIZE > 0) # There was a match so dump the buffer but only if user wanted more than 0 buffers in the first place.
 			{
 				while ( @PREVIOUS_LINES )
 				{
@@ -2790,7 +2790,7 @@ sub process_line( $ )
 						printf STDERR "<=%s\n", pop @PREVIOUS_LINES;
 					}
 				}
-				$IS_A_POST_MATCH = $opt{'Q'};
+				$IS_A_POST_MATCH = $BUFF_SIZE;
 			}
 		}
 	}
@@ -2872,7 +2872,7 @@ sub process_line( $ )
 	{
 		# no match but save the line in case there is a match some time within the next '-Q' lines.
 		unshift @PREVIOUS_LINES, $line;
-		pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $opt{'Q'} );
+		pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
 	}
 	# Output line numbering, but if -d selected, output dedup'ed counts instead.
 	if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
@@ -2898,6 +2898,9 @@ sub init
 	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
+	# -Q outputs unpredictably if negative numbers are used. Clean them here.
+	$BUFF_SIZE = $opt{'Q'};
+	$BUFF_SIZE = 0 if ( $opt{'Q'} < 1 );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
