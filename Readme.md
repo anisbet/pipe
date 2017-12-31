@@ -71,17 +71,17 @@ Complete list of flags
                   can be entered as a reset value to start incrementing again.
                   Example: -2c0:0,1 would output 0, 1, 0, 1, 0, ...
  -3{c0[:n],c1,...cn}: Increment the value stored in given column(s) by a given step.
-                  Like '-1', but you can specify a given step value like '-2'.
+                  Like -1, but you can specify a given step value like -2.
                   '10' '-1c0:-2' => 8. An invalid increment value will fail silently unless
-                  '-D' is used.
+                  -D is used.
  -4{c0,c1,...cn}: Compute difference between value in previous column. If the values in the
                   line above are numerical the previous line is subtracted from the current line.
-                  If the '-R' switch is used the current line is subtracted from the previous line.
+                  If the -R switch is used the current line is subtracted from the previous line.
  -5             : Modifier used with -[g|X|Y]'any:{regex}', outputs all the values that match the regular
                   expression to STDERR.
  -6{cn:[char]}  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
- -7{nth-match}  : Return after 'n'th line match of a search. See '-g', '-G', '-X', '-Y'.
+ -7{nth-match}  : Return after 'n'th line match of a search is output. See -g, -G, -X, -Y, -C.
  -a{c0,c1,...cn}: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -100,7 +100,7 @@ Complete list of flags
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
-                  true, that is '-C' is logically AND across columns. This behaviour changes
+                  true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
                   as any column comparison matches successfully.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
@@ -141,16 +141,17 @@ Complete list of flags
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
                   succeeds because the value in c1 matches the value in c3.
- -G{[any|c0:regex,...}: Inverse of '-g', and can be used together to perform AND operation as
+ -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
-                  expressions are permitted. See '-g' for more information.
+                  expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -g, -G. Causes further processing on the line ONLY
-                  if -g or -G succeed. Normally -g or -G will suppress output if a condition matches.
+ -i             : Turns on virtual matching for -g, -G, and -C. Causes further processing on 
+                  the line ONLY if -g or -G succeed. Normally -g or -G will suppress output if 
+                  a condition matches.
                   The -i flag will override that behaviour but suppress any additional processing of
-                  the line unless the -g or -G flag succeeds.
+                  the line unless the -g or -G or -C flag succeeds.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
@@ -175,7 +176,7 @@ Complete list of flags
                   requests can be comma separated like this -L'1,3,8,23-45,12,-100'.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
-                  over other line output selections in the '-L' flag.
+                  over other line output selections in the -L flag.
  -m{c0:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
@@ -188,15 +189,15 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Print the enclosing lines between successful '-X' and '-Y' matches. See '-X' and '-Y'.
+ -M             : Print the enclosing lines between successful -X and -Y matches. See -X and -Y.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
-                  (non-alphanumeric and '_' characters). The '-I' switch leaves the value's case
-                  unchanged. However the default is to change the case to upper case. See '-N',
-                  '-I' switches for more information.
+                  (non-alphanumeric and '_' characters). The -I switch leaves the value's case
+                  unchanged. However the default is to change the case to upper case. See -N,
+                  -I switches for more information.
  -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
-                  Normalization removes all non-word characters before comparison. Use the '-I'
-                  switch to preserve keys' case during comparison. See '-n', and '-I'.
-                  Outputs absolute value of -a, -v, -1, -3, -4 results.
+                  Normalization removes all non-word characters before comparison. Use the -I
+                  switch to preserve keys' case during comparison. See -n, and -I.
+                  Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
  -o{c0,c1,...cn}: Order the columns in a different order. Only the specified columns are output.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
@@ -210,12 +211,12 @@ Complete list of flags
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
                   This has the effect of joining n-number of lines into one line.
- -Q{lines}      : Output 'n' lines before and line after a '-g', or '-G' match to STDERR. Used to
+ -Q{lines}      : Output 'n' lines before and line after a -g, or -G match to STDERR. Used to
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match
                   is denoted by '<=', the line after by '=>'. If the match occurs on the first line
                   the preceding match is '<=BOF', beginning of file, and if the match occurs on
-                  the last line the trailing match is '=>EOF'. The arrows can be suppressed with '-N'.
+                  the last line the trailing match is '=>EOF'. The arrows can be suppressed with -N.
  -r{percent}    : Output a random percentage of records, ie: -r100 output all lines in random
                   order. -r15 outputs 15% of the input in random order. -r0 produces all output in order.
  -R             : Reverse sort (-d, -4 and -s).
@@ -225,8 +226,8 @@ Complete list of flags
                   Ie: '12345' -S'c0:0.2.4' => '135', -S'c0:0-2.4' => '1235', and -S'c0:2-' => '345'.
                   Note that you can reverse a string by reversing your selection like so:
                   '12345' -S'c0:4-0' => '54321', but -S'c0:0-4' => '1234'. Removal of characters
-                  from the end of data can be specified with syntax (n -m), where 'n' is a literal
-                  and represents the length of the data, and '-m' represents the number of characters
+                  from the end of data can be specified with syntax (n - m), where 'n' is a literal
+                  and represents the length of the data, and 'm' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
  -t{any|c0,c1,...cn}: Trim the specified columns of white space front and back.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
@@ -246,15 +247,15 @@ Complete list of flags
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -X{any|c0:regex,...}: Like the '-g' flag, grep columns for values, and if matched, either
-                  start outputting lines, or output '-Y' matches if selected. See '-Y'.
+                  start outputting lines, or output -Y matches if selected. See -Y.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
- -y{precision}  : Controls precision of computed floating point number output (example '-v').
+ -y{precision}  : Controls precision of computed floating point number output.
  -Y{any|c0:regex,...}: Like the '-g', search for matches on columns after initial match(es)
-                  of '-X' (required). See '-X'.
+                  of -X (required). See -X.
                   If the keyword 'any' is used the first column to match will return true.
                   The default behaviour is to output the X and Y matches only, but can be changed.
-                  See '-M' for more details.
+                  See -M for more details.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 ```

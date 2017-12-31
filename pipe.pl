@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.44.02 - Dec 31, 2017 '-C' works with '-i' as it does with '-g', and '-G'.
+# 0.44.03 - Dec 31, 2017 '-C' works with '-7'.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.44.02};
+my $VERSION           = qq{0.44.03};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -184,7 +184,7 @@ All column references are 0 based. Line numbers start at 1.
                   expression to STDERR.
  -6{cn:[char]}  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
- -7{nth-match}  : Return after 'n'th line match of a search. See -g, -G, -X, -Y.
+ -7{nth-match}  : Return after 'n'th line match of a search is output. See -g, -G, -X, -Y, -C.
  -a{c0,c1,...cn}: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs the number of key matches from dedup.
                   The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
@@ -2794,15 +2794,22 @@ sub process_line( $ )
 			}
 		}
 	}
-	if ( $opt{'C'} and ! test_condition( \@columns ) )
+	if ( $opt{'C'} )
 	{
-		if ( $opt{'i'} )
+		if ( ! test_condition( \@columns ) )
 		{
-			$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			}
+			else
+			{
+				return '';
+			}
 		}
 		else
 		{
-			return '';
+			$MATCH_COUNT++;
 		}
 	}
 	if ( $continue_to_process_match )
