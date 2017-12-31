@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.44.04 - Dec 31, 2017 Fixed output of negative line buffer output requests.
+# 0.44.05 - Dec 31, 2017 Better handling of negative inputs of -Q.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.44.04};
+my $VERSION           = qq{0.44.05};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -2899,8 +2899,7 @@ sub init
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	# -Q outputs unpredictably if negative numbers are used. Clean them here.
-	$BUFF_SIZE = $opt{'Q'};
-	$BUFF_SIZE = 0 if ( $opt{'Q'} < 1 );
+	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
