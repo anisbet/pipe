@@ -203,10 +203,10 @@ Complete list of flags
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
- -p{c0:exp,... }: Pad fields left or right with arbitrary characters. The expression is separated by an
-                  optional '.' character. '123' -pc0:-5, -pc0:-5. both do the same thing: '123  '. Literal
-                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. 
-                  Use '123' -pc0:-5.\\. => '123..'.
+ -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
+                  '.' character. '123' -pc0:-5, -pc0:-5.\s both do the same thing: '123  '. Literal
+                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. Spaces are qualified
+                  with either '\s', '\t', or '\n'.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
