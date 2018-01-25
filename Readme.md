@@ -189,7 +189,6 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Print the enclosing lines between successful -X and -Y matches. See -X and -Y.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -246,16 +245,12 @@ Complete list of flags
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the '-g' flag, grep columns for values, and if matched, either
-                  start outputting lines, or output -Y matches if selected. See -Y.
+ -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
+                  output until a -Y match succeeds. See -Y.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Like the '-g', search for matches on columns after initial match(es)
-                  of -X (required). See -X.
-                  If the keyword 'any' is used the first column to match will return true.
-                  The default behaviour is to output the X and Y matches only, but can be changed.
-                  See -M for more details.
+ -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 ```
@@ -268,13 +263,12 @@ The order of operations is as follows:
   -x - Usage message, then exits.
   -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file.
+  -X - Grep values in specified columns, start output, or start searches for -Y values.
+  -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
   -v - Average numerical values in selected columns.
-  -X - Grep values in specified columns, start output, or start searches for -Y values.
-  -Y - Grep values in specified columns once greps with -X succeeds.
-  -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
@@ -320,7 +314,7 @@ The order of operations is as follows:
   -q - Selectively allow new line output of '-H'.
   -h - Replace default delimiter.
   -j - Remove last delimiter on the last line of data output.
-  -N - Normalize keys before comparisons, summaries to STDOUT, abs(result).
+  -N - Normalize summaries, keys before comparisons, abs(result). Strips formatting.
 ```
 ## Some performance data.
 Running on a virtualized Ubuntu machine where the native ```wc``` runs at:
@@ -1597,7 +1591,7 @@ The above example illustrates the default behaviour of outputting the initial su
 followed by the the successful match on '-Y'. Sometimes it's you would like to see all the data in between
 the 2 matches; for that use the '-M' switch. 
 ```
-cat X.lst | pipe.pl -X"c0:2" -Y"c0:6" -M
+cat X.lst | pipe.pl -X"c0:2" -Y"c0:6"
 2
 3
 4

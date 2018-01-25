@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.44.06 - Jan 4, 2018 Bug fix of -p using white space.
+# 0.45.01 - Jan 25, 2018 Refactor -X and -Y, -M is obsolete. Fixed -C compare bug.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.44.06};
+my $VERSION           = qq{0.45.01};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -83,7 +83,8 @@ my @FLIP_COLUMNS      = (); my $flip_ref      = {}; # Stores the flip instructio
 my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
-my $IS_X_MATCH        = 0;                          # True if -X matched. Turns on -y or -Y.
+my $IS_Y_MATCH        = 0;                          # True if -Y matched. Turns off -X.
+my $continue_to_process_match = 0;                  # Set true if -X or -Y are not used, but controls output of an arbitrary but specific line.
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
 my @MATCH_Y_COLUMNS   = (), my $match_y_ref   = {}; # Look ahead -Y test conditions supplied by user.
 my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
@@ -98,7 +99,6 @@ my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0; my $TABLE_ATTR = ''; # Does the user want to output to a table.
 my $WIDTHS_COLUMNS    = {};
-my $X_UNTIL_Y         = 0;
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
 my @PREVIOUS_LINES    = (); my $BUFF_SIZE = 0; # Display the 'n' lines before the match.
@@ -144,7 +144,7 @@ sub usage()
        -2{cn:[start,[end]],...}
        -6{cn:[char],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
-       -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-M]]
+       -X{any|cn:[regex],...} [-Y{any|cn:regex,...}]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -292,7 +292,6 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Print the enclosing lines between successful -X and -Y matches. See -X and -Y.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -349,16 +348,12 @@ All column references are 0 based. Line numbers start at 1.
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the '-g' flag, grep columns for values, and if matched, either
-                  start outputting lines, or output -Y matches if selected. See -Y.
+ -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
+                  output until a -Y match succeeds. See -Y.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Like the '-g', search for matches on columns after initial match(es)
-                  of -X (required). See -X.
-                  If the keyword 'any' is used the first column to match will return true.
-                  The default behaviour is to output the X and Y matches only, but can be changed.
-                  See -M for more details.
+ -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 
@@ -366,13 +361,12 @@ The order of operations is as follows:
   -x - Usage message, then exits.
   -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file.
+  -X - Grep values in specified columns, start output, or start searches for -Y values.
+  -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
   -r - Randomize line output.
   -s - Sort columns.
   -v - Average numerical values in selected columns.
-  -X - Grep values in specified columns, start output, or start searches for -Y values.
-  -Y - Grep values in specified columns once greps with -X succeeds.
-  -M - Output all data until -Y succeeds.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
@@ -1587,10 +1581,10 @@ sub pad_line( $ ) # remove split
 sub test_condition_cmp( $$$ )
 {
 	my $cmpOperator = shift;
-	my $cmpValue    = shift;
+	my $cmpValue    = shift ;
 	my $value       = shift;
 	my $result      = 0;
-	if ( $value =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ && $cmpValue =~ m/^[+|-]?\d{1,}\.?\d{1,}?$/ )
+	if ( $value =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ && $cmpValue =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
 	{
 		if ( $cmpOperator eq 'eq' )
 		{
@@ -2659,7 +2653,7 @@ sub process_line( $ )
 {
 	# Always output if -g, -C, or -G match or not, but if matches additional processing will be done.
 	# We turn it on by default so if -g or -G not used the line will get processed as normal.
-	my ( $continue_to_process_match, $continue_to_process_match_C ) = 1;
+	my $continue_to_process_match_C = 1;
 	my $line = shift;
 	chomp $line;
 	# With -W the line will look like this; '11|abc{_PIPE_}def'
@@ -2672,37 +2666,29 @@ sub process_line( $ )
 			$col =~ s/($SUB_DELIMITER)/\|/g;
 		}
 	}
-	if ( $opt{'X'} )
+	if ( $opt{'X'} || $opt{'Y'} )
 	{
-		# If IS_X_MATCH is turned on we found the anchor now test for the -Y.
-        if ( $IS_X_MATCH )
-        {
-			if ( $opt{'Y'} )
-			{
-				if ( ! is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
-				{
-					if ( ! $X_UNTIL_Y )
-					{
-						return '';
-					}
-				}
-				else # Turn off continuous search -- we found the 'Y' search.
-				{
-					$X_UNTIL_Y = 0;
-				}
-			}
-        }
-        # if not '-Y', then once we match on '-X', start outputting lines from there on.
-        # But if no match found, try and turn it on by matching this line if no match, suppress output.
-        if ( ! $IS_X_MATCH )
-        {
-            $IS_X_MATCH = is_match( \@columns, $match_start_ref, \@MATCH_START_COLS );
-			printf STDERR "Setting X match '%d' ", $IS_X_MATCH if ( $opt{'D'} );
-			# Retest b/c you didn't match to get here but do we match now, if we do it's the first match
-			# which we want to display which lets the line fall through to the following processes.
-			# If it is not a match return nothing.
-			return '' if ( ! $IS_X_MATCH );
-        }
+		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
+		{
+			$continue_to_process_match = 1;
+		}
+		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ))
+		{
+			$IS_Y_MATCH = 1;
+			$continue_to_process_match = 0;
+		}
+		if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
+		{ # and outputting the Y match. The next line will be suppressed.
+			$IS_Y_MATCH = 0;
+		}
+		else
+		{
+			return '' if ( ! $continue_to_process_match );
+		}
+	}
+	else # If 'X' or 'Y' not selected then make sure the rest of the lines get processed normally.
+	{
+		$continue_to_process_match = 1;
 	}
 	# if the line isn't to be selected for output by '-L skip' return early.
 	return '' if ( $SKIP_LINE > 0 and $LINE_NUMBER % $SKIP_LINE != 0 );
@@ -2903,11 +2889,11 @@ sub init
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	# -Q outputs unpredictably if negative numbers are used. Clean them here.
+	printf STDERR      "*** -M is obsolete.\n" if ( $opt{'M'} );
 	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
-	$X_UNTIL_Y         = 1 if ( $opt{'M'} ); # Set continuous output if X and Y are set.
 	$JOIN_COUNT        = read_whole_number( $opt{'q'} ) if ( $opt{'q'} );
 	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
 	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref, 0 )      if ( $opt{'3'} );
