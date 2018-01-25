@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.45.01 - Jan 25, 2018 Refactor -X and -Y, -M is obsolete. Fixed -C compare bug.
+# 0.45.01 - Jan 25, 2018 Re-factored -X and -Y, -M is obsolete. Fixed -C compare bug.
 #
 ####################################################################################
 
