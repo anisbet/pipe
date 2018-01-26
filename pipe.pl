@@ -2686,7 +2686,7 @@ sub process_line( $ )
 		{
 			$IS_DUMPABLE_MATCH = 1;
 		}
-		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ))
+		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
 		{
 			$IS_Y_MATCH = 1;
 			$IS_X_MATCH = 0;
