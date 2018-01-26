@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.45.01 - Jan 25, 2018 Re-factored -X and -Y, -M is obsolete. Fixed -C compare bug.
+# 0.46.00 - Jan 25, 2018 Add -g function to -X and -Y.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.45.01};
+my $VERSION           = qq{0.46.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -83,7 +83,10 @@ my @FLIP_COLUMNS      = (); my $flip_ref      = {}; # Stores the flip instructio
 my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
+my $IS_X_MATCH        = 0;                          # True if -X matched.
+my @FRAME_BUFFER      = ();                         # Store the lines that match 
 my $IS_Y_MATCH        = 0;                          # True if -Y matched. Turns off -X.
+my $IS_DUMPABLE_MATCH = 0;                          # If 1, then '-g' matched during a -X and -Y test.
 my $continue_to_process_match = 0;                  # Set true if -X or -Y are not used, but controls output of an arbitrary but specific line.
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
 my @MATCH_Y_COLUMNS   = (), my $match_y_ref   = {}; # Look ahead -Y test conditions supplied by user.
@@ -2668,18 +2671,46 @@ sub process_line( $ )
 	}
 	if ( $opt{'X'} || $opt{'Y'} )
 	{
-		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
+		# if X matched on a previous line but we have no Y yet store the line. 
+		if ( $IS_X_MATCH )
+		{
+			push @FRAME_BUFFER, $line;
+		}
+		elsif ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
 		{
 			$continue_to_process_match = 1;
+			$IS_X_MATCH = 1;
+			push @FRAME_BUFFER, $line;
+		}
+		if ( $opt{'g'} && $IS_X_MATCH && is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
+		{
+			$IS_DUMPABLE_MATCH = 1;
 		}
 		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ))
 		{
 			$IS_Y_MATCH = 1;
+			$IS_X_MATCH = 0;
 			$continue_to_process_match = 0;
 		}
 		if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
 		{ # and outputting the Y match. The next line will be suppressed.
 			$IS_Y_MATCH = 0;
+			while ( @FRAME_BUFFER )
+			{
+				my $frame_line = shift @FRAME_BUFFER;
+				if ( $IS_DUMPABLE_MATCH )
+				{
+					if ( $opt{'N'} )
+					{
+						printf STDERR "%s\n", $frame_line;
+					}
+					else
+					{
+						printf STDERR "=>%s\n", $frame_line;
+					}
+				}
+			}
+			$IS_DUMPABLE_MATCH = 0;
 		}
 		else
 		{
