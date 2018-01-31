@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.46.00 - Jan 25, 2018 Add -g function to -X and -Y.
+# 0.46.00 - Jan 31, 2018 Add -g function to -X and -Y.
 #
 ####################################################################################
 
@@ -1508,22 +1508,21 @@ sub apply_padding( $$ )
 	my $field       = shift;
 	my $instruction = shift;
 	my @newField    = '';
-	printf "PAD: '%s'.\n", $instruction if ( $opt{'D'} );
+	my ( $token, $replacement ) = split( m/(?<!\\)\./, $instruction );
+	# The $replacement string should preserve requests for space characters.
+	$replacement =~ tr/\\s/\x20/;
+	$replacement =~ tr/\\t/\x09/;
+	$replacement =~ tr/\\n/\x0A/;
+	printf STDERR "pad expression: '%s' places of '%s' \n", $token, $replacement if ( $opt{'D'} );
 	my $count = 0;
-	my $character = '';
-	if ( $instruction =~ m/^[+|-]?\d{1,}\.?/ )
+	my $character = $replacement;
+	if ( $token =~ m/^[+|-]?\d{1,}/ )
 	{
-		$count = $&;
-		$character = $';
-		# The $replacement string should preserve requests for space characters.
-		$character =~ s/\\s/\x20/g;
-		$character =~ s/\\t/\x09/g;
-		$character =~ s/\\n/\x0A/g;
-		printf STDERR "padding '%s' char '%s'\n", $count, $character if ( $opt{'D'} );
+		$count = sprintf "%d", $token;
 	}
 	else
 	{
-		print STDERR "*** syntax error in padding instruction.\n";
+		printf STDERR "*** syntax error in padding instruction: '%s'\n", $instruction;
 		usage();
 	}
 	return $field if ( abs($count) <= length $field );
