@@ -126,7 +126,7 @@ Complete list of flags
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
  -F{c0:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
  -g{[any|c0:regex,...}: Searches the specified field for the Perl regular expression.
-                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
+                  Example data: 1481241, -g"c0:241  produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
@@ -140,15 +140,18 @@ Complete list of flags
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
-                  succeeds because the value in c1 matches the value in c3.
+                  succeeds because the value in c1 matches the value in c3. Behaviour changes
+                  if used in combination with -X and -Y. The -g outputs just the frame that is
+                  bounded by -X and -Y, but if -g matches, only the matching frame is output
+                  to STDERR, while only the -g that matches within the frame is output to STDOUT.
  -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -g, -G, and -C. Causes further processing on 
-                  the line ONLY if -g or -G succeed. Normally -g or -G will suppress output if 
+ -i             : Turns on virtual matching for -g, -G, and -C. Causes further processing on
+                  the line ONLY if -g or -G succeed. Normally -g or -G will suppress output if
                   a condition matches.
                   The -i flag will override that behaviour but suppress any additional processing of
                   the line unless the -g or -G or -C flag succeeds.
@@ -158,17 +161,17 @@ Complete list of flags
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).
  -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
-                  The existing value of the column is stored in an internal variable called '\$value'
+                  The existing value of the column is stored in an internal variable called '$value'
                   and can be manipulated and output as per these examples.
-                  "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
-                  "hello|worle" => -kc1:'\$value++;'
+                  "13|world"    => -kc0:'$a=3; $b=10; $value = $b + $a;'
+                  "hello|worle" => -kc1:'$value++;'
                   Note use single quotes around your script.
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
  -l{c0:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
-                  produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
-                  and '\\n'. "Hello" -lc0:e.\\t => 'H       llo'
+                  produces 'abcPefP'. 3 white space characters are supported '\s', '\t',
+                  and '\n'. "Hello" -lc0:e.\t => 'H       llo'
                   Can be made case insensitive with '-I'.
  -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
@@ -188,7 +191,8 @@ Complete list of flags
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '\' to escape either '_', ',' or '#'.
+                  Use '' to escape either '_', ',' or '#'.
+ -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -243,14 +247,14 @@ Complete list of flags
  -V             : Validate that the output has the same number of columns as the input.
  -w{c0,c1,...cn}: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
+ -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
-                  output until a -Y match succeeds. See -Y.
+ -X{any|c0:regex,...}: Like the -g, but once a line matches all subsequent lines are also
+                  output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded.
+ -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 ```
@@ -1581,15 +1585,7 @@ cat x.lst | pipe.pl -X'c0:5'
 8
 9
 ```
-Search for '2' in column 0, then output any line where column 0 matches '6'.
-```
-cat x.lst | pipe.pl -X'c0:2+' -Y'c0:6' 
-2
-6
-```
-The above example illustrates the default behaviour of outputting the initial successful match on '-X'
-followed by the the successful match on '-Y'. Sometimes it's you would like to see all the data in between
-the 2 matches; for that use the '-M' switch. 
+Sometimes it's you would like to see all the data in between one match pattern and another that occurs later in the file. This can be done using the -Y flag. The first use of -X opens a selection match frame. The -Y match closes the match frame.
 ```
 cat X.lst | pipe.pl -X"c0:2" -Y"c0:6"
 2
@@ -1599,6 +1595,36 @@ cat X.lst | pipe.pl -X"c0:2" -Y"c0:6"
 6
 ```
 This is especially useful when the column data are sorted dates.
+
+What about a special case within a regular-patterned file. Consider the following data.
+```
+$ cat XYg_simple.lst
+A
+B
+C
+A
+B
+7
+C
+A
+B
+C
+```
+If we want all the groups that start with 'B' and end with 'C' we could -X and -Y like the above example. But what if we wanted only the frame that also contained a '7'? We would then use -g in conjunction with -X and -Y. If the 3 switches together only the frame(s) that match all the flags are output to STDERR and include a '=>' prefix to STDOUT output. This feature can be turned off the prefix with -N. Only the line(s) that match -g within the frame are output to STDOUT. 
+```
+$ cat XYg_simple.lst | pipe.pl -Xc0:B -Yc0:C -gc0:7
+7
+=>B
+=>7
+=>C
+```
+To just get the match use pipe in this way.
+```
+$ cat XYg_simple.lst | pipe.pl -Xc0:B -Yc0:C -gc0:7 -N >/dev/null # Drops STDOUT.
+B
+7
+C
+``` 
 
 Pro tips
 --------

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.45.02 - Jan 31, 2018 Fixed white space handling in -p.
+# 0.46.00 - Jan 31, 2018 Add -g function to -X and -Y.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.45.02};
+my $VERSION           = qq{0.46.00};
 my $KEYWORD_ANY       = qw{any};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -83,7 +83,10 @@ my @FLIP_COLUMNS      = (); my $flip_ref      = {}; # Stores the flip instructio
 my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instructions by column number.
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
+my $IS_X_MATCH        = 0;                          # True if -X matched.
+my @FRAME_BUFFER      = ();                         # Store the lines that match 
 my $IS_Y_MATCH        = 0;                          # True if -Y matched. Turns off -X.
+my $IS_DUMPABLE_MATCH = 0;                          # If 1, then '-g' matched during a -X and -Y test.
 my $continue_to_process_match = 0;                  # Set true if -X or -Y are not used, but controls output of an arbitrary but specific line.
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
 my @MATCH_Y_COLUMNS   = (), my $match_y_ref   = {}; # Look ahead -Y test conditions supplied by user.
@@ -144,7 +147,7 @@ sub usage()
        -2{cn:[start,[end]],...}
        -6{cn:[char],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
-       -X{any|cn:[regex],...} [-Y{any|cn:regex,...}]
+       -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -243,7 +246,10 @@ All column references are 0 based. Line numbers start at 1.
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
-                  succeeds because the value in c1 matches the value in c3.
+                  succeeds because the value in c1 matches the value in c3. Behaviour changes
+                  if used in combination with -X and -Y. The -g outputs just the frame that is 
+                  bounded by -X and -Y, but if -g matches, only the matching frame is output 
+                  to STDERR, while only the -g that matches within the frame is output to STDOUT. 
  -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
@@ -292,6 +298,7 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+ -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -348,12 +355,12 @@ All column references are 0 based. Line numbers start at 1.
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
-                  output until a -Y match succeeds. See -Y.
+ -X{any|c0:regex,...}: Like the -g, but once a line matches all subsequent lines are also
+                  output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded.
+ -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 
@@ -2667,17 +2674,43 @@ sub process_line( $ )
 	}
 	if ( $opt{'X'} || $opt{'Y'} )
 	{
-		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
+		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
 		{
 			$continue_to_process_match = 1;
+			$IS_X_MATCH = 1;
 		}
-		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ))
+		if ( $opt{'Y'} && $IS_X_MATCH && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
 		{
 			$IS_Y_MATCH = 1;
 			$continue_to_process_match = 0;
 		}
+		if ( $IS_X_MATCH )
+		{
+			push @FRAME_BUFFER, $line if ( $opt{'g'} ); # Don't fill the buffer unless -g is used.
+		}
+		if ( $opt{'g'} && $IS_X_MATCH && is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
+		{
+			$IS_DUMPABLE_MATCH = 1;
+		}
 		if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
 		{ # and outputting the Y match. The next line will be suppressed.
+			while ( @FRAME_BUFFER )
+			{
+				my $frame_line = shift @FRAME_BUFFER;
+				if ( $IS_DUMPABLE_MATCH )
+				{
+					if ( $opt{'N'} )
+					{
+						printf STDERR "%s\n", $frame_line;
+					}
+					else
+					{
+						printf STDERR "=>%s\n", $frame_line;
+					}
+				}
+			}
+			$IS_DUMPABLE_MATCH = 0;
+			$IS_X_MATCH = 0;
 			$IS_Y_MATCH = 0;
 		}
 		else
