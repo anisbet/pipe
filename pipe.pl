@@ -147,7 +147,7 @@ sub usage()
        -2{cn:[start,[end]],...}
        -6{cn:[char],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
-       -X{any|cn:[regex],...} [-Y{any|cn:regex,...}]
+       -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
 example counts the number of non-empty values in the specified columns. Other
@@ -246,7 +246,10 @@ All column references are 0 based. Line numbers start at 1.
                   "a|b|c|b|d" '-gc2:c,c3:' => nil because the value in c3 doesn't match 'c' of c2.
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
-                  succeeds because the value in c1 matches the value in c3.
+                  succeeds because the value in c1 matches the value in c3. Behaviour changes
+                  if used in combination with -X and -Y. The -g outputs just the frame that is 
+                  bounded by -X and -Y, but if -g matches, only the matching frame is output 
+                  to STDERR. 
  -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
@@ -295,7 +298,7 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Deprecated.
+ -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -353,11 +356,11 @@ All column references are 0 based. Line numbers start at 1.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
  -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
-                  output until a -Y match succeeds. See -Y.
+                  output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded.
+ -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
 
@@ -2669,7 +2672,6 @@ sub process_line( $ )
 			$col =~ s/($SUB_DELIMITER)/\|/g;
 		}
 	}
-	# if ( $opt{'X'} && $opt{'Y'} && $opt{'g'} )
 	if ( $opt{'X'} || $opt{'Y'} )
 	{
 		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
@@ -2677,7 +2679,7 @@ sub process_line( $ )
 			$continue_to_process_match = 1;
 			$IS_X_MATCH = 1;
 		}
-		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
+		if ( $opt{'Y'} && $IS_X_MATCH && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
 		{
 			$IS_Y_MATCH = 1;
 			$continue_to_process_match = 0;
@@ -2716,26 +2718,6 @@ sub process_line( $ )
 			return '' if ( ! $continue_to_process_match );
 		}
 	}
-	# elsif ( $opt{'X'} || $opt{'Y'} )
-	# {
-		# if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
-		# {
-			# $continue_to_process_match = 1;
-		# }
-		# if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
-		# {
-			# $IS_Y_MATCH = 1;
-			# $continue_to_process_match = 0;
-		# }
-		# if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
-		# { # and outputting the Y match. The next line will be suppressed.
-			# $IS_Y_MATCH = 0;
-		# }
-		# else
-		# {
-			# return '' if ( ! $continue_to_process_match );
-		# }
-	# }
 	else # If 'X' or 'Y' not selected then make sure the rest of the lines get processed normally.
 	{
 		$continue_to_process_match = 1;
