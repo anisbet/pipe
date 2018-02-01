@@ -249,7 +249,7 @@ All column references are 0 based. Line numbers start at 1.
                   succeeds because the value in c1 matches the value in c3. Behaviour changes
                   if used in combination with -X and -Y. The -g outputs just the frame that is 
                   bounded by -X and -Y, but if -g matches, only the matching frame is output 
-                  to STDERR. 
+                  to STDERR, while only the -g that matches within the frame is output to STDOUT. 
  -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
@@ -2686,7 +2686,7 @@ sub process_line( $ )
 		}
 		if ( $IS_X_MATCH )
 		{
-			push @FRAME_BUFFER, $line;
+			push @FRAME_BUFFER, $line if ( $opt{'g'} ); # Don't fill the buffer unless -g is used.
 		}
 		if ( $opt{'g'} && $IS_X_MATCH && is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
