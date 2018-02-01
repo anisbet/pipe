@@ -2669,27 +2669,29 @@ sub process_line( $ )
 			$col =~ s/($SUB_DELIMITER)/\|/g;
 		}
 	}
-	if ( $opt{'X'} && $opt{'Y'} && $opt{'g'} )
+	# if ( $opt{'X'} && $opt{'Y'} && $opt{'g'} )
+	if ( $opt{'X'} || $opt{'Y'} )
 	{
-		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
+		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
 		{
-			$IS_X_MATCH = 1;
 			$continue_to_process_match = 1;
+			$IS_X_MATCH = 1;
+		}
+		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
+		{
+			$IS_Y_MATCH = 1;
+			$continue_to_process_match = 0;
+		}
+		if ( $IS_X_MATCH )
+		{
+			push @FRAME_BUFFER, $line;
 		}
 		if ( $opt{'g'} && $IS_X_MATCH && is_match( \@columns, $match_ref, \@MATCH_COLUMNS ) )
 		{
 			$IS_DUMPABLE_MATCH = 1;
 		}
-		# Keep looking until we find 'Y'
-		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
-		{
-			$IS_Y_MATCH = 1;
-		}
-		if ( $IS_X_MATCH && $IS_Y_MATCH && $IS_DUMPABLE_MATCH )
-		{
-			printf STDERR "* X, Y, and g matched.\n";
-			# dump the frame buffer and set output to 1
-			$continue_to_process_match = 1;
+		if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
+		{ # and outputting the Y match. The next line will be suppressed.
 			while ( @FRAME_BUFFER )
 			{
 				my $frame_line = shift @FRAME_BUFFER;
@@ -2705,45 +2707,8 @@ sub process_line( $ )
 					}
 				}
 			}
-			$IS_X_MATCH = 0;
-			$IS_Y_MATCH = 0;
 			$IS_DUMPABLE_MATCH = 0;
-			$continue_to_process_match = 0;
-		}
-		if ( $IS_X_MATCH && $IS_Y_MATCH )
-		{
-			printf STDERR "* X, Y, but NOT g matched.\n";
-			@FRAME_BUFFER = ();
 			$IS_X_MATCH = 0;
-			$IS_Y_MATCH = 0;
-			$IS_DUMPABLE_MATCH = 0;
-			$continue_to_process_match = 0;
-		}
-		if ( $IS_X_MATCH )
-		{
-			printf STDERR "* X matched.\n";
-			push @FRAME_BUFFER, $line;
-		}
-		return '' if ( ! $continue_to_process_match );
-	}
-	elsif ( $opt{'X'} || $opt{'Y'} )
-	{
-		# if X matched on a previous line but we have no Y yet store the line. 
-		# if ( $IS_X_MATCH )
-		# {
-			# push @FRAME_BUFFER, $line;
-		# }
-		if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
-		{
-			$continue_to_process_match = 1;
-		}
-		if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
-		{
-			$IS_Y_MATCH = 1;
-			$continue_to_process_match = 0;
-		}
-		if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
-		{ # and outputting the Y match. The next line will be suppressed.
 			$IS_Y_MATCH = 0;
 		}
 		else
@@ -2751,6 +2716,26 @@ sub process_line( $ )
 			return '' if ( ! $continue_to_process_match );
 		}
 	}
+	# elsif ( $opt{'X'} || $opt{'Y'} )
+	# {
+		# if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ))
+		# {
+			# $continue_to_process_match = 1;
+		# }
+		# if ( $opt{'Y'} && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
+		# {
+			# $IS_Y_MATCH = 1;
+			# $continue_to_process_match = 0;
+		# }
+		# if ( $IS_Y_MATCH ) # If we had a match turn it off. This line of the file will continue to process, capturing
+		# { # and outputting the Y match. The next line will be suppressed.
+			# $IS_Y_MATCH = 0;
+		# }
+		# else
+		# {
+			# return '' if ( ! $continue_to_process_match );
+		# }
+	# }
 	else # If 'X' or 'Y' not selected then make sure the rest of the lines get processed normally.
 	{
 		$continue_to_process_match = 1;
