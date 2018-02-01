@@ -249,7 +249,7 @@ Complete list of flags
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the '-g', but once a line matches all subsequent lines are also
+ -X{any|c0:regex,...}: Like the -g, but once a line matches all subsequent lines are also
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
@@ -1585,15 +1585,7 @@ cat x.lst | pipe.pl -X'c0:5'
 8
 9
 ```
-Search for '2' in column 0, then output any line where column 0 matches '6'.
-```
-cat x.lst | pipe.pl -X'c0:2+' -Y'c0:6' 
-2
-6
-```
-The above example illustrates the default behaviour of outputting the initial successful match on '-X'
-followed by the the successful match on '-Y'. Sometimes it's you would like to see all the data in between
-the 2 matches; for that use the '-M' switch. 
+Sometimes it's you would like to see all the data in between one match pattern and another that occurs later in the file. This can be done using the -Y flag. The first use of -X opens a selection match frame. The -Y match closes the match frame.
 ```
 cat X.lst | pipe.pl -X"c0:2" -Y"c0:6"
 2
@@ -1603,6 +1595,36 @@ cat X.lst | pipe.pl -X"c0:2" -Y"c0:6"
 6
 ```
 This is especially useful when the column data are sorted dates.
+
+What about a special case within a regular-patterned file. Consider the following data.
+```
+$ cat XYg_simple.lst
+A
+B
+C
+A
+B
+7
+C
+A
+B
+C
+```
+If we want all the groups that start with 'B' and end with 'C' we could -X and -Y like the above example. But what if we wanted only the frame that also contained a '7'? We would then use -g in conjunction with -X and -Y. If the 3 switches together only the frame(s) that match all the flags are output to STDERR and include a '=>' prefix to STDOUT output. This feature can be turned off the prefix with -N. Only the line(s) that match -g within the frame are output to STDOUT. 
+```
+$ cat XYg_simple.lst | pipe.pl -Xc0:B -Yc0:C -gc0:7
+7
+=>B
+=>7
+=>C
+```
+To just get the match use pipe in this way.
+```
+$ cat XYg_simple.lst | pipe.pl -Xc0:B -Yc0:C -gc0:7 -N >/dev/null # Drops STDOUT.
+B
+7
+C
+``` 
 
 Pro tips
 --------
