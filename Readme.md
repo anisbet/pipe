@@ -203,9 +203,9 @@ Complete list of flags
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
  -o{c0,c1,...cn[,remaining]}: Order the columns in a different order. Only the specified columns are
-                  output, unless. The keyword 'remaining' is used, then the remaining columns in the  
-                  in the data are output in left-to-right order. 
-                  Any further column ordering requests are ignored.
+                  output unless the keyword 'remaining' is used, then all the remaining columns in the  
+                  in the data are output in left-to-right order, after the initial columns selections.
+                  Any additional column requests are ignored.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
