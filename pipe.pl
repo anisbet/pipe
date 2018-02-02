@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.46.05 - Feb 1, 2018 Add 'any' keyword to -o function.
+# 0.46.05 - Feb 2, 2018 Added 'remaining' keyword to ordering columns (-o).
 #
 ####################################################################################
 
@@ -39,6 +39,7 @@ use Getopt::Std;
 ### Globals
 my $VERSION           = qq{0.46.05};
 my $KEYWORD_ANY       = qw{any};
+my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -124,7 +125,8 @@ sub usage()
     usage: cat file | pipe.pl [-5ADijLNtUVx]
        -0{file_name}
        -W{delimiter}
-       -14bBcovwzZ{c0,c1,...,cn}
+       -14bBcvwzZ{c0,c1,...,cn}
+       -o{c0,c1,...,cn[,remaining]}
        -3{c0:n,c1:m,...,cn:p}
        -noOtu{[any|c0,c1,...,cn]}
        -C{[any|cn]:(gt|lt|eq|ge|le)exp,...}
@@ -308,8 +310,10 @@ All column references are 0 based. Line numbers start at 1.
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{any|c0,c1,...cn}: Order the columns in a different order. Only the specified columns are output, unless.
-                  the keyword 'any' is used, then the remaining columns are output in left-to-right order.
+ -o{c0,c1,...cn[,remaining]}: Order the columns in a different order. Only the specified columns are
+                  output, unless. The keyword 'remaining' is used, then the remaining columns in the  
+                  in the data are output in left-to-right order. 
+                  Any further column ordering requests are ignored.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
@@ -635,10 +639,17 @@ sub read_requested_columns( $$ )
 			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
 			push( @list, trim( $colNum ) );
 		}
-		elsif ( $colNum =~ m/^any$/ and $is_allowed =~ m/($KEYWORD_ANY)/i )
+		elsif ( $colNum =~ m/^any$/i and $is_allowed =~ m/($KEYWORD_ANY)/i )
 		{
 			# Clear any other column selections the user may have already requested.
 			@list = ();
+			push( @list, $is_allowed );
+			last; # don't allow user to add more.
+		}
+		elsif ( $colNum =~ m/^remaining$/i and $is_allowed =~ m/($KEYWORD_REMAINING)/i )
+		{
+			# Keep all the columns collected so far, but tack on the keyword as a marker
+			# that the remaining fields (if any) should be appended in order.
 			push( @list, $is_allowed );
 			last; # don't allow user to add more.
 		}
@@ -866,23 +877,28 @@ sub order_line( $ )
 		# If the keyword any is used push all the missing columns of the line onto @order_columns.
 		# Other lines might have different numbers of columns.
 		# now add all the columns that aren't on the array already.
-		last if ( $c =~ m/($KEYWORD_ANY)/i );
-		unshift @order_columns, $c;
-	}
-	if ( grep /($KEYWORD_ANY)/i, @ORDER_COLUMNS )
-	{
-		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		if ( $c =~ m/($KEYWORD_REMAINING)/i )
 		{
-			next if ( grep /($colIndex)/, @order_columns );
-			unshift @order_columns, $colIndex;
+			foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+			{
+				next if ( grep /($colIndex)/, @order_columns );
+				push @order_columns, $colIndex;
+			}
+		}
+		else # Standard column output ordering request, and all column ordering requests before 'remaining'.
+		{
+			push @order_columns, $c;
 		}
 	}
-	printf STDERR "order of columns: ";
-	foreach my $c ( @order_columns )
+	if ( $opt{'D'} )
 	{
-		printf STDERR "%d, ", $c;
+		printf STDERR "order of columns: ";
+		foreach my $c ( @order_columns )
+		{
+			printf STDERR "%d, ", $c;
+		}
+		printf STDERR "\n";
 	}
-	printf STDERR "\n";
 	foreach my $colIndex ( @order_columns )
 	{
 		if ( defined @{ $line }[ $colIndex ] )
@@ -2981,7 +2997,7 @@ sub init
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
-	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_ANY )                  if ( $opt{'o'} );
+	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING )            if ( $opt{'o'} );
 	# @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'2'} )
