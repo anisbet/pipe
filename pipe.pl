@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.46.05 - Feb 2, 2018 Added 'remaining' keyword to ordering columns (-o).
+# 0.46.07 - Feb 14, 2018 Added 'any' keyword to translate columns (-l).
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.46.05};
+my $VERSION           = qq{0.46.07};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -139,7 +139,7 @@ sub usage()
        -gG{any|cn:[regex],...}
        -H[-q{positive integer}]
        -k{cn:expr,(...)}
-       -l{c0:n.p,...}
+       -l{[any|c0]:n.p,...}
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
        -p{cn:[+|-]countChar+,...}
@@ -277,7 +277,7 @@ All column references are 0 based. Line numbers start at 1.
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
- -l{c0:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+ -l{[any|c0]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
                   and '\\n'. "Hello" -lc0:e.\\t => 'H       llo'
                   Can be made case insensitive with '-I'.
@@ -1955,6 +1955,29 @@ sub translate_line( $ )
 {
 	my $line = shift;
 	my $i    = 0;
+	if ( $TRANSLATE_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
+	{
+		my $exp = $trans_ref->{ $KEYWORD_ANY };
+		my ( $token, $replacement ) = split( m/(?<!\\)\./, $exp );
+		# The $replacement string should preserve requests for space characters.
+		$replacement =~ tr/\\s/\x20/;
+		$replacement =~ tr/\\t/\x09/;
+		$replacement =~ tr/\\n/\x0A/;
+		printf STDERR "translate expression: '%s' replaced with '%s' \n", $trans_ref->{ $i }, $replacement if ( $opt{'D'} );
+		
+		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+		{
+			if ( $opt{'I'} )
+			{
+				@{ $line }[ $colIndex ] =~ s/($token)/$replacement/gi;
+			}
+			else
+			{
+				@{ $line }[ $colIndex ] =~ s/($token)/$replacement/g;
+			}
+		}
+		return;
+	}
 	for ( $i = 0; $i < scalar( @{ $line } ); $i++ )
 	{
 		if ( exists $trans_ref->{ $i } )
@@ -2985,11 +3008,11 @@ sub init
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
 	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref, $KEYWORD_ANY ) if ( $opt{'X'} );
-	@MATCH_Y_COLUMNS   = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )    if ( $opt{'Y'} );
+	@MATCH_Y_COLUMNS   = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )     if ( $opt{'Y'} );
 	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref, 0 )      if ( $opt{'k'} );
 	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref, 0 )        if ( $opt{'m'} );
 	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref, 0 )        if ( $opt{'S'} );
-	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref, 0 )       if ( $opt{'l'} );
+	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref, $KEYWORD_ANY )       if ( $opt{'l'} );
 	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref, 0 )         if ( $opt{'p'} );
 	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref, 0 )        if ( $opt{'f'} );
 	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref, 0 )      if ( $opt{'F'} );
