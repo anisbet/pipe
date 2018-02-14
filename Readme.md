@@ -169,9 +169,9 @@ Complete list of flags
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
- -l{c0:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+ -l{[any|c0]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\s', '\t',
-                  and '\n'. "Hello" -lc0:e.\t => 'H       llo'
+                  and '\n'. "Hello" -lc0:e.\\t => 'H       llo'
                   Can be made case insensitive with '-I'.
  -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
