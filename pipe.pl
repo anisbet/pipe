@@ -2980,11 +2980,11 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	# -Q outputs unpredictably if negative numbers are used. Clean them here.
-	printf STDERR      "*** -M is obsolete.\n" if ( $opt{'M'} );
+	printf STDERR      "*** -M is obsolete.\n" if ( $opt{'M'} && ! defined $opt{'0'} );
 	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
