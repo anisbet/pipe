@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.46.07 - Feb 14, 2018 Added 'any' keyword to translate columns (-l).
+# 0.47.00 - Feb 15, 2018 Added '-M' + '-0' combo to merge fields from another file.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.46.07};
+my $VERSION           = qq{0.47.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -114,6 +114,11 @@ my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
+## Experimental
+my $IS_DATA_TO_MERGE  = 1; 
+my @MERGE_SRC_COLUMNS = (); my $merge_expression_ref = {};
+my @MERGE_REF_COLUMNS_TRUE = ();
+my @MERGE_REF_COLUMNS_FALSE = ();
 
 #
 # Message about this program and how to use it.
@@ -2899,6 +2904,7 @@ sub process_line( $ )
 	}
 	if ( $continue_to_process_match )
 	{
+		# merge_with_reference_file( \@columns  ) if ( $IS_DATA_TO_MERGE ); ## -M + -0
 		inc_line( \@columns  )              if ( $opt{'1'} );
 		inc_line_by_value( \@columns )      if ( $opt{'3'} );
 		delta_previous_line( \@columns )    if ( $opt{'4'} );
@@ -2983,8 +2989,14 @@ sub init
 	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
-	# -Q outputs unpredictably if negative numbers are used. Clean them here.
-	printf STDERR      "*** -M is obsolete.\n" if ( $opt{'M'} && ! defined $opt{'0'} );
+	if ( $opt{'M'} && $opt{'0'} )
+	{
+		@MERGE_SRC_COLUMNS = read_requested_qualified_columns( $opt{'M'}, $merge_expression_ref, $KEYWORD_ANY );
+	}
+	else
+	{
+		printf STDERR      "*** -M is obsolete without '-0'.\n";
+	}
 	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
@@ -3021,7 +3033,6 @@ sub init
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING )            if ( $opt{'o'} );
-	# @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'2'} )
 	{
@@ -3100,11 +3111,120 @@ sub init
 	}
 }
 
+sub get_col_num_or_literal_command( $$ )
+{
+	my $array_ref = shift;
+	my $line_string = shift;
+	my @tmp = split( /\+?\s?c/i, $line_string ) if ( $line_string );
+	foreach my $i ( @tmp )
+	{
+		push @{$array_ref}, $i if ( defined $i );
+	}
+}
+# Take the line input. Its the columns from the alternate file with the key of the comparison field.
+# Later we will add it to the line(s) from the data coming in (from STDIN).
+# return: nothing, but a hash reference is built of compare column keys, with merge columns as values.
+my @REF_COLUMN_INDEX_TRUE  = ();
+my @REF_COLUMN_INDEX_FALSE = ();
+# my @MERGE_REF_COLUMNS_TRUE = ();
+# my @MERGE_REF_COLUMNS_FALSE = ();
+sub parse_M_line()
+{
+	# parse the expression that describes which columns of the ref file we want.
+	# -Mc1:"c2?c3.c4" but more generally -Mcn:"[cm,...|'literal']?[cp,...|'literal'].[cq,...|'literal']"
+	foreach my $key ( keys %{$merge_expression_ref} )
+	{
+		printf STDERR "key : '%s' \n", $merge_expression_ref->{ $key } if ( $opt{'D'} );
+		my ( $token, $ref_merge_false ) = split( m/(?<!\\)\./, $merge_expression_ref->{ $key } );
+		# The default can optional, can be another column, or a literal.
+		# printf STDERR "EXPRESSION : '%s', OR: '%s' \n", $token, $ref_merge_false;
+		# EXPRESSION : 'c2?c3', OR: 'c4'
+		my ( $ref_cmp, $ref_merge_true ) = split( m/(?<!\\)\?/, $token );
+		# printf STDERR "ref_cmp : '%s', ref_merge_true : '%s' \n", $ref_cmp, $ref_merge_true;
+		get_col_num_or_literal_command( \@REF_COLUMN_INDEX_TRUE, $ref_merge_true ); 
+		get_col_num_or_literal_command( \@REF_COLUMN_INDEX_FALSE, $ref_merge_false );  
+		# foreach my $i ( @REF_COLUMN_INDEX_TRUE )
+		# {
+			# printf STDERR "%s ", $i;
+		# }
+		# printf STDERR "TRUE<=\n=>FALSE ";
+		# foreach my $i ( @REF_COLUMN_INDEX_FALSE )
+		# {
+			# printf STDERR "%s ", $i;
+		# }
+		# printf STDERR "\n";
+	}
+}
+
+# Saves the column values from the input reference file line
+# param:  col_indexes a list of all the columns we want from each line.
+# param:  data - storage array of all the columns from each line are packed on here.
+# param:  line from the file. Also an array. We take the values from here and save them.
+# return: none.
+sub push_merge_ref_columns( $$$ )
+{
+	my $col_indexes = shift;
+	my $data        = shift;
+	my $line        = shift;
+	my @scratch_line= ();
+	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
+	for ( my $i = 0; $i < @{$col_indexes}; $i++ )
+	{
+		push @scratch_line, @{$line}[ $i ] if ( defined @{$line}[ $i ] );
+	}
+	push @{$data}, \@scratch_line if ( @scratch_line );
+}
+
 init();
 table_output("HEAD") if ( $TABLE_OUTPUT );
 my $ifh;
 my $is_stdin = 0;
-if ( defined $opt{'0'} )
+if ( defined $opt{'0'} && defined $opt{'M'} )
+{
+	# parse the command line after -M
+	parse_M_line();
+	open $ifh, "<", $opt{'0'} or die $!;
+	# Read the entire merging file.
+	while (<$ifh>)
+	{
+		my $line = trim( $_ );
+		if ( $opt{'W'} )
+		{
+			# Replace delimiter selection with '|' pipe.
+			$line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
+			# Now replace the user selected delimiter with a pipe.
+			$line =~ s/($opt{'W'})/\|/g;
+		}
+		my @columns = split '\|', $line;
+		if ( $opt{'W'} )
+		{
+			foreach my $col ( @columns )
+			{
+				# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+				$col =~ s/($SUB_DELIMITER)/\|/g;
+			}
+		}
+		# Save all the true and false columns.
+		push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, \@MERGE_REF_COLUMNS_TRUE, \@columns );
+		push_merge_ref_columns( \@REF_COLUMN_INDEX_FALSE, \@MERGE_REF_COLUMNS_FALSE, \@columns );
+	}
+	close $ifh;
+	foreach my $i ( @MERGE_REF_COLUMNS_TRUE )
+	{
+		printf STDERR "%s\n", @{$i};
+	}
+	printf STDERR "TRUE<=\n=>FALSE ";
+	foreach my $i ( @MERGE_REF_COLUMNS_FALSE )
+	{
+		printf STDERR "%s\n", @{$i};
+	}
+	printf STDERR "\n";
+	# Now return STDIN as the input stream.
+	$ifh = *STDIN;
+	$is_stdin++;
+	$IS_DATA_TO_MERGE = 0; # Set true.
+}
+elsif ( defined $opt{'0'} )
 {
 	open $ifh, "<", $opt{'0'} or die $!;
 }
