@@ -3209,6 +3209,8 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
 		push_merge_ref_columns( \@REF_COLUMN_INDEX_FALSE, \@MERGE_REF_COLUMNS_FALSE, \@columns );
 	}
 	close $ifh;
+	#### We store an array ref of all the columns to merge if true (and false) but we have to have
+	#### them in a hash for quick lookup by the specified value key. *** ADD THAT HERE.
 	foreach my $i ( @MERGE_REF_COLUMNS_TRUE )
 	{
 		printf STDERR "%s\n", @{$i};
