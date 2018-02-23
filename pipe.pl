@@ -2744,6 +2744,7 @@ sub merge_reference_file( $ )
 		# Normalize, and make case insensitive if required here.
 		my $key = @{$line}[$src_col];
 		$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
+		$key = normalize( $key ) if ( $opt{'N'} );
 		# Okay there is a column in the STDIN doc, but is there one in the reference doc?
 		if ( exists $REF_FILE_DATA_HREF->{ $key } )
 		{
@@ -3213,10 +3214,13 @@ sub push_merge_ref_columns( $$$ )
 	my $line      = shift;
 	my $key_col   = shift;
 	return if ( ! defined $key_col );
+	# my $key = get_key( $line, $wantedColumns );
+	# $key = normalize( $key ) if ( $opt{'N'} );
 	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
 	$key_col = sprintf( "%d", $key_col );
 	my $key = @{$line}[ $key_col ];
 	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
+	$key = normalize( $key ) if ( $opt{'N'} );
 	my @string_values = ();
 	foreach my $i ( @{$col_index} )
 	{
