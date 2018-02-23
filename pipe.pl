@@ -2743,31 +2743,11 @@ sub merge_reference_file( $ )
 		next if ( ! defined @{$line}[$src_col] );
 		# Normalize, and make case insensitive if required here.
 		my $key = @{$line}[$src_col];
-		printf STDERR "KEY from \@{\$line}='%s'\n", $key;
-		printf STDERR "all keys \$REF_FILE_DATA_HREF\n=================> ";
-		foreach my $i ( keys %{$REF_FILE_DATA_HREF} )
-		{
-			printf STDERR "'%s', ", $i;
-		}
-		printf STDERR "<==================\n";
+		$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
 		# Okay there is a column in the STDIN doc, but is there one in the reference doc?
 		if ( exists $REF_FILE_DATA_HREF->{ $key } )
 		{
-			# printf STDERR "BEFORE ADDING to \@{\$line}\n";
-			# foreach my $i ( @{$line} )
-			# {
-				# printf STDERR "'%s', ", $i;
-			# }
-			# printf STDERR "\n and the stored reference contains: \n";
-			# printf STDERR "'%s'", $REF_FILE_DATA_HREF->{ $key };
-			# printf STDERR "\n";
 			push @{$line}, split ',', $REF_FILE_DATA_HREF->{ $key };
-			# printf STDERR "AFTER ADDING to \@{\$line}\n";
-			# foreach my $i ( @{$line} )
-			# {
-				# printf STDERR "'%s', ", $i;
-			# }
-			# printf STDERR "\n";
 		}
 		else
 		{
@@ -3231,20 +3211,17 @@ sub push_merge_ref_columns( $$$ )
 {
 	my $col_index = shift;
 	my $line      = shift;
-	my $key_col       = shift;
-	
-	
+	my $key_col   = shift;
 	return if ( ! defined $key_col );
 	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
 	$key_col = sprintf( "%d", $key_col );
 	my $key = @{$line}[ $key_col ];
+	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
 	my @string_values = ();
-	
 	foreach my $i ( @{$col_index} )
 	{
-		push @string_values, @{$line}[ $i ];
+		push @string_values, @{$line}[ $i ] if ( defined @{$line}[ $i ] );
 	}
-	printf STDERR " :::: \$key_col:'%s', \$key:'%s'\n", $key_col, $key;
 	$REF_FILE_DATA_HREF->{ $key } = join ',', @string_values if ( @string_values );
 }
 
