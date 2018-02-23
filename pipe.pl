@@ -119,7 +119,6 @@ my $IS_DATA_TO_MERGE  = $FALSE;
 my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
 my $merge_expression_ref = {};
 my $REF_FILE_DATA_HREF  = {};
-my @MERGE_REF_LITERALS_FALSE = ();
 my @REF_COLUMN_INDEX_TRUE   = ();
 my @REF_LITERALS_FALSE  = ();
 
@@ -2732,10 +2731,11 @@ sub merge_reference_file( $ )
 {
 	my $line = shift;
 	# my @MERGE_SRC_COLUMNS = ();
-	# @MERGE_REF_COLUMNS; # Parse out the column(s) for matching.
-	# @REF_COLUMN_INDEX_TRUE; # Parse out the column(s) used if match true.
-	# @REF_LITERALS_FALSE;
-	# for each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
+	# my $REF_FILE_DATA_HREF  = {}; # key value hash of compare columns and values from ref file.
+	# my @REF_COLUMN_INDEX_TRUE   = (); # Column values if comparison succeeds.
+	# my @REF_LITERALS_FALSE  = (); # Column value literals if comparison fails.
+	# Now do a comparison of columns from STDIN and look up the values in the reference file.
+	# To do that take each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
 	# we will have to allow for '-U', '-I', and '-n'.
 	foreach my $src_col ( @MERGE_SRC_COLUMNS )
 	{
@@ -2743,21 +2743,38 @@ sub merge_reference_file( $ )
 		next if ( ! defined @{$line}[$src_col] );
 		# Normalize, and make case insensitive if required here.
 		my $key = @{$line}[$src_col];
+		printf STDERR "KEY from \@{\$line}='%s'\n", $key;
+		printf STDERR "all keys \$REF_FILE_DATA_HREF\n=================> ";
+		foreach my $i ( keys %{$REF_FILE_DATA_HREF} )
+		{
+			printf STDERR "'%s', ", $i;
+		}
+		printf STDERR "<==================\n";
 		# Okay there is a column in the STDIN doc, but is there one in the reference doc?
 		if ( exists $REF_FILE_DATA_HREF->{ $key } )
 		{
-			push @{$line}, $REF_FILE_DATA_HREF->{ $key };
+			# printf STDERR "BEFORE ADDING to \@{\$line}\n";
+			# foreach my $i ( @{$line} )
+			# {
+				# printf STDERR "'%s', ", $i;
+			# }
+			# printf STDERR "\n and the stored reference contains: \n";
+			# printf STDERR "'%s'", $REF_FILE_DATA_HREF->{ $key };
+			# printf STDERR "\n";
+			push @{$line}, split ',', $REF_FILE_DATA_HREF->{ $key };
+			# printf STDERR "AFTER ADDING to \@{\$line}\n";
+			# foreach my $i ( @{$line} )
+			# {
+				# printf STDERR "'%s', ", $i;
+			# }
+			# printf STDERR "\n";
 		}
 		else
 		{
 			push @{$line}, @REF_LITERALS_FALSE;  # which may be empty.
 		}
 	}
-	# my $REF_FILE_DATA_HREF  = {}; # key value hash of compare columns and values from ref file.
-	# my @MERGE_REF_LITERALS_FALSE = (); # Column indexes that contain literals if comparison fails.
-	# my @REF_COLUMN_INDEX_TRUE   = (); # Column values if comparison succeeds.
-	# my @REF_LITERALS_FALSE  = (); # Column value literals if comparison fails.
-	# now do a comparison of columns from STDIN and look up the values in the reference file.
+	
 }
 
 # This function abstracts all line operations for line by line operations.
@@ -3206,38 +3223,29 @@ sub parse_M_line()
 }
 
 # Saves the column values used to compare to the src document, and the column data from the reference document.
-# param:  col_indexes - a list of all the columns we want from each line.
-# param:  data - Stores the data from the desired columns in the array.
+# param:  col_index - a list of all the columns we want from each line.
 # param:  line from the file. Also an array of columns. We take the values from here and save them.
-# param:  array of indexes to use as the key for storing the data.
+# param:  Key of the column to store from the ref file.
 # return: none.
-sub push_merge_ref_columns( $$$$ )
+sub push_merge_ref_columns( $$$ )
 {
-	my $col_indexes = shift;
-	my $data        = shift;
-	my $line        = shift;
-	my $key_array   = shift;
-	my $master_key  = '';     # The final string that will become the key for this line of the reference file.
-	# Make a key from the values stored on the arg $key_array.
-	foreach my $key ( @{$key_array} )
-	{
-		$master_key .= $key; #### You will have to add code to normalize and ignore case here.
-	}
-	# printf STDERR " KEY:::: '%s' data: '%s'\n", $master_key, $data;
-	return if ( ! defined $master_key );
-	my @scratch_line= ();
+	my $col_index = shift;
+	my $line      = shift;
+	my $key_col       = shift;
+	
+	
+	return if ( ! defined $key_col );
 	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
-	for ( my $i = 0; $i < @{$col_indexes}; $i++ )
+	$key_col = sprintf( "%d", $key_col );
+	my $key = @{$line}[ $key_col ];
+	my @string_values = ();
+	
+	foreach my $i ( @{$col_index} )
 	{
-		my $index = sprintf( "%d", @{$col_indexes}[$i] );
-		if ( defined @{$line}[ $index ] )
-		{
-			push @scratch_line, @{$line}[ $index ];
-		}
+		push @string_values, @{$line}[ $i ];
 	}
-	# Store the requested columns from the reference file by the key column data. 
-	# This may clobber other entries if they have the same key.
-	$data->{ $master_key } = @scratch_line if ( @scratch_line );
+	printf STDERR " :::: \$key_col:'%s', \$key:'%s'\n", $key_col, $key;
+	$REF_FILE_DATA_HREF->{ $key } = join ',', @string_values if ( @string_values );
 }
 
 init();
@@ -3287,7 +3295,7 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
 			}
 		}
 		# Save all the true and false column values.
-		push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, $REF_FILE_DATA_HREF, \@columns, \@MERGE_REF_COLUMNS );
+		push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, \@columns, $MERGE_REF_COLUMNS[0] );
 		# The false values are literals taken from the command line.
 	}
 	close $ifh;
