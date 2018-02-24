@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.00 - Feb 15, 2018 Added '-M' + '-0' combo to merge fields from another file.
+# 0.47.01 - Feb 23, 2018 Fix -m confusion with -M.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.00};
+my $VERSION           = qq{0.47.01};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -3036,9 +3036,9 @@ sub init
 	{
 		@MERGE_SRC_COLUMNS = read_requested_qualified_columns( $opt{'M'}, $merge_expression_ref, 0 );
 	}
-	else
+	elsif ( $opt{'M'} )
 	{
-		printf STDERR      "*** -M is obsolete without '-0'.\n";
+		printf STDERR      "*** -M is obsolete without '-0'.\nSee usage (-x) for more information.\n";
 	}
 	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
