@@ -59,6 +59,15 @@ Complete list of flags
 ----------------------
 ```
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
+                  Using -M will allow columns of values from another file to be output if they
+                  match an arbitrary, but specific column read from STDIN.
+                  Thus for all rows from STDIN, a given column's value will be compared 
+                  to an arbitrary, but specific column in the file read with -0. 
+                  If the 2 columns match (optionally with -I and -N), the true value(s)
+                  are appended to the current line, and if not an optional set of literal(s) 
+                  will be appended. Multiple values of each are separated by '+' characters.
+                  Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
+                  Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -192,7 +201,7 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '' to escape either '_', ',' or '#'.
- -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
+ -M             : Deprecated, but does function in conjunction with -0 (zero). See above.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -269,7 +278,7 @@ The order of operations is as follows:
 ```
   -x - Usage message, then exits.
   -y - Specify precision of floating computed variables (see -v).
-  -0 - Input from named file.
+  -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
@@ -352,13 +361,68 @@ sys     1m8.059s
 ```
 
 
+== Matching values between files
+Sometimes it's handy to be able to reference values in another file and append them to the output conditionally. An example is a list of catalog keys and titles in one file, while the data coming in from STDIN contains an item key. If we wanted to append the title to the data from STDIN referencing the titles from file from -0, we can do that with the -M switch and -0 switch.
+```
+$ head a b
+==> a <==
+1000048|6|15|
+1000048|10|2|
+1000048|10|4|
+1000048|30|5|
+1000048|30|6|
+1000048|36|7|
+1000048|61|1|
+1000048|119|3|
+1000048|128|1|
+1000048|140|1|
 
+==> b <==
+1000048|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain|
+$ cat a | pipe.pl -0b -Mc0:c0?c1
+1000048|6|15|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|10|2|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|10|4|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|30|5|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|30|6|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|36|7|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|61|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|119|3|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|128|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|140|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|140|2|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|141|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|142|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|143|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+1000048|145|1|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
+```
 
+More generally you can specify that matches should be normalized before comparison.
+```
+$ head M.lst zero.lst                             ==> M.lst <==
+1|one
+2|TWO
+3|ThReE
+
+==> zero.lst <==
+one|1
+two|2
+4|four
+threE|3
+$ cat M.lst | pipe.pl -0zero.lst -Mc1:c0?c0."No match"
+1|one|one
+2|TWO|No match
+3|ThReE|No match
+$ cat M.lst | pipe.pl -0zero.lst -Mc1:c0?c0."No match" -N
+1|one|one
+2|TWO|two
+3|ThReE|threE
+```
 
 
 Exit searches after 'n' matches
 ---
-Works like '-m' in modern grep, stops searches after 'n'-th successful match. Works with '-g', '-G', '-X', '-Y', and has precidence over '-i'.
+Works like '-m' in modern grep, stops searches after 'n'-th successful match. Works with '-g', '-G', '-X', '-Y', and has precedence over '-i'.
 ```
 $ cat Y.lst
 1|a

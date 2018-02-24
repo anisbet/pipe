@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.46.07 - Feb 14, 2018 Added 'any' keyword to translate columns (-l).
+# 0.47.00 - Feb 15, 2018 Added '-M' + '-0' combo to merge fields from another file.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.46.07};
+my $VERSION           = qq{0.47.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -114,6 +114,13 @@ my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
+## Experimental
+my $IS_DATA_TO_MERGE  = $FALSE; 
+my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
+my $merge_expression_ref = {};
+my $REF_FILE_DATA_HREF  = {};
+my @REF_COLUMN_INDEX_TRUE   = ();
+my @REF_LITERALS_FALSE  = ();
 
 #
 # Message about this program and how to use it.
@@ -123,7 +130,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-5ADijLNtUVx]
-       -0{file_name}
+       -0{file_name}[-Mcn:cm?cp.{literal}]
        -W{delimiter}
        -14bBcvwzZ{c0,c1,...,cn}
        -o{c0,c1,...,cn[,remaining]}
@@ -167,6 +174,15 @@ pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
+                  Using -M will allow columns of values from another file to be output if they
+                  match an arbitrary, but specific column read from STDIN.
+                  Thus for all rows from STDIN, a given column's value will be compared 
+                  to an arbitrary, but specific column in the file read with -0. 
+                  If the 2 columns match (optionally with -I and -N), the true value(s)
+                  are appended to the current line, and if not an optional set of literal(s) 
+                  will be appended. Multiple values of each are separated by '+' characters.
+                  Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
+                  Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -300,7 +316,7 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
+ -M             : Deprecated, but does function in conjunction with -0 (zero). See above.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -372,7 +388,7 @@ All column references are 0 based. Line numbers start at 1.
 The order of operations is as follows:
   -x - Usage message, then exits.
   -y - Specify precision of floating computed variables (see -v).
-  -0 - Input from named file.
+  -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
@@ -917,7 +933,7 @@ sub order_line( $ )
 # param:  string line of values from the input.
 # param:  List of desired fields, or columns.
 # return: string composed of each string selected as column pasted together without trailing spaces.
-sub get_key( $$ )  # remove split
+sub get_key( $$ )
 {
 	my $line          = shift;
 	my $wantedColumns = shift;
@@ -2715,6 +2731,38 @@ sub read_whole_number( $ )
 	exit( -1 );
 }
 
+# If there is data selected for extraction from the file argument (to '-0') 
+# merge that data with the input line as required.
+# param:  Input line read from STDIN.
+# return: None. Side effect; appends the true or false column data from the
+#         the file argument specified with '-0'.
+sub merge_reference_file( $ )
+{
+	my $line = shift;
+	# Now do a comparison of columns from STDIN and look up the values in the reference file.
+	# To do that take each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
+	# we will have to allow for '-I', and '-N'.
+	my $key = '';
+	return if ( ! defined $MERGE_SRC_COLUMNS[0] );
+	my $src_col = $MERGE_SRC_COLUMNS[0];
+	# There may not even be such a column so test.
+	return if ( ! defined @{$line}[$src_col] );
+	# Normalize, and make case insensitive if required here.
+	$key = @{$line}[$src_col];
+	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
+	$key = normalize( $key ) if ( $opt{'N'} );
+	# Okay there is a column in the STDIN doc, but is there one in the reference doc?
+	if ( exists $REF_FILE_DATA_HREF->{ $key } )
+	{
+		push @{$line}, split ',', $REF_FILE_DATA_HREF->{ $key };
+	}
+	else
+	{
+		push @{$line}, @REF_LITERALS_FALSE;  # which may be empty.
+	}
+	printf STDERR "KEY: '%s'\n", $key if ( $opt{'D'} );
+}
+
 # This function abstracts all line operations for line by line operations.
 # param:  line from file.
 # return: Modified line.
@@ -2897,8 +2945,9 @@ sub process_line( $ )
 			$MATCH_COUNT++;
 		}
 	}
-	if ( $continue_to_process_match )
+	if ( $continue_to_process_match )  ##### Majority of the testing and operations take place in this block.
 	{
+		merge_reference_file( \@columns )   if ( $IS_DATA_TO_MERGE ); ## -M + -0
 		inc_line( \@columns  )              if ( $opt{'1'} );
 		inc_line_by_value( \@columns )      if ( $opt{'3'} );
 		delta_previous_line( \@columns )    if ( $opt{'4'} );
@@ -2980,11 +3029,17 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:MNn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
-	# -Q outputs unpredictably if negative numbers are used. Clean them here.
-	printf STDERR      "*** -M is obsolete.\n" if ( $opt{'M'} );
+	if ( $opt{'M'} && $opt{'0'} )
+	{
+		@MERGE_SRC_COLUMNS = read_requested_qualified_columns( $opt{'M'}, $merge_expression_ref, 0 );
+	}
+	else
+	{
+		printf STDERR      "*** -M is obsolete without '-0'.\n";
+	}
 	$BUFF_SIZE         = read_whole_number( $opt{'Q'} ) if ( $opt{'Q'} );
 	$PRECISION         = read_whole_number( $opt{'y'} ) if ( $opt{'y'} );
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
@@ -3021,7 +3076,6 @@ sub init
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
 	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING )            if ( $opt{'o'} );
-	# @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, 0 )                             if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
 	if ( $opt{'2'} )
 	{
@@ -3100,11 +3154,144 @@ sub init
 	}
 }
 
+# This parses a string into a set of commands to be consumed by other functions. The 
+# command strings include columns (denoted with 'cn'), separated with a delimiter token of '+'.
+# The returned string may also include literal strings. Use '\+' if you wish to include 
+# a '+' in the literal string.
+# param:  array reference of column indexes. This is where you intend to store the columns that
+#         the consuming function will operate on.
+# param:  The input string. Example: 'c100+"dog eat dog"+c 2'
+# param:  1 if literal terms (used to fill in false values optionally), or 0, specifies columns
+#         all of which will be expected to be in the form of '[c|C]n' where n is a positive integer.
+# return: None. Side effect: argument array reference will contain integers, and strings.
+sub get_col_num_or_literal_command( $$$ )
+{
+	my $array_ref = shift;
+	my $line_string = shift;
+	my $is_literal_string = shift;
+	# Split on column identifiers, making sure we don't pick up any empty or blank column identifiers.
+	my @tmp = ();
+	if ( $is_literal_string )
+	{
+		@tmp = split( /\+/, $line_string ) if ( $line_string );
+	}
+	else
+	{
+		@tmp = grep { /\S/ } split( /\+?\s?c/i, $line_string ) if ( $line_string );
+	}
+	foreach my $i ( @tmp )
+	{
+		push @{$array_ref}, $i if ( defined $i );
+	}
+}
+
+# Take the line input. Its the columns from the alternate file with the key of the comparison field.
+# Later we will add it to the line(s) from the data coming in (from STDIN).
+# return: nothing, but a hash reference is built of compare column keys, with merge columns as values.
+sub parse_M_line()
+{
+	# parse the expression that describes which columns of the ref file we want.
+	# -Mc1:"c2?c3.c4" but more generally -Mcn:"[cm,...|'literal']?[cp,...|'literal'].[cq,...|'literal']"
+	foreach my $key ( keys %{$merge_expression_ref} )
+	{
+		printf STDERR "key : '%s' \n", $merge_expression_ref->{ $key } if ( $opt{'D'} );
+		# EXPRESSION [col_input]:[col_ref]?[true column index or literal].[false literal]
+		# Example: [col_input]:'c2?c3', OR: 'c4'
+		# Split on the '.'. The LHS is the test operator and true expression, the RHS is the false expression.
+		my ( $token, $ref_false_literals ) = split( m/(?<!\\)\./, $merge_expression_ref->{ $key } );
+		# Split the LHS on the '?'. The LHS of this operation is the column to compare to the column of the input file. The RHS is the true expression.
+		my ( $ref_file_columns, $ref_true_cols ) = split( m/(?<!\\)\?/, $token );
+		printf STDERR "ref_file_columns : '%s', ref_true_cols : '%s', ref_false_literals: '%s'\n", $ref_file_columns, $ref_true_cols, $ref_false_literals if ( $opt{'D'} );
+		get_col_num_or_literal_command( \@MERGE_REF_COLUMNS, $ref_file_columns, 0 ); # Parse out the column(s) for matching.
+		get_col_num_or_literal_command( \@REF_COLUMN_INDEX_TRUE, $ref_true_cols, 0 ); # Parse out the column(s) used if match true.
+		get_col_num_or_literal_command( \@REF_LITERALS_FALSE, $ref_false_literals, 1 ); # Parse out the literals used if match false.
+	}
+}
+
+# Saves the column values used to compare to the src document, and the column data from the reference document.
+# param:  col_index - a list of all the columns we want from each line.
+# param:  line from the file. Also an array of columns. We take the values from here and save them.
+# param:  Key of the column to store from the ref file.
+# return: none.
+sub push_merge_ref_columns( $$$ )
+{
+	my $col_index = shift;
+	my $line      = shift;
+	my $key_col   = shift;
+	return if ( ! defined $key_col );
+	# my $key = get_key( $line, $wantedColumns );
+	# $key = normalize( $key ) if ( $opt{'N'} );
+	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
+	$key_col = sprintf( "%d", $key_col );
+	my $key = @{$line}[ $key_col ];
+	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
+	$key = normalize( $key ) if ( $opt{'N'} );
+	my @string_values = ();
+	foreach my $i ( @{$col_index} )
+	{
+		push @string_values, @{$line}[ $i ] if ( defined @{$line}[ $i ] );
+	}
+	$REF_FILE_DATA_HREF->{ $key } = join ',', @string_values if ( @string_values );
+}
+
 init();
 table_output("HEAD") if ( $TABLE_OUTPUT );
 my $ifh;
 my $is_stdin = 0;
-if ( defined $opt{'0'} )
+# If both switches are used together we expect input on STDIN and with '-0'.
+if ( defined $opt{'0'} && defined $opt{'M'} )
+{
+	# parse the command line after -M
+	parse_M_line();
+	#### We store an array ref of all the columns to merge if true (and false) but we have to have
+	#### them in a hash for quick lookup by the specified value key. *** ADD THAT HERE.
+	if ( $opt{'D'} )
+	{
+		printf STDERR "start => ";
+		foreach my $i ( keys %{$REF_FILE_DATA_HREF} )
+		{
+			printf STDERR "%s, ", %{$REF_FILE_DATA_HREF}->[$i];
+		}
+		printf STDERR "TRUE_VALUES<=\n=>FALSE_VALUES ";
+		foreach my $i ( @REF_LITERALS_FALSE )
+		{
+			printf STDERR "%s, ", $i;
+		}
+		printf STDERR "<= end\n";
+	}
+	open $ifh, "<", $opt{'0'} or die $!;
+	# Read the entire merging file.
+	while (<$ifh>)
+	{
+		my $line = trim( $_ );
+		if ( $opt{'W'} )
+		{
+			# Replace delimiter selection with '|' pipe.
+			$line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
+			# Now replace the user selected delimiter with a pipe.
+			$line =~ s/($opt{'W'})/\|/g;
+		}
+		my @columns = split '\|', $line;
+		if ( $opt{'W'} )
+		{
+			foreach my $col ( @columns )
+			{
+				# Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+				$col =~ s/($SUB_DELIMITER)/\|/g;
+			}
+		}
+		# Save all the true and false column values.
+		push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, \@columns, $MERGE_REF_COLUMNS[0] );
+		# The false values are literals taken from the command line.
+	}
+	close $ifh;
+	
+	# Now return STDIN as the input stream.
+	$ifh = *STDIN;
+	$is_stdin++;
+	$IS_DATA_TO_MERGE = keys %{$REF_FILE_DATA_HREF}; # Set true if there are values stored in the hash reference.
+}
+elsif ( defined $opt{'0'} )
 {
 	open $ifh, "<", $opt{'0'} or die $!;
 }
