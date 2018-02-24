@@ -130,7 +130,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: cat file | pipe.pl [-5ADijLNtUVx]
-       -0{file_name}
+       -0{file_name}[-Mcn:cm?cp.{literal}]
        -W{delimiter}
        -14bBcvwzZ{c0,c1,...,cn}
        -o{c0,c1,...,cn[,remaining]}
@@ -174,6 +174,14 @@ pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
+                  If -M is used, the file is considered reference input for any other data read
+                  from STDIN. Thus for all rows from STDIN, a given column's value will be searched 
+                  within any row and column's data read from the file specified with -0. 
+                  If the 2 columns match (optionally with -I and -N), the true value(s)
+                  are appended to the current line, and if not an optional set of literals 
+                  will be appended.
+                  Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
+                  Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -307,7 +315,7 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
- -M             : Deprecated. Prints all lines between a -X and -Y match which is now the default.
+ -M             : Deprecated, but does function in conjunction with -0 (zero). See above.
  -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
@@ -379,7 +387,7 @@ All column references are 0 based. Line numbers start at 1.
 The order of operations is as follows:
   -x - Usage message, then exits.
   -y - Specify precision of floating computed variables (see -v).
-  -0 - Input from named file.
+  -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
