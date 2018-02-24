@@ -384,7 +384,7 @@ threE|3|ThReE
 
 Exit searches after 'n' matches
 ---
-Works like '-m' in modern grep, stops searches after 'n'-th successful match. Works with '-g', '-G', '-X', '-Y', and has precidence over '-i'.
+Works like '-m' in modern grep, stops searches after 'n'-th successful match. Works with '-g', '-G', '-X', '-Y', and has precedence over '-i'.
 ```
 $ cat Y.lst
 1|a

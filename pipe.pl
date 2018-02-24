@@ -2738,14 +2738,11 @@ sub read_whole_number( $ )
 sub merge_reference_file( $ )
 {
 	my $line = shift;
-	# my @MERGE_SRC_COLUMNS = ();
-	# my $REF_FILE_DATA_HREF  = {}; # key value hash of compare columns and values from ref file.
-	# my @REF_COLUMN_INDEX_TRUE   = (); # Column values if comparison succeeds.
-	# my @REF_LITERALS_FALSE  = (); # Column value literals if comparison fails.
 	# Now do a comparison of columns from STDIN and look up the values in the reference file.
 	# To do that take each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
 	# we will have to allow for '-I', and '-N'.
 	my $key = '';
+	return if ( ! defined $MERGE_SRC_COLUMNS[0] );
 	my $src_col = $MERGE_SRC_COLUMNS[0];
 	# There may not even be such a column so test.
 	return if ( ! defined @{$line}[$src_col] );
