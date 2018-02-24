@@ -924,7 +924,7 @@ sub order_line( $ )
 # param:  string line of values from the input.
 # param:  List of desired fields, or columns.
 # return: string composed of each string selected as column pasted together without trailing spaces.
-sub get_key( $$ )  # remove split
+sub get_key( $$ )
 {
 	my $line          = shift;
 	my $wantedColumns = shift;
@@ -2736,26 +2736,25 @@ sub merge_reference_file( $ )
 	# my @REF_LITERALS_FALSE  = (); # Column value literals if comparison fails.
 	# Now do a comparison of columns from STDIN and look up the values in the reference file.
 	# To do that take each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
-	# we will have to allow for '-U', '-I', and '-n'.
-	foreach my $src_col ( @MERGE_SRC_COLUMNS )
+	# we will have to allow for '-I', and '-N'.
+	my $key = '';
+	my $src_col = $MERGE_SRC_COLUMNS[0];
+	# There may not even be such a column so test.
+	return if ( ! defined @{$line}[$src_col] );
+	# Normalize, and make case insensitive if required here.
+	$key = @{$line}[$src_col];
+	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
+	$key = normalize( $key ) if ( $opt{'N'} );
+	# Okay there is a column in the STDIN doc, but is there one in the reference doc?
+	if ( exists $REF_FILE_DATA_HREF->{ $key } )
 	{
-		# There may not even be such a column so test.
-		next if ( ! defined @{$line}[$src_col] );
-		# Normalize, and make case insensitive if required here.
-		my $key = @{$line}[$src_col];
-		$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
-		$key = normalize( $key ) if ( $opt{'N'} );
-		# Okay there is a column in the STDIN doc, but is there one in the reference doc?
-		if ( exists $REF_FILE_DATA_HREF->{ $key } )
-		{
-			push @{$line}, split ',', $REF_FILE_DATA_HREF->{ $key };
-		}
-		else
-		{
-			push @{$line}, @REF_LITERALS_FALSE;  # which may be empty.
-		}
+		push @{$line}, split ',', $REF_FILE_DATA_HREF->{ $key };
 	}
-	
+	else
+	{
+		push @{$line}, @REF_LITERALS_FALSE;  # which may be empty.
+	}
+	printf STDERR "KEY: '%s'\n", $key if ( $opt{'D'} );
 }
 
 # This function abstracts all line operations for line by line operations.
