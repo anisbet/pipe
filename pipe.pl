@@ -174,12 +174,13 @@ pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
-                  If -M is used, the file is considered reference input for any other data read
-                  from STDIN. Thus for all rows from STDIN, a given column's value will be searched 
-                  within any row and column's data read from the file specified with -0. 
+                  Using -M will allow columns of values from another file to be output if they
+                  match an arbitrary, but specific column read from STDIN.
+                  Thus for all rows from STDIN, a given column's value will be compared 
+                  to an arbitrary, but specific column in the file read with -0. 
                   If the 2 columns match (optionally with -I and -N), the true value(s)
-                  are appended to the current line, and if not an optional set of literals 
-                  will be appended.
+                  are appended to the current line, and if not an optional set of literal(s) 
+                  will be appended. Multiple values of each are separated by '+' characters.
                   Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
                   Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
