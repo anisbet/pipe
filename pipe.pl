@@ -1544,14 +1544,15 @@ sub contain_same_value( $$ )
 			$lastValue = @{ $line }[ $colIndex ] if ( defined @{ $line }[ $colIndex ] && @{ $line }[ $colIndex ] );
 			next;
 		}
-		printf STDERR "IS_MATCHED: '%s' cmp '%s' \n", $lastValue, @{ $line }[ $colIndex ] if ( $opt{'D'} );
+		printf STDERR "IS_MATCHED: '%s' cmp '%s' \n", $lastValue, "UNDEFINED" if ( ! defined @{ $line }[ $colIndex ] &&  $opt{'D'} );
+		printf STDERR "IS_MATCHED: '%s' cmp '%s' \n", $lastValue, @{ $line }[ $colIndex ] if ( defined @{ $line }[ $colIndex ] && $opt{'D'} );
 		if ( $opt{'I'} )
 		{
-			return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/i );
+			return 0 if ( ! defined @{ $line }[ $colIndex ] || @{ $line }[ $colIndex ] !~ /^($lastValue)$/i );
 		}
 		else
 		{
-			return 0 if ( @{ $line }[ $colIndex ] !~ /^($lastValue)$/ );
+			return 0 if ( ! defined @{ $line }[ $colIndex ] || @{ $line }[ $colIndex ] !~ /^($lastValue)$/ );
 		}
 	}
 	printf STDERR "IS_MATCHED: '%d'\n", $matchCount if ( $opt{'D'} );
