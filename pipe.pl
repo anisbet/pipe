@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.01 - Feb 23, 2018 Fix -m confusion with -M.
+# 0.47.02 - Feb 28, 2018 Fix bug that caused -b and -B to fail on non-existent cols.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.01};
+my $VERSION           = qq{0.47.02};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
