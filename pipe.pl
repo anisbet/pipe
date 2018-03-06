@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.02 - Feb 28, 2018 Fix bug that caused -b and -B to fail on non-existent cols.
+# 0.47.03 - March 6, 2018 Fix bug that would output double-space chars.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.02};
+my $VERSION           = qq{0.47.03};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -141,7 +141,7 @@ sub usage()
        -e[c0:[uc|lc|mc|us],...}
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
-	   -7{n-th match}
+       -7{n-th match}
        -F[c0:[x|b|d],...}
        -gG{any|cn:[regex],...}
        -H[-q{positive integer}]
@@ -295,8 +295,8 @@ All column references are 0 based. Line numbers start at 1.
                   Turns all columns into rows.
  -l{[any|c0]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
-                  and '\\n'. "Hello" -lc0:e.\\t => 'H       llo'
-                  Can be made case insensitive with '-I'.
+                  and '\\n'. "Hello" -lc0:"e.\\t" => 'H       llo'
+                  Can be made case insensitive with '-I'. Quote all expressions.
  -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple
@@ -334,9 +334,9 @@ All column references are 0 based. Line numbers start at 1.
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
-                  '.' character. '123' -pc0:-5, -pc0:-5.\\s both do the same thing: '123  '. Literal
-                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. Spaces are qualified 
-                  with either '\\s', '\\t', or '\\n'. 
+                  '.' character. '123' -pc0:"-5", -pc0:"-5.\\s" both do the same thing: '123  '. Literal
+                  digit(s) can be used as padding. '123' -pc0:"-5.0" => '12300'. Spaces are qualified 
+                  with either '\\s', '\\t', or '\\n'. Quote all expressions.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -1569,10 +1569,16 @@ sub apply_padding( $$ )
 	my $instruction = shift;
 	my @newField    = '';
 	my ( $token, $replacement ) = split( m/(?<!\\)\./, $instruction );
+	printf STDERR "instruction:  '%s' \n", $instruction if ( $opt{'D'} );
 	# The $replacement string should preserve requests for space characters.
-	$replacement =~ tr/\\s/\x20/;
-	$replacement =~ tr/\\t/\x09/;
-	$replacement =~ tr/\\n/\x0A/;
+	if ( ! defined $replacement )
+	{
+		printf STDERR "*** syntax error in padding instruction: '%s'\n", $instruction;
+		usage();
+	}
+	$replacement =~ s/\\s/\x20/g;
+	$replacement =~ s/\\t/\x09/g;
+	$replacement =~ s/\\n/\x0A/g;
 	printf STDERR "pad expression: '%s' places of '%s' \n", $token, $replacement if ( $opt{'D'} );
 	my $count = 0;
 	my $character = $replacement;
@@ -1977,9 +1983,14 @@ sub translate_line( $ )
 		my $exp = $trans_ref->{ $KEYWORD_ANY };
 		my ( $token, $replacement ) = split( m/(?<!\\)\./, $exp );
 		# The $replacement string should preserve requests for space characters.
-		$replacement =~ tr/\\s/\x20/;
-		$replacement =~ tr/\\t/\x09/;
-		$replacement =~ tr/\\n/\x0A/;
+		if ( ! defined $replacement )
+		{
+			printf STDERR "*** syntax error in translation instruction: '%s'\n", $exp;
+			usage();
+		}
+		$replacement =~ s/\\s/\x20/i;
+		$replacement =~ s/\\t/\x09/i;
+		$replacement =~ s/\\n/\x0A/i;
 		printf STDERR "translate expression: '%s' replaced with '%s' \n", $trans_ref->{ $i }, $replacement if ( $opt{'D'} );
 		
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
@@ -2002,9 +2013,14 @@ sub translate_line( $ )
 			my $exp = $trans_ref->{ $i };
 			my ( $token, $replacement ) = split( m/(?<!\\)\./, $exp );
 			# The $replacement string should preserve requests for space characters.
-			$replacement =~ tr/\\s/\x20/;
-			$replacement =~ tr/\\t/\x09/;
-			$replacement =~ tr/\\n/\x0A/;
+			if ( ! defined $replacement )
+			{
+				printf STDERR "*** syntax error in translation instruction: '%s'\n", $exp;
+				usage();
+			}
+			$replacement =~ s/\\s/\x20/i;
+			$replacement =~ s/\\t/\x09/i;
+			$replacement =~ s/\\n/\x0A/i;
 			printf STDERR "translate expression: '%s' replaced with '%s' \n", $trans_ref->{ $i }, $replacement if ( $opt{'D'} );
 			if ( $opt{'I'} )
 			{

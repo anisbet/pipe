@@ -180,8 +180,8 @@ Complete list of flags
                   Turns all columns into rows.
  -l{[any|c0]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\s', '\t',
-                  and '\n'. "Hello" -lc0:e.\\t => 'H       llo'
-                  Can be made case insensitive with '-I'.
+                  and '\n'. "Hello" -lc0:"e.\t" => 'H       llo'
+                  Can be made case insensitive with '-I'. Quote all expressions.
  -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
                   '99', line 99 only, '35-40', from lines 35 to 40 inclusive. Multiple
@@ -219,9 +219,9 @@ Complete list of flags
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
-                  '.' character. '123' -pc0:-5, -pc0:-5.\s both do the same thing: '123  '. Literal
-                  digit(s) can be used as padding. '123' -pc0:-5.0 => '12300'. Spaces are qualified
-                  with either '\s', '\t', or '\n'.
+                  '.' character. '123' -pc0:"-5", -pc0:"-5.\s" both do the same thing: '123  '. Literal
+                  digit(s) can be used as padding. '123' -pc0:"-5.0" => '12300'. Spaces are qualified 
+                  with either '\s', '\t', or '\n'. Quote all expressions.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -1186,13 +1186,13 @@ cat pad.lst
 123
 1234
 12345
-cat pad.lst | pipe.pl -pc0:5.\.
+cat pad.lst | pipe.pl -pc0:"5.\."
 ....1
 ...12
 ..123
 .1234
 12345
-cat pad.lst | pipe.pl -pc0:-5.\.
+cat pad.lst | pipe.pl -pc0:"-5.\."
 1....
 12...
 123..
@@ -1201,17 +1201,17 @@ cat pad.lst | pipe.pl -pc0:-5.\.
 ```
 Multiple characters may be used, but each string counts as a single padding sequence as shown in the next example.
 ```
-echo 21221012345678 | pipe.pl -p'c0:17dot'
+echo 21221012345678 | pipe.pl -p'c0:17.dot'
 dotdotdot21221012345678
 ```
 and
 ```
-echo 21221012345678 | pipe.pl -p'c0:-17dot'
+echo 21221012345678 | pipe.pl -p'c0:-17.dot'
 21221012345678dotdotdot
 ```
 The '.' character is optional, but required if you want to specify digits as padding. For example.
 ```
-$ echo '123|abc' | pipe.pl -pc0:-5.1
+$ echo '123|abc' | pipe.pl -pc0:"-5.1"
 12311|abc
 ```
 
