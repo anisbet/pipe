@@ -104,14 +104,20 @@ Complete list of flags
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{any|c0:{gt|lt|eq|ge|le]value,... }: Compare column and output line if value in column
-                  is greater than (gt), less than (lt), equal to (eq), greater than
+ -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}: Compare column and output line if value
+                  in column is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
                   as any column comparison matches successfully.
+                  -C supports comparisons across columns. Using the modified syntax
+                  -Cc1:ccgec0 where 'c1' refers to source of the comparison data,
+                  'cc' is the keyword for column comparison, 'ge' - the comparison
+                  operator, and 'c0' the column who's value is used for comparison. 
+                  "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
+                  than or equal to the value in c1, which is true, so the line is output.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -293,7 +299,7 @@ The order of operations is as follows:
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
-  -C - Conditionally test column values.
+  -C - Conditionally test columns against values.
   -e - Change case of string in column.
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
@@ -1388,6 +1394,22 @@ columns requested: '0'
 regex: 'ge12345'
 * comparison fails on non-numeric value: '12345a'
 ```
+
+Using the column comparison feature.
+------------------------------------
+Consider the following data. In this example we want to output the line if the value in column 1 is less than or equal to the value in column 0. 
+```
+$ cat C.lst
+1|2
+2|2
+3|2
+$ cat C.lst | pipe.pl -Cc1:cclec0 
+2|2
+3|2
+```
+
+
+
 Use of '-S', sub strings
 ------------------------
 You can use -S to output a sub string of the value in the specified column(s). The

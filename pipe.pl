@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.03 - March 6, 2018 Fix bug that would output double-space chars.
+# 0.47.50 - March 29, 2018 Add comparison for fields in -C.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.03};
+my $VERSION           = qq{0.47.50};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -136,7 +136,7 @@ sub usage()
        -o{c0,c1,...,cn[,remaining]}
        -3{c0:n,c1:m,...,cn:p}
        -noOtu{[any|c0,c1,...,cn]}
-       -C{[any|cn]:(gt|lt|eq|ge|le)exp,...}
+       -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
        -e[c0:[uc|lc|mc|us],...}
        -E[c0:[r|?c.r[.e]],...}
@@ -219,14 +219,20 @@ All column references are 0 based. Line numbers start at 1.
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{any|c0:{gt|lt|eq|ge|le]value,... }: Compare column and output line if value in column
-                  is greater than (gt), less than (lt), equal to (eq), greater than
+ -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}: Compare column and output line if value
+                  in column is greater than (gt), less than (lt), equal to (eq), greater than
                   or equal to (ge), or less than or equal to (le) the value that follows.
                   The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
                   as any column comparison matches successfully.
+                  -C supports comparisons across columns. Using the modified syntax
+                  -Cc1:ccgec0 where 'c1' refers to source of the comparison data,
+                  'cc' is the keyword for column comparison, 'ge' - the comparison
+                  operator, and 'c0' the column who's value is used for comparison. 
+                  "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
+                  than or equal to the value in c1, which is true, so the line is output.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -1653,6 +1659,7 @@ sub test_condition_cmp( $$$ )
 	my $cmpValue    = shift ;
 	my $value       = shift;
 	my $result      = 0;
+	printf STDERR "'%s' '%s' '%s'.\n", $cmpValue, $cmpOperator, $value if ( $opt{'D'} );
 	if ( $value =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ && $cmpValue =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
 	{
 		if ( $cmpOperator eq 'eq' )
@@ -1674,6 +1681,11 @@ sub test_condition_cmp( $$$ )
 		elsif ( $cmpOperator eq 'ge' )
 		{
 			$result = 1 if ( $value >= $cmpValue );
+		}
+		else
+		{
+			printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
+			usage();
 		}
 	}
 	else
@@ -1703,6 +1715,11 @@ sub test_condition_cmp( $$$ )
 		{
 			$result = 1 if ( $value ge $cmpValue );
 		}
+		else
+		{
+			printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
+			usage();
+		}
 	}
 	return $result;
 }
@@ -1716,10 +1733,9 @@ sub test_condition( $ )
 	my $result = 0;
 	if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
 	{
-		printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
 		my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
 		# The first 2 characters determine the type of comparison.
-		$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
+		$exp =~ m/(cc)?(lt|gt|eq|ge|le)/;
 		if ( ! $& )
 		{
 			printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1727,6 +1743,30 @@ sub test_condition( $ )
 		}
 		my $cmpValue    = $';
 		my $cmpOperator = $&;
+		# Change compare value to the value in a different column (if exists) and requested.
+		if ( $exp =~ m/^cc/ )
+		{
+			# we are expecting a col definition like (c|C)\d+, so get that column number
+			# strip it if supplied, but the 'c' is optional, but good form.
+			$cmpValue =~ s/^c//;
+			if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
+			{
+				if ( defined @{ $line }[ $cmpValue ] )
+				{
+					$cmpValue = @{ $line }[ $cmpValue ];
+				}
+				else
+				{
+					printf STDERR "* warn requested column in '%s' doesn't exist.\n", $cmpValue if ( $opt{'D'} );
+					return $result;
+				}
+			}
+			else
+			{
+				printf STDERR "*** error malformed column requested '%s'.\n", $cmpValue;
+				usage();
+			}
+		}
 		foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
 		{
 			return 1 if( test_condition_cmp( $cmpOperator, $cmpValue, @{ $line }[ $colIndex ] ) );
@@ -1737,10 +1777,9 @@ sub test_condition( $ )
 	{
 		if ( defined @{ $line }[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
 		{
-			printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$colIndex} if ( $opt{'D'} );
 			my $exp = lc $cond_cmp_ref->{$colIndex};
 			# The first 2 characters determine the type of comparison.
-			$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
+			$exp =~ m/(lt|gt|eq|ge|le)/;
 			if ( ! $& )
 			{
 				printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
@@ -1748,6 +1787,31 @@ sub test_condition( $ )
 			}
 			my $cmpValue    = $';
 			my $cmpOperator = $&;
+			# since the m// compares on 'lt' etc, only the exact match is kept in '$&'.
+			# This allows us to prefix the operation with almost any keyword combination.
+			if ( $exp =~ m/^cc/ )
+			{
+				# we are expecting a col definition like (c|C)\d+, so get that column number
+				# strip it if supplied, but the 'c' is optional, but good form.
+				$cmpValue =~ s/^c//;
+				if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
+				{
+					if ( defined @{ $line }[ $cmpValue ] )
+					{
+						$cmpValue = @{ $line }[ $cmpValue ];
+					}
+					else
+					{
+						printf STDERR "* warn requested column in '%s' doesn't exist.\n", $cmpValue if ( $opt{'D'} );
+						return $result;
+					}
+				}
+				else
+				{
+					printf STDERR "*** error malformed column requested '%s'.\n", $cmpValue;
+					usage();
+				}
+			}
 			$result += test_condition_cmp( $cmpOperator, $cmpValue, @{ $line }[ $colIndex ] );
 		}
 	}
