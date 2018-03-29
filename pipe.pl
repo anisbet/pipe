@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.03 - March 6, 2018 Fix bug that would output double-space chars.
+# 0.47.50 - March 29, 2018 Add comparison for fields in -C.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.03};
+my $VERSION           = qq{0.47.50};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -1719,7 +1719,7 @@ sub test_condition( $ )
 		printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$KEYWORD_ANY} if ( $opt{'D'} );
 		my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
 		# The first 2 characters determine the type of comparison.
-		$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
+		$exp =~ m/^(lt|gt|eq|ge|le)/;
 		if ( ! $& )
 		{
 			printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1740,7 +1740,7 @@ sub test_condition( $ )
 			printf STDERR "regex: '%s' \n", $cond_cmp_ref->{$colIndex} if ( $opt{'D'} );
 			my $exp = lc $cond_cmp_ref->{$colIndex};
 			# The first 2 characters determine the type of comparison.
-			$exp =~ m/^(lt|gt|lt|eq|ge|le)/;
+			$exp =~ m/^(lt|gt|eq|ge|le)/;
 			if ( ! $& )
 			{
 				printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
