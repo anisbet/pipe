@@ -1541,10 +1541,10 @@ Using -l to translate values in columns
 Sometimes it's useful to replace character sequences within a targeted column.
 The '-l' switch does this. Here are some examples.
 ```
-echo "Catkey 1456824 has 114 T024's" | pipe.pl -W'\s+' -l"c4:\'. "
+echo "Catkey 1456824 has 114 T024's" | pipe.pl -W'\s+' -lc4:\'.\s
 Catkey|1456824|has|114|T024s
 ```
-Replace all the '8's within a column.
+Replace all the '1's with '8' within a column.
 ```
 echo "Catkey 1481241 has 134 T024's" | pipe.pl -W'\s+' -l'c1:1.8'
 Catkey|8488248|has|134|T024's
@@ -1554,6 +1554,13 @@ An entry that has no value in 'c0', you can add a default value with:
 echo "|Catkey|8488248|has|134|T024's" | pipe.pl -l'c0:^$.NA'
 NA|Catkey|8488248|has|134|T024's
 ```
+The -l flag also allows for the user to replace a character with a space (\s), a line break (\n OS agnostic), and a tab (\t). In the example below I change multiple spaces in a column to a single space.
+```
+echo "15285    59th Street" | pipe.pl -lc0:"\s+.\s"
+15285 59th Street
+```
+
+
 Simple scripting with -k
 ------------------------
 You can add a new column anywhere within a line, with content taken and processed from another column.
