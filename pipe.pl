@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.50 - March 29, 2018 Add comparison for fields in -C.
+# 0.47.51 - April 6, 2018 Add error guard for empty key value in -M, -0.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.50};
+my $VERSION           = qq{0.47.51};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -183,6 +183,7 @@ All column references are 0 based. Line numbers start at 1.
                   will be appended. Multiple values of each are separated by '+' characters.
                   Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
                   Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
+                  Both files must use the same column delimiter, and can be defined with -W.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -3289,7 +3290,8 @@ sub parse_M_line()
 	}
 }
 
-# Saves the column values used to compare to the src document, and the column data from the reference document.
+# Used to collect the requested fields from the reference document read with -0. 
+# Each column selection is saved and appended if the match turns out to be true.
 # param:  col_index - a list of all the columns we want from each line.
 # param:  line from the file. Also an array of columns. We take the values from here and save them.
 # param:  Key of the column to store from the ref file.
@@ -3307,6 +3309,8 @@ sub push_merge_ref_columns( $$$ )
 	my $key = @{$line}[ $key_col ];
 	$key = uc $key if ( $opt{'I'} ); # Compare key in upper case if '-I'.
 	$key = normalize( $key ) if ( $opt{'N'} );
+	# Return is the key is blank, like if the index is out of range, or the files have different delimiters.
+	return if ( ! defined $key );
 	my @string_values = ();
 	foreach my $i ( @{$col_index} )
 	{

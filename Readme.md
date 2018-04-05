@@ -68,6 +68,7 @@ Complete list of flags
                   will be appended. Multiple values of each are separated by '+' characters.
                   Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
                   Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
+                  Both files must use the same column delimiter, and can be defined with -W.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
