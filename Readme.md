@@ -310,7 +310,7 @@ The order of operations is as follows:
   -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
   -C - Conditionally test columns against values.
-  -e - Change case of string in column.
+  -e - Change case and normalize strings.
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
