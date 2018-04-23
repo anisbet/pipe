@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.47.51 - April 6, 2018 Add error guard for empty key value in -M, -0.
+# 0.48.00 - April 23, 2018 Add additional formatting options for -e.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.47.51};
+my $VERSION           = qq{0.48.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 # Flag means that the entire file must be read for an operation like sort to work.
@@ -138,7 +138,7 @@ sub usage()
        -noOtu{[any|c0,c1,...,cn]}
        -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
-       -e[c0:[uc|lc|mc|us],...}
+       -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
@@ -238,8 +238,17 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{c0:[uc|lc|mc|us],...}: Change the case of a value in a column to upper case (uc),
-                  lower case (lc), mixed case (mc), or underscore (us).
+ -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}: Change the case of a value in a column
+                  to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
+                  An extended set of commands is available starting in version 0.48.00. 
+                  These include (spc) to replace multiple white spaces with a single x20
+                  character, and (normal_{char}) which allows the removal of classes 
+                  of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
+                  removes all non-digits from the input string. Different classes are
+                  supported based on Perl's regex class qualifiers W,w word, D,d digit,
+                  and S,s whitespace. Multiple qualifiers can be separated with a '|'
+                  character. For example normalize removing digits and non-word characters.
+                  "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
  -E{c0:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -1829,21 +1838,36 @@ sub apply_casing( $$ )
 {
 	my $field       = shift;
 	my $instruction = shift;
-	if ( $instruction eq "uc" )
+	if ( $instruction =~ m/uc/i )
 	{
 		$field = uc $field;
 	}
-	if ( $instruction eq "lc" )
+	if ( $instruction =~ m/lc/i )
 	{
 		$field = lc $field;
 	}
-	if ( $instruction eq "mc" )
+	if ( $instruction =~ m/mc/i )
 	{
 		$field =~ s/([\w']+)/\u\L$1/g;
 	}
-	if ( $instruction eq "us" )
+	if ( $instruction =~ m/us/i )
 	{
 		$field =~ s/\s/_/g;
+	}
+	# Replace multiple space characters with a single space.
+	if ( $instruction =~ m/spc/i )
+	{
+		$field =~ s/\s+/\x20/g;
+	}
+	if ( $instruction =~ m/^normal_/i )
+	{
+		# Take the next part of the string as the operation for the string.
+		my @normal_cmds = split '\|', $';
+		foreach my $normal ( @normal_cmds )
+		{
+			my $exps = '\\'.$normal;
+			$field =~ s/($exps)//g;
+		}
 	}
 	return $field;
 }
@@ -1862,13 +1886,12 @@ sub modify_case_line( $ )
 			printf STDERR "case specifier: '%s' \n", $case_ref->{ $i } if ( $opt{'D'} );
 			my $exp = $case_ref->{ $i };
 			# The first 2 characters determine the type of casing.
-			$exp =~ m/^[uUlLmM][cCsS]/;
+			$exp =~ m/^(uc|lc|mc|us|spc|normal_)/i;
 			if ( ! $& )
 			{
-				printf STDERR "*** error case specifier. Expected [uc|lc|mc|us] (ignoring case) but got '%s'.\n", $case_ref->{ $i };
+				printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d)) but got '%s'.\n", $case_ref->{ $i };
 				usage();
 			}
-			$exp = lc $exp;
 			@{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );
 		}
 	}

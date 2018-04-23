@@ -123,8 +123,17 @@ Complete list of flags
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{c0:[uc|lc|mc|us],...}: Change the case of a value in a column to upper case (uc),
-                  lower case (lc), mixed case (mc), or underscore (us).
+ -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}: Change the case of a value in a column
+                  to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
+                  An extended set of commands is available starting in version 0.48.00. 
+                  These include (spc) to replace multiple white spaces with a single x20
+                  character, and (normal_{char}) which allows the removal of classes 
+                  of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
+                  removes all non-digits from the input string. Different classes are
+                  supported based on Perl's regex class qualifiers W,w word, D,d digit,
+                  and S,s whitespace. Multiple qualifiers can be separated with a '|'
+                  character. For example normalize removing digits and non-word characters.
+                  "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
  -E{c0:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -1490,13 +1499,34 @@ echo '000.000' | pipe.pl -f'c0:3?\..\..\.'
 ```
 Use the escape for ',' and '?' as well.
 
-Changing case with '-e'
+Changing case and normalizing with '-e'
 -----------------------
 You can change the case of data in a column with '-e' as in this example:
 ```
 echo 'upper case|mIX cASE|LOWER CASE|12345678|hello world' | pipe.pl -e'c0:uc,c1:mc,c2:Lc,c3:UC,c4:us'
 UPPER CASE|Mix Case|lower case|12345678|hello_world
 ```
+
+Additionally '-e' can normalize strings in ways that '-n' can't. You can remove multiple spaces in a string with 'spc' and remove classes of characters using similar (case sensitive) Perl character classifiers, like 'd' - digits, 'D' - non-digits. Other supported classes include w - word characters, W - non-word characters, and s - white space, S - non-white space characters. 
+For example:
+```
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:uc
+23)  LINE WITH     LOTS OF  #'S!
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:lc
+23)  line with     lots of  #'s!
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:mc
+23)  Line With     Lots Of  #'s!
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:us
+23)__Line_with_____lots_of__#'s!
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:spc
+23) Line with lots of #'s!
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:"NORMAL_d|W"  # you need the quotes for the '|' character.
+Linewithlotsofs
+$ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:NORMAL_D
+23
+```
+
+
 Using -E to replace fields conditionally.
 -----------------------------------------
 Like the -f flag that replaces specific characters in a field, this function replaces the entire
