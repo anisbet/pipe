@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.00 - April 23, 2018 Add additional formatting options for -e.
+# 0.48.10 - April 24, 2018 Add keyword 'continue' to -o.
 #
 ####################################################################################
 
@@ -37,9 +37,10 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.00};
+my $VERSION           = qq{0.48.10};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
+my $KEYWORD_CONTINUE  = qw{continue};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -114,7 +115,6 @@ my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
-## Experimental
 my $IS_DATA_TO_MERGE  = $FALSE; 
 my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
 my $merge_expression_ref = {};
@@ -129,13 +129,12 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: cat file | pipe.pl [-5ADijLNtUVx]
+    usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
        -0{file_name}[-Mcn:cm?cp.{literal}]
-       -W{delimiter}
-       -14bBcvwzZ{c0,c1,...,cn}
-       -o{c0,c1,...,cn[,remaining]}
+       -14abBcvwzZ{c0,c1,...,cn}
+       -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
-       -noOtu{[any|c0,c1,...,cn]}
+       -6{cn:[char],...}
        -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
        -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}
@@ -149,13 +148,14 @@ sub usage()
        -l{[any|c0]:n.p,...}
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
+       -noOtu{[any|c0,c1,...,cn]}
+       -o{c0,c1,...,cn[,remaining][,continue]}
        -p{cn:[+|-]countChar+,...}
        -q{n-th} [-Q{n}]
        -S{cn:[range],...}
-       -y{precision}
-       -2{cn:[start,[end]],...}
-       -6{cn:[char],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
+       -W{delimiter}
+       -y{precision}
        -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
 Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
 performs common tasks on pipe-delimited files. The count function (-c), for
@@ -238,7 +238,7 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}: Change the case of a value in a column
+ -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
                   to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
                   An extended set of commands is available starting in version 0.48.00. 
                   These include (spc) to replace multiple white spaces with a single x20
@@ -342,10 +342,11 @@ All column references are 0 based. Line numbers start at 1.
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{c0,c1,...cn[,remaining]}: Order the columns in a different order. Only the specified columns are
-                  output unless the keyword 'remaining' is used, then all the remaining columns in the  
-                  in the data are output in left-to-right order, after the initial columns selections.
-                  Any additional column requests are ignored.
+ -o{c0,c1,...cn[,remaining][,continue]}: Order the columns in a different order. Only the specified columns are
+                  output unless the keyword 'remaining', or 'continue'. The 'remaining' keyword outputs  
+                  all columns that have not already been specified, in order. The 'continue' keyword
+                  outputs all the columns from the last specified column to the last column in the line.
+                  Once a keyword is encountered, any additional column output request is ignored.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
@@ -470,7 +471,7 @@ EOF
 sub parse_single_column_single_argument( $ )
 {
 	my $input = shift;
-	if ( $input =~ m/^[C|c]\d{1,}/ )
+	if ( $input =~ m/^c\d{1,}/i )
 	{
 		my ( $colNum, $value ) = split ':', $input;
 		my $reset = '';    # might not be used if user doesn't specify a reset value.
@@ -481,7 +482,7 @@ sub parse_single_column_single_argument( $ )
 			$value = $';
 			if ( $input =~ m/,/ )
 			{
-				( $value, $reset ) = split ',', $value;
+				( $value, $reset ) = split '\s?,\s?', $value;
 				$value = trim( $value );
 				$reset = trim( $reset );
 			}
@@ -503,12 +504,12 @@ sub parse_single_column_single_argument( $ )
 # param:  hash reference of column names and qualifiers.
 # param:  is_allowed string that specifies a keyword like $KEYWORD_ANY.
 # return: New array.
-sub read_requested_qualified_columns( $$$ )
+sub read_requested_qualified_columns
 {
-	my $line       = shift;
-	my @list       = ();
-	my $hash_ref   = shift;
-	my $is_allowed = shift;
+	my $line             = shift;
+	my @list             = ();
+	my $hash_ref         = shift;
+	my @allowed_keywords = @_;
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
 	# To accommodate expressions that include a ',' as part of the mask split on non-escaped ','s
@@ -518,7 +519,7 @@ sub read_requested_qualified_columns( $$$ )
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing
 		# '0' as a legitimate column number.
-		if ( $colNum =~ m/[C|c]\d{1,}/ )
+		if ( $colNum =~ m/c\d{1,}/i )
 		{
 			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
 			# We now allow other characters, and possibly ':' so split the line on the first one only.
@@ -539,7 +540,7 @@ sub read_requested_qualified_columns( $$$ )
 			$nameQualifier[1] =~ s/\\,/,/g;
 			$hash_ref->{$nameQualifier[0]} = trim( $nameQualifier[1] );
 		}
-		elsif ( $colNum =~ m/any/ and $is_allowed =~ m/($KEYWORD_ANY)/i )
+		elsif ( $colNum =~ m/any/  && grep /($KEYWORD_ANY)/, @allowed_keywords )
 		{
 			my @nameQualifier = ();
 			if ( $colNum =~ m/:/ )
@@ -654,35 +655,44 @@ sub parse_line_ranges( $ )
 # param:  command line string of requested columns.
 # param:  command "any" if the caller is allowed to operate on any column without restriction.
 # return: New array.
-sub read_requested_columns( $$ )
+sub read_requested_columns
 {
-	my $line       = shift;
-	my $is_allowed = shift;
+	my $line             = shift;
+	my @allowed_keywords = @_;
+	# printf STDERR "-->%s<--\n", @allowed_keywords;
 	my @list = ();
 	# Since we can't split if there is no delimiter character, let's introduce one if there isn't one.
 	$line .= "," if ( $line !~ m/,/ );
-	my @cols = split( ',', $line );
+	my @cols = split( '\s?,\s?', $line );
+	# my @cols = split( ',', $line );
 	foreach my $colNum ( @cols )
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing
 		# '0' as a legitimate column number.
 		if ( $colNum =~ m/[C|c]\d{1,}/ )
 		{
-			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
+			$colNum =~ s/c//i; # get rid of the 'c' because it causes problems later.
 			push( @list, trim( $colNum ) );
 		}
-		elsif ( $colNum =~ m/^any$/i and $is_allowed =~ m/($KEYWORD_ANY)/i )
+		elsif ( $colNum =~ m/^any$/i && grep /($KEYWORD_ANY)/, @allowed_keywords )
 		{
 			# Clear any other column selections the user may have already requested.
 			@list = ();
-			push( @list, $is_allowed );
+			push( @list, $KEYWORD_ANY );
 			last; # don't allow user to add more.
 		}
-		elsif ( $colNum =~ m/^remaining$/i and $is_allowed =~ m/($KEYWORD_REMAINING)/i )
+		elsif ( $colNum =~ m/^remaining$/i && grep /($KEYWORD_REMAINING)/, @allowed_keywords )
 		{
 			# Keep all the columns collected so far, but tack on the keyword as a marker
 			# that the remaining fields (if any) should be appended in order.
-			push( @list, $is_allowed );
+			push( @list, $KEYWORD_REMAINING );
+			last; # don't allow user to add more.
+		}
+		elsif ( $colNum =~ m/^continue$/i && grep /($KEYWORD_CONTINUE)/, @allowed_keywords )
+		{
+			# Keep all the columns collected so far, but tack on the keyword as a marker
+			# that the remaining fields (if any) should be appended in order.
+			push( @list, $KEYWORD_CONTINUE );
 			last; # don't allow user to add more.
 		}
 		else
@@ -901,9 +911,10 @@ sub normalize_line( $ )
 # return: <none>.
 sub order_line( $ )
 {
-	my $line    = shift;
-	my @newLine = ();
+	my $line          = shift;
+	my @newLine       = ();
 	my @order_columns = ();
+	my $count         = 0; # Keep track of the index of the your index in the line. Used for 'continue' keyword in -o.
 	foreach my $c ( @ORDER_COLUMNS )
 	{
 		# If the keyword any is used push all the missing columns of the line onto @order_columns.
@@ -916,11 +927,25 @@ sub order_line( $ )
 				next if ( grep /($colIndex)/, @order_columns );
 				push @order_columns, $colIndex;
 			}
+			last;
+		}
+		# Add all the rest of the columns from the input line.
+		elsif ( $c =~ m/($KEYWORD_CONTINUE)/i )
+		{
+			# Use the last saved array index to 
+			foreach my $colIndex ( $count .. scalar( @{ $line } ) -1 )
+			{
+				push @order_columns, $colIndex;
+			}
+			last;
 		}
 		else # Standard column output ordering request, and all column ordering requests before 'remaining'.
 		{
 			push @order_columns, $c;
 		}
+		# To get here the value has to have been numeric, save it in case the continue keyword is used,
+		# then use it to output all the columns from the last index to the end of the line.
+		$count = $c +1;
 	}
 	if ( $opt{'D'} )
 	{
@@ -3139,7 +3164,7 @@ sub init
 	usage() if ( $opt{'x'} );
 	if ( $opt{'M'} && $opt{'0'} )
 	{
-		@MERGE_SRC_COLUMNS = read_requested_qualified_columns( $opt{'M'}, $merge_expression_ref, 0 );
+		@MERGE_SRC_COLUMNS = read_requested_qualified_columns( $opt{'M'}, $merge_expression_ref );
 	}
 	elsif ( $opt{'M'} )
 	{
@@ -3150,52 +3175,52 @@ sub init
 	$MATCH_LIMIT       = read_whole_number( $opt{'7'} ) if ( $opt{'7'} );
 	$DELIMITER         = $opt{'h'} if ( $opt{'h'} );
 	$JOIN_COUNT        = read_whole_number( $opt{'q'} ) if ( $opt{'q'} );
-	@INCR_COLUMNS      = read_requested_columns( $opt{'1'}, 0 ) if ( $opt{'1'} );
-	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref, 0 )      if ( $opt{'3'} );
-	@DELTA4_COLUMNS    = read_requested_columns( $opt{'4'}, 0 ) if ( $opt{'4'} );
-	@SUM_COLUMNS       = read_requested_columns( $opt{'a'}, 0 ) if ( $opt{'a'} );
-	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'}, 0 ) if ( $opt{'c'} );
-	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'}, 0 ) if ( $opt{'z'} );
-	@SHOW_EMPTY_COLUMNS= read_requested_columns( $opt{'Z'}, 0 ) if ( $opt{'Z'} );
+	@INCR_COLUMNS      = read_requested_columns( $opt{'1'} ) if ( $opt{'1'} );
+	@INCR3_COLUMNS     = read_requested_qualified_columns( $opt{'3'}, $increment_ref ) if ( $opt{'3'} );
+	@DELTA4_COLUMNS    = read_requested_columns( $opt{'4'} ) if ( $opt{'4'} );
+	@SUM_COLUMNS       = read_requested_columns( $opt{'a'} ) if ( $opt{'a'} );
+	@COUNT_COLUMNS     = read_requested_columns( $opt{'c'} ) if ( $opt{'c'} );
+	@EMPTY_COLUMNS     = read_requested_columns( $opt{'z'} ) if ( $opt{'z'} );
+	@SHOW_EMPTY_COLUMNS= read_requested_columns( $opt{'Z'} ) if ( $opt{'Z'} );
 	if ( $opt{'u'} )
 	{
 		build_encoding_table();
 		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
 	}
-	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )    if ( $opt{'C'} );
-	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref, 0 )        if ( $opt{'e'} );
-	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref, 0 )     if ( $opt{'E'} );
+	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )   if ( $opt{'C'} );
+	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref )        if ( $opt{'e'} );
+	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
 	@MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
 	@MATCH_START_COLS  = read_requested_qualified_columns( $opt{'X'}, $match_start_ref, $KEYWORD_ANY ) if ( $opt{'X'} );
 	@MATCH_Y_COLUMNS   = read_requested_qualified_columns( $opt{'Y'}, $match_y_ref, $KEYWORD_ANY )     if ( $opt{'Y'} );
-	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref, 0 )      if ( $opt{'k'} );
-	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref, 0 )        if ( $opt{'m'} );
-	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref, 0 )        if ( $opt{'S'} );
+	@SCRIPT_COLUMNS    = read_requested_qualified_columns( $opt{'k'}, $script_ref )      if ( $opt{'k'} );
+	@MASK_COLUMNS      = read_requested_qualified_columns( $opt{'m'}, $mask_ref )        if ( $opt{'m'} );
+	@SUBS_COLUMNS      = read_requested_qualified_columns( $opt{'S'}, $subs_ref )        if ( $opt{'S'} );
 	@TRANSLATE_COLUMNS = read_requested_qualified_columns( $opt{'l'}, $trans_ref, $KEYWORD_ANY )       if ( $opt{'l'} );
-	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref, 0 )         if ( $opt{'p'} );
-	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref, 0 )        if ( $opt{'f'} );
-	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref, 0 )      if ( $opt{'F'} );
-	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'}, 0 )                             if ( $opt{'b'} );
-	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'}, 0 )                             if ( $opt{'B'} );
-	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )                  if ( $opt{'n'} );
-	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )                  if ( $opt{'O'} );
-	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING )            if ( $opt{'o'} );
-	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )                  if ( $opt{'t'} );
+	@PAD_COLUMNS       = read_requested_qualified_columns( $opt{'p'}, $pad_ref )         if ( $opt{'p'} );
+	@FLIP_COLUMNS      = read_requested_qualified_columns( $opt{'f'}, $flip_ref )        if ( $opt{'f'} );
+	@FORMAT_COLUMNS    = read_requested_qualified_columns( $opt{'F'}, $format_ref )      if ( $opt{'F'} );
+	@COMPARE_COLUMNS   = read_requested_columns( $opt{'b'} )                             if ( $opt{'b'} );
+	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} )                             if ( $opt{'B'} );
+	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )               if ( $opt{'n'} );
+	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )               if ( $opt{'O'} );
+	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE )    if ( $opt{'o'} );
+	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )               if ( $opt{'t'} );
 	if ( $opt{'2'} )
 	{
 		($AUTO_INCR_COLUMN, $AUTO_INCR_SEED, $AUTO_INCR_RESET) = parse_single_column_single_argument( $opt{'2'} );
 		$AUTO_INCR_ORIG_VALUE = $AUTO_INCR_SEED;
 	}
-	@HISTOGRAM_COLUMN  = read_requested_qualified_columns( $opt{'6'}, $hist_ref, 0 )        if ( $opt{'6'} );
+	@HISTOGRAM_COLUMN  = read_requested_qualified_columns( $opt{'6'}, $hist_ref )        if ( $opt{'6'} );
 	if ( $opt{'v'} )
 	{
-		@AVG_COLUMNS   = read_requested_columns( $opt{'v'}, 0 ) if ( $opt{'v'} );
+		@AVG_COLUMNS   = read_requested_columns( $opt{'v'} ) if ( $opt{'v'} );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'d'} )
 	{
-		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'}, 0 );
+		@DDUP_COLUMNS  = read_requested_columns( $opt{'d'} );
 		$READ_FULL = 1;
 	}
 	# Output specific lines.
@@ -3221,12 +3246,12 @@ sub init
 	}
 	if ( $opt{'s'} )
 	{
-		@SORT_COLUMNS  = read_requested_columns( $opt{'s'}, 0 );
+		@SORT_COLUMNS  = read_requested_columns( $opt{'s'} );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'w'} )
 	{
-		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'}, 0 );
+		@WIDTH_COLUMNS  = read_requested_columns( $opt{'w'} );
 		$READ_FULL = 1;
 	}
 	if ( $opt{'T'} )
