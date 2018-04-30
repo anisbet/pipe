@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.10 - April 24, 2018 Add keyword 'continue' to -o.
+# 0.48.20 - April 30, 2018 Add -i virtual matching to -z and -Z.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.10};
+my $VERSION           = qq{0.48.20};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -119,7 +119,7 @@ my $IS_DATA_TO_MERGE  = $FALSE;
 my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
 my $merge_expression_ref = {};
 my $REF_FILE_DATA_HREF  = {};
-my @REF_COLUMN_INDEX_TRUE   = ();
+my @REF_COLUMN_INDEX_TRUE = ();
 my @REF_LITERALS_FALSE  = ();
 
 #
@@ -290,11 +290,10 @@ All column references are 0 based. Line numbers start at 1.
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -g, -G, and -C. Causes further processing on 
-                  the line ONLY if -g or -G succeed. Normally -g or -G will suppress output if 
-                  a condition matches.
-                  The -i flag will override that behaviour but suppress any additional processing of
-                  the line unless the -g or -G or -C flag succeeds.
+ -i             : Turns on virtual matching for -g, -G, -C, -z and -Z. Normally fields are conditionally
+                  suppressed or output depending on the above conditional flags. '-i' allows further 
+                  modifications on lines that match these conditions, while allowing all other lines
+                  to pass through, in order, unmodified.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
@@ -399,11 +398,16 @@ All column references are 0 based. Line numbers start at 1.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
  -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
- -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist.
- -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist.
+ -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. See -i.
+ -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
 
 The order of operations is as follows:
   -x - Usage message, then exits.
+  -G - Inverse grep specified columns.
+  -g - Grep values in specified columns.
+  -C - Conditionally test column values.
+  -Z - Show line output if column(s) test empty.
+  -z - Suppress line output if column(s) test empty.
   -y - Specify precision of floating computed variables (see -v).
   -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
@@ -420,7 +424,6 @@ The order of operations is as follows:
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
-  -C - Conditionally test column values.
   -e - Change case and normalize strings.
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
@@ -428,8 +431,6 @@ The order of operations is as follows:
   -7 - Stop search after n-th match.
   -i - Output all lines, but process only if -g or -G match.
   -5 - Output all -g 'any' keyword matchs to STDERR.
-  -G - Inverse grep specified columns.
-  -g - Grep values in specified columns.
   -Q - Output 'n' lines before and after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.
   -S - Sub string column values.
@@ -440,8 +441,6 @@ The order of operations is as follows:
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
-  -Z - Show line output if column(s) test empty.
-  -z - Suppress line output if column(s) test empty.
   -w - Output minimum an maximum width of column data.
   -a - Sum of numeric values in specific columns.
   -c - Count numeric values in specified columns.
@@ -3075,6 +3074,42 @@ sub process_line( $ )
 			$MATCH_COUNT++;
 		}
 	}
+	if ( $opt{'z'} )
+	{
+		if ( is_empty( \@columns ) )
+		{
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			}
+			else
+			{
+				return '';
+			}
+		}
+		else
+		{
+			$MATCH_COUNT++;
+		}
+	}
+	if ( $opt{'Z'} )
+	{
+		if ( is_not_empty( \@columns ) )
+		{
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			}
+			else
+			{
+				return '';
+			}
+		}
+		else
+		{
+			$MATCH_COUNT++;
+		}
+	}
 	if ( $continue_to_process_match )  ##### Majority of the testing and operations take place in this block.
 	{
 		merge_reference_file( \@columns )   if ( $IS_DATA_TO_MERGE ); ## -M + -0
@@ -3096,8 +3131,6 @@ sub process_line( $ )
 		# Stop processing lines if the requested column(s) test empty.
 		return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
 		return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
-		return ''                           if ( $opt{'z'} and is_empty( \@columns ) );
-		return ''                           if ( $opt{'Z'} and is_not_empty( \@columns ) );
 		width( \@columns, $LINE_NUMBER )    if ( $opt{'w'} );
 		sum( \@columns )                    if ( $opt{'a'} );
 		count( \@columns )                  if ( $opt{'c'} );
