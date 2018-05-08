@@ -226,10 +226,12 @@ Complete list of flags
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{c0,c1,...cn[,remaining][,continue]}: Order the columns in a different order. Only the specified columns are
-                  output unless the keyword 'remaining', or 'continue'. The 'remaining' keyword outputs  
-                  all columns that have not already been specified, in order. The 'continue' keyword
-                  outputs all the columns from the last specified column to the last column in the line.
+ -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}: Order the columns in a different order. 
+                  Only the specified columns are output unless the keyword 'remaining', or 'continue'.  
+                  The 'remaining' keyword outputs all columns that have not already been specified, 
+                  in order. The 'continue' keyword outputs all the columns from the last specified 
+                  column to the last column in the line. 'last' will output the last column in a row.
+                  'reverse' reverses the column order.
                   Once a keyword is encountered, any additional column output request is ignored.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
