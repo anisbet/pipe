@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.20 - April 30, 2018 Add -i virtual matching to -z and -Z.
+# 0.48.50 - May 08, 2018 Add keyword 'last' and 'reverse' to '-o'.
 #
 ####################################################################################
 
@@ -37,10 +37,12 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.20};
+my $VERSION           = qq{0.48.50};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
+my $KEYWORD_LAST      = qw{last};
+my $KEYWORD_REVERSE   = qw{reverse};
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -149,7 +151,7 @@ sub usage()
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
        -noOtu{[any|c0,c1,...,cn]}
-       -o{c0,c1,...,cn[,remaining][,continue]}
+       -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}
        -p{cn:[+|-]countChar+,...}
        -q{n-th} [-Q{n}]
        -S{cn:[range],...}
@@ -341,10 +343,12 @@ All column references are 0 based. Line numbers start at 1.
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{c0,c1,...cn[,remaining][,continue]}: Order the columns in a different order. Only the specified columns are
-                  output unless the keyword 'remaining', or 'continue'. The 'remaining' keyword outputs  
-                  all columns that have not already been specified, in order. The 'continue' keyword
-                  outputs all the columns from the last specified column to the last column in the line.
+ -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}: Order the columns in a different order. 
+                  Only the specified columns are output unless the keyword 'remaining', or 'continue'.  
+                  The 'remaining' keyword outputs all columns that have not already been specified, 
+                  in order. The 'continue' keyword outputs all the columns from the last specified 
+                  column to the last column in the line. 'last' will output the last column in a row.
+                  'reverse' reverses the column order.
                   Once a keyword is encountered, any additional column output request is ignored.
  -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
@@ -694,6 +698,19 @@ sub read_requested_columns
 			push( @list, $KEYWORD_CONTINUE );
 			last; # don't allow user to add more.
 		}
+		# $, $KEYWORD_REVERSE
+		elsif ( $colNum =~ m/^last$/i && grep /($KEYWORD_LAST)/, @allowed_keywords )
+		{
+			# use the last column.
+			push( @list, $KEYWORD_LAST );
+			last; # don't allow user to add more.
+		}
+		elsif ( $colNum =~ m/^reverse$/i && grep /($KEYWORD_REVERSE)/, @allowed_keywords )
+		{
+			# use the last column.
+			push( @list, $KEYWORD_REVERSE );
+			last; # don't allow user to add more.
+		}
 		else
 		{
 			print STDERR "** Warning: illegal column designation '$colNum', ignoring.\n";
@@ -936,6 +953,21 @@ sub order_line( $ )
 			{
 				push @order_columns, $colIndex;
 			}
+			last;
+		}
+		# Return the last column from the list.
+		elsif ( $c =~ m/($KEYWORD_LAST)/i )
+		{
+			push @order_columns, -1;
+			last;
+		}
+		elsif ( $c =~ m/($KEYWORD_REVERSE)/i )
+		{
+			foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+			{
+				push @order_columns, $colIndex;
+			}
+			@order_columns = reverse @order_columns;
 			last;
 		}
 		else # Standard column output ordering request, and all column ordering requests before 'remaining'.
@@ -3238,7 +3270,7 @@ sub init
 	@NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} )                             if ( $opt{'B'} );
 	@NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )               if ( $opt{'n'} );
 	@MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )               if ( $opt{'O'} );
-	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE )    if ( $opt{'o'} );
+	@ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE, $KEYWORD_LAST, $KEYWORD_REVERSE )    if ( $opt{'o'} );
 	@TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )               if ( $opt{'t'} );
 	if ( $opt{'2'} )
 	{
