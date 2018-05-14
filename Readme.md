@@ -175,10 +175,10 @@ Complete list of flags
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -g, -G, -C, -z and -Z. Normally fields are conditionally
-                  suppressed or output depending on the above conditional flags. '-i' allows further 
-                  modifications on lines that match these conditions, while allowing all other lines
-                  to pass through, in order, unmodified.
+ -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -z and -Z. Normally fields are 
+                  conditionally suppressed or output depending on the above conditional flags. '-i'  
+                  allows further modifications on lines that match these conditions, while allowing 
+                  all other lines to pass through, in order, unmodified.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
@@ -298,6 +298,8 @@ The order of operations is as follows:
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -C - Conditionally test column values.
+  -b - Suppress line output if columns' values differ.
+  -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -y - Specify precision of floating computed variables (see -v).
@@ -321,7 +323,7 @@ The order of operations is as follows:
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
   -7 - Stop search after n-th match.
-  -i - Output all lines, but process only if -g or -G match.
+  -i - Output all lines, but process only if -b, -B, -C, -g, -G, -z or -Z match.
   -5 - Output all -g 'any' keyword matchs to STDERR.
   -Q - Output 'n' lines before and after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.50 - May 08, 2018 Add keyword 'last' and 'reverse' to '-o'.
+# 0.48.50 - May 14, 2018 Add virtual matching on -b -B.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.50};
+my $VERSION           = qq{0.48.60};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -292,10 +292,10 @@ All column references are 0 based. Line numbers start at 1.
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
  -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -g, -G, -C, -z and -Z. Normally fields are conditionally
-                  suppressed or output depending on the above conditional flags. '-i' allows further 
-                  modifications on lines that match these conditions, while allowing all other lines
-                  to pass through, in order, unmodified.
+ -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -z and -Z. Normally fields are 
+                  conditionally suppressed or output depending on the above conditional flags. '-i'  
+                  allows further modifications on lines that match these conditions, while allowing 
+                  all other lines to pass through, in order, unmodified.
  -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
@@ -410,6 +410,8 @@ The order of operations is as follows:
   -G - Inverse grep specified columns.
   -g - Grep values in specified columns.
   -C - Conditionally test column values.
+  -b - Suppress line output if columns' values differ.
+  -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
   -y - Specify precision of floating computed variables (see -v).
@@ -433,7 +435,7 @@ The order of operations is as follows:
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
   -7 - Stop search after n-th match.
-  -i - Output all lines, but process only if -g or -G match.
+  -i - Output all lines, but process only if -b, -B, -C, -g, -G, -z or -Z match.
   -5 - Output all -g 'any' keyword matchs to STDERR.
   -Q - Output 'n' lines before and after a '-g', or '-G' match to STDERR.
   -m - Mask specified column values.
@@ -3106,6 +3108,42 @@ sub process_line( $ )
 			$MATCH_COUNT++;
 		}
 	}
+	if ( $opt{'b'} )
+	{
+		if ( ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) )
+		{
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			}
+			else
+			{
+				return '';
+			}
+		}
+		else
+		{
+			$MATCH_COUNT++;
+		}
+	}
+	if ( $opt{'B'} )
+	{
+		if ( contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) )
+		{
+			if ( $opt{'i'} )
+			{
+				$continue_to_process_match = 0; # let the line contents through but additional processing will be done.
+			}
+			else
+			{
+				return '';
+			}
+		}
+		else
+		{
+			$MATCH_COUNT++;
+		}
+	}
 	if ( $opt{'z'} )
 	{
 		if ( is_empty( \@columns ) )
@@ -3160,9 +3198,6 @@ sub process_line( $ )
 		normalize_line( \@columns )         if ( $opt{'n'} );
 		trim_line( \@columns )              if ( $opt{'t'} );
 		pad_line( \@columns )               if ( $opt{'p'} );
-		# Stop processing lines if the requested column(s) test empty.
-		return ''                           if ( $opt{'b'} and ! contain_same_value( \@columns, \@COMPARE_COLUMNS ) );
-		return ''                           if ( $opt{'B'} and   contain_same_value( \@columns, \@NO_COMPARE_COLUMNS ) );
 		width( \@columns, $LINE_NUMBER )    if ( $opt{'w'} );
 		sum( \@columns )                    if ( $opt{'a'} );
 		count( \@columns )                  if ( $opt{'c'} );
