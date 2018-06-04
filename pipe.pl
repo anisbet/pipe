@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.50 - May 14, 2018 Add virtual matching on -b -B.
+# 0.48.61 - June 4, 2018 Fix -M to ensure fields that contain '0' are transfered.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.60};
+my $VERSION           = qq{0.48.61};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -132,7 +132,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
-       -0{file_name}[-Mcn:cm?cp.{literal}]
+       -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
        -14abBcvwzZ{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
@@ -183,6 +183,8 @@ All column references are 0 based. Line numbers start at 1.
                   If the 2 columns match (optionally with -I and -N), the true value(s)
                   are appended to the current line, and if not an optional set of literal(s) 
                   will be appended. Multiple values of each are separated by '+' characters.
+                  If there is no match, no literal is specified, and -V is used 
+                  a zero value (0) is used.
                   Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
                   Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
                   Both files must use the same column delimiter, and can be defined with -W.
@@ -3421,7 +3423,7 @@ sub get_col_num_or_literal_command( $$$ )
 sub parse_M_line()
 {
 	# parse the expression that describes which columns of the ref file we want.
-	# -Mc1:"c2?c3.c4" but more generally -Mcn:"[cm,...|'literal']?[cp,...|'literal'].[cq,...|'literal']"
+	# -Mc1:c2?c3.c4 but more generally -Mcn:"[cm,...|'literal']?[cp,...|'literal'].[cq,...|'literal']"
 	foreach my $key ( keys %{$merge_expression_ref} )
 	{
 		printf STDERR "key : '%s' \n", $merge_expression_ref->{ $key } if ( $opt{'D'} );
@@ -3450,8 +3452,6 @@ sub push_merge_ref_columns( $$$ )
 	my $line      = shift;
 	my $key_col   = shift;
 	return if ( ! defined $key_col );
-	# my $key = get_key( $line, $wantedColumns );
-	# $key = normalize( $key ) if ( $opt{'N'} );
 	# The indexes of the target columns we want are stored in order. Like: (3, 0, 1, ...).
 	$key_col = sprintf( "%d", $key_col );
 	my $key = @{$line}[ $key_col ];
@@ -3462,7 +3462,19 @@ sub push_merge_ref_columns( $$$ )
 	my @string_values = ();
 	foreach my $i ( @{$col_index} )
 	{
-		push @string_values, @{$line}[ $i ] if ( defined @{$line}[ $i ] );
+		if ( defined @{$line}[ $i ] )
+		{
+			push @string_values, @{$line}[ $i ];
+		}
+		elsif ( @REF_LITERALS_FALSE ) 
+		{
+			push @string_values, @REF_LITERALS_FALSE;
+		}
+		else
+		{
+			# Ensure a value if there aren't literals and no value or '0' stored in array.
+			push @string_values, '0' if ( $opt{'V'} );
+		}
 	}
 	$REF_FILE_DATA_HREF->{ $key } = join ',', @string_values if ( @string_values );
 }
