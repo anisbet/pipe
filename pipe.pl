@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.50 - May 14, 2018 Add virtual matching on -b -B.
+# 0.49.00 - May 14, 2018 Add virtual matching on -b -B.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.48.60};
+my $VERSION           = qq{0.49.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -93,8 +93,8 @@ my $IS_Y_MATCH        = 0;                          # True if -Y matched. Turns 
 my $IS_DUMPABLE_MATCH = 0;                          # If 1, then '-g' matched during a -X and -Y test.
 my $continue_to_process_match = 0;                  # Set true if -X or -Y are not used, but controls output of an arbitrary but specific line.
 my @MATCH_START_COLS  = (); my $match_start_ref= {};# Stores each columns IS_MATCHED flag, and turns on -Y.
-my @MATCH_Y_COLUMNS   = (), my $match_y_ref   = {}; # Look ahead -Y test conditions supplied by user.
-my @U_ENCODE_COLUMNS  = (); my $url_characters= {}; # Stores the character mappings.
+my @MATCH_Y_COLUMNS   = (), my $match_y_ref    = {}; # Look ahead -Y test conditions supplied by user.
+my @U_ENCODE_COLUMNS  = (); my $url_characters = {}; # Stores the character mappings.
 my @MERGE_COLUMNS     = (); # List of columns to merge. The first is the anchor column.
 my @EMPTY_COLUMNS     = (); # empty column number checks.
 my @SHOW_EMPTY_COLUMNS= (); # Show empty column number checks.
@@ -123,6 +123,7 @@ my $merge_expression_ref = {};
 my $REF_FILE_DATA_HREF  = {};
 my @REF_COLUMN_INDEX_TRUE = ();
 my @REF_LITERALS_FALSE  = ();
+my @MATH_COLUMNS      = (); my $math_ref = {}; # Math operations stored. math_ref contains the operator.
 
 #
 # Message about this program and how to use it.
@@ -132,6 +133,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
+       -?cn:{opr}{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp.{literal}]
        -14abBcvwzZ{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
@@ -175,6 +177,13 @@ Example: cat file.lst | pipe.pl -c"c0"
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
+ -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Currently only
+                  'div', 'mul', 'add', 'sub' are supported. Division and subtraction
+                  only work on the first column after the operator and dot '.' delimiter.
+                  All results are output at the start of the line like -A and -J.
+                  Example: divide c1 by c0, '2|10' -?c1:div.c0 => 5 2|10'.
+                  Example: add c0, c2, c3, and c1, '1|2|3|4|5' -?c0:add.c2,c3,c1 => '10 1|2|3|4|5'.
+                  Use -P to add a pipe delimiter instead of a space.
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
                   Using -M will allow columns of values from another file to be output if they
                   match an arbitrary, but specific column read from STDIN.
@@ -240,7 +249,7 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
+ -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
                   to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
                   An extended set of commands is available starting in version 0.48.00. 
                   These include (spc) to replace multiple white spaces with a single x20
@@ -251,7 +260,7 @@ All column references are 0 based. Line numbers start at 1.
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
- -E{c0:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
+ -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
                   value the field must have to be replaced by r, and optionally
@@ -266,8 +275,8 @@ All column references are 0 based. Line numbers start at 1.
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F{c0:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g{[any|c0:regex,...}: Searches the specified field for the Perl regular expression.
+ -F{cn:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
@@ -286,7 +295,7 @@ All column references are 0 based. Line numbers start at 1.
                   if used in combination with -X and -Y. The -g outputs just the frame that is 
                   bounded by -X and -Y, but if -g matches, only the matching frame is output 
                   to STDERR, while only the -g that matches within the frame is output to STDOUT. 
- -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
+ -G{[any|cn]:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
@@ -321,7 +330,7 @@ All column references are 0 based. Line numbers start at 1.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the -L flag.
- -m{c0:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
+ -m{cn:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
                   If the last character is either '_' or '#', then it will be repeated until
@@ -334,7 +343,7 @@ All column references are 0 based. Line numbers start at 1.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
  -M             : Deprecated, but does function in conjunction with -0 (zero). See above.
- -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
+ -n{[any|cn],...}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
                   -I switches for more information.
@@ -350,7 +359,7 @@ All column references are 0 based. Line numbers start at 1.
                   column to the last column in the line. 'last' will output the last column in a row.
                   'reverse' reverses the column order.
                   Once a keyword is encountered, any additional column output request is ignored.
- -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
+ -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
@@ -379,13 +388,13 @@ All column references are 0 based. Line numbers start at 1.
                   from the end of data can be specified with syntax (n - m), where 'n' is a literal
                   and represents the length of the data, and 'm' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t{any|c0,c1,...cn}: Trim the specified columns of white space front and back.
+ -t{[any|cn],...}: Trim the specified columns of white space front and back.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
- -u{any|c0,c1,...cn}: Encodes strings in specified columns into URL safe versions.
+ -u{[any|cn],...}: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison. With -C, non-numeric value tests always fail, that is
@@ -396,12 +405,12 @@ All column references are 0 based. Line numbers start at 1.
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the -g, but once a line matches all subsequent lines are also
+ -X{[any|cn]:regex,...}: Like the -g, but once a line matches all subsequent lines are also
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
+ -Y{[any|cn]:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. See -i.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
 
@@ -422,6 +431,7 @@ The order of operations is as follows:
   -r - Randomize line output.
   -s - Sort columns.
   -v - Average numerical values in selected columns.
+  -? - Perform math operations on columns.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
@@ -2390,6 +2400,67 @@ sub inc_line_by_value( $ )
 	}
 }
 
+# Performs math operations on columns.
+sub do_math( $ )
+{
+	my $line    = shift;
+	my $result  = 0.0;
+	foreach my $colIndex ( @MATH_COLUMNS )
+	{
+		if ( defined @{ $line }[ $colIndex ] )
+		{
+			# Guard against values that can't be operated on mathematically.
+			if ( @{ $line }[ $colIndex ] !~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
+			{
+				printf STDERR "* warning can't use '%s' for computation.\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
+				next;
+			}
+			my $exp = $math_ref->{'add'}; # TODO FIX ME.
+			# The first 2 characters determine the type of comparison.
+			$exp =~ m/(add|sub|mul|div|mod)/;
+			printf STDERR "OP:'%s'.\n", $exp;
+			exit();
+			if ( ! $& )
+			{
+				printf STDERR "*** error operation '%s' not supported yet.\n", $exp;
+				usage();
+			}
+			# my $mathOperands = $';
+			# we are expecting a col definition like (c|C)\d+, so get that column number
+			my @mathOperandIndexes = split ',(\s+)?', $'; # ["c0","c1","c2"]
+			my $mathOperator = $&;
+			# Change compare value to the value in a different column (if exists) and requested.
+			for my $mathOperand ( @mathOperandIndexes )
+			{
+				# Clean off the 'c'
+				$mathOperand =~ s/c//i;
+				if ( $mathOperand =~ m/^\d+$/ )
+				{
+					if ( defined @{ $line }[ $mathOperand ] )
+					{
+						# $mathOperand = @{ $line }[ $mathOperand ];
+					}
+					else
+					{
+						printf STDERR "* warn requested column in '%s' doesn't exist.\n", $mathOperand if ( $opt{'D'} );
+						return $result;
+					}
+				}
+				else
+				{
+					printf STDERR "*** error malformed column requested '%s'.\n", $mathOperand;
+					exit();
+				}
+			}
+			# foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+			# {
+				# return 1 if( test_condition_cmp( $mathOperator, $mathOperands, @{ $line }[ $colIndex ] ) );
+			# }
+			return $result;
+		}
+	}
+}
+
 # Computes the difference between this line and the previous and outputs that difference.
 # param:  Array reference of line's columns.
 # return: <none>
@@ -2402,7 +2473,7 @@ sub delta_previous_line( $ )
 		if ( defined @{ $line }[ $colIndex ] )
 		{
 			# Guard against values that can't be subtracted.
-			if ( @{ $line }[ $colIndex ] !~ m/^(\-)?\d+(\.\d+)?$/ )
+			if ( @{ $line }[ $colIndex ] !~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
 			{
 				printf STDERR "* warning can't use '%s' for computation.\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
 				next;
@@ -3202,6 +3273,7 @@ sub process_line( $ )
 		sum( \@columns )                    if ( $opt{'a'} );
 		count( \@columns )                  if ( $opt{'c'} );
 		average( \@columns )                if ( $opt{'v'} );
+		do_math( \@columns )                if ( $opt{'?'} );
 		merge_line( \@columns )             if ( $opt{'O'} );
 		order_line( \@columns )             if ( $opt{'o'} );
 		add_auto_increment( \@columns )     if ( $opt{'2'} );
@@ -3259,7 +3331,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-	my $opt_string = '0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+	my $opt_string = '?:0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
 	getopts( "$opt_string", \%opt ) or usage();
 	usage() if ( $opt{'x'} );
 	if ( $opt{'M'} && $opt{'0'} )
@@ -3288,6 +3360,7 @@ sub init
 		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
 	}
 	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )   if ( $opt{'C'} );
+	@MATH_COLUMNS      = read_requested_qualified_columns( $opt{'?'}, $math_ref )   if ( $opt{'?'} );
 	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref )        if ( $opt{'e'} );
 	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
