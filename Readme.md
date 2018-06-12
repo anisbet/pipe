@@ -66,6 +66,8 @@ Complete list of flags
                   If the 2 columns match (optionally with -I and -N), the true value(s)
                   are appended to the current line, and if not an optional set of literal(s) 
                   will be appended. Multiple values of each are separated by '+' characters.
+                  If there is no match, no literal is specified, and -V is used 
+                  a zero value (0) is used.
                   Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
                   Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
                   Both files must use the same column delimiter, and can be defined with -W.
