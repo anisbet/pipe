@@ -27,11 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-<<<<<<< HEAD
-# 0.49.00 - May 14, 2018 Add virtual matching on -b -B.
-=======
 # 0.48.61 - June 4, 2018 Fix -M to ensure fields that contain '0' are transfered.
->>>>>>> master
 #
 ####################################################################################
 
@@ -41,11 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-<<<<<<< HEAD
 my $VERSION           = qq{0.49.00};
-=======
-my $VERSION           = qq{0.48.61};
->>>>>>> master
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -141,12 +133,8 @@ sub usage()
     print STDERR << "EOF";
 
     usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
-<<<<<<< HEAD
        -?cn:{opr}{c0,c1,...,cn}
-       -0{file_name}[-Mcn:cm?cp.{literal}]
-=======
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
->>>>>>> master
        -14abBcvwzZ{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
@@ -3374,7 +3362,7 @@ sub init
 		@U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
 	}
 	@COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )   if ( $opt{'C'} );
-	@MATH_COLUMNS      = read_requested_qualified_columns( $opt{'?'}, $math_ref )   if ( $opt{'?'} );
+	@MATH_COLUMNS      = read_requested_qualified_columns( $opt{'?'}, $math_ref )        if ( $opt{'?'} );
 	@CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref )        if ( $opt{'e'} );
 	@REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
 	@NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
