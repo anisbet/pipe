@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.48.61 - June 4, 2018 Fix -M to ensure fields that contain '0' are transfered.
+# 0.49.00 - June 12, 2018 Add simple math operations over columns.
 #
 ####################################################################################
 
