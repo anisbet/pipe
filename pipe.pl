@@ -133,7 +133,7 @@ sub usage()
     print STDERR << "EOF";
 
     usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
-       -?cn:{opr}{c0,c1,...,cn}
+       -?{opr}:{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
        -14abBcvwzZ{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
@@ -177,7 +177,7 @@ Example: cat file.lst | pipe.pl -c"c0"
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
- -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
+ -?{opr}:{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
                   'mul', and 'div'. The order of columns is important for subtraction and division 
                   since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
                   The result always appears in column 0 (c0), see -o to re-order. See -y to 

@@ -58,7 +58,7 @@ cat file | pipe.pl -t'c0' | pipe.pl -o'c1,c0'
 Complete list of flags
 ----------------------
 ```
- -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
+ -?{opr}:{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
                   'mul', and 'div'. The order of columns is important for subtraction and division 
                   since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
                   The result always appears in column 0 (c0), see -o to re-order. See -y to 
