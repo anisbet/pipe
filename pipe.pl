@@ -536,7 +536,7 @@ sub read_requested_qualified_columns
 	{
 		# Columns are designated with 'c' prefix to get over the problem of perl not recognizing
 		# '0' as a legitimate column number.
-		if ( $colNum =~ m/c\d{1,}/i )
+		if ( $colNum =~ m/^c\d{1,}/i )
 		{
 			$colNum =~ s/[C|c]//; # get rid of the 'c' because it causes problems later.
 			# We now allow other characters, and possibly ':' so split the line on the first one only.
@@ -557,7 +557,7 @@ sub read_requested_qualified_columns
 			$nameQualifier[1] =~ s/\\,/,/g;
 			$hash_ref->{$nameQualifier[0]} = trim( $nameQualifier[1] );
 		}
-		elsif ( $colNum =~ m/any/  && grep /($KEYWORD_ANY)/, @allowed_keywords )
+		elsif ( $colNum =~ m/any/ && grep /($KEYWORD_ANY)/, @allowed_keywords )
 		{
 			my @nameQualifier = ();
 			if ( $colNum =~ m/:/ )
@@ -572,10 +572,30 @@ sub read_requested_qualified_columns
 			}
 			@list = ();
 			push( @list, trim( $nameQualifier[0] ) );
-			# Add the qualifier to the hash reference too for reference later.
-			# The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
+			## Add the qualifier to the hash reference too for reference later.
+			## The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
 			$nameQualifier[1] =~ s/\\,/,/g;
 			$hash_ref->{$KEYWORD_ANY} = trim( $nameQualifier[1] );
+			last;
+		}
+		elsif ( $colNum =~ m/(add|sub|mul|div)/i )
+		{
+			my ( $operator, $column_string ) = '';
+			if ( $colNum =~ m/:/ )
+			{
+				$operator      = $`;
+				$column_string = $';
+			}
+			# printf STDERR "--> '%s' and '%s' <--\n", $operator, $column_string;
+			if ( not $operator || not $column_string )
+			{
+				print STDERR "*** Syntax error at '$colNum'. ***\n";
+				exit();
+			}
+			@list = ();
+			push( @list, $column_string );
+			push( @list, @cols[1 .. @cols -1] );
+			$hash_ref->{$operator} = 0.0; # Incase none of the columns exist or all have non-numeric values.
 			last;
 		}
 		else
@@ -2406,9 +2426,10 @@ sub inc_line_by_value( $ )
 sub do_math( $ )
 {
 	my $line    = shift;
-	my $result  = 0.0;
+	my $count_numeric_columns = 0;
 	foreach my $colIndex ( @MATH_COLUMNS )
 	{
+		$colIndex =~ s/c//i;
 		if ( defined @{ $line }[ $colIndex ] )
 		{
 			# Guard against values that can't be operated on mathematically.
@@ -2417,50 +2438,44 @@ sub do_math( $ )
 				printf STDERR "* warning can't use '%s' for computation.\n", @{ $line }[ $colIndex ] if ( $opt{'D'} );
 				next;
 			}
-			my $exp = $math_ref->{'add'}; # TODO FIX ME.
-			# The first 2 characters determine the type of comparison.
-			$exp =~ m/(add|sub|mul|div|mod)/;
-			printf STDERR "OP:'%s'.\n", $exp;
-			exit();
-			if ( ! $& )
+			# You have to store the first value @line[0] if it exists and is numeric to pre populate the result for mul, div, sub.
+			if ( $count_numeric_columns == 0 )
 			{
-				printf STDERR "*** error operation '%s' not supported yet.\n", $exp;
-				usage();
+				$math_ref->{'result'} = @{ $line }[ $colIndex ];
+				$count_numeric_columns++;
+				next;
 			}
-			# my $mathOperands = $';
-			# we are expecting a col definition like (c|C)\d+, so get that column number
-			my @mathOperandIndexes = split ',(\s+)?', $'; # ["c0","c1","c2"]
-			my $mathOperator = $&;
-			# Change compare value to the value in a different column (if exists) and requested.
-			for my $mathOperand ( @mathOperandIndexes )
+			if ( exists $math_ref->{'add'} )
 			{
-				# Clean off the 'c'
-				$mathOperand =~ s/c//i;
-				if ( $mathOperand =~ m/^\d+$/ )
-				{
-					if ( defined @{ $line }[ $mathOperand ] )
-					{
-						# $mathOperand = @{ $line }[ $mathOperand ];
-					}
-					else
-					{
-						printf STDERR "* warn requested column in '%s' doesn't exist.\n", $mathOperand if ( $opt{'D'} );
-						return $result;
-					}
-				}
-				else
-				{
-					printf STDERR "*** error malformed column requested '%s'.\n", $mathOperand;
-					exit();
-				}
+				$math_ref->{'result'} += @{ $line }[ $colIndex ];
 			}
-			# foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
-			# {
-				# return 1 if( test_condition_cmp( $mathOperator, $mathOperands, @{ $line }[ $colIndex ] ) );
-			# }
-			return $result;
+			elsif ( exists $math_ref->{'sub'} )
+			{
+				$math_ref->{'result'} -= @{ $line }[ $colIndex ];
+			}
+			elsif ( exists $math_ref->{'mul'} )
+			{
+				$math_ref->{'result'} *= @{ $line }[ $colIndex ];
+			}
+			elsif ( exists $math_ref->{'div'} )
+			{	
+				if ( @{ $line }[ $colIndex ] == 0 )
+				{
+					printf STDERR "*** error divide by 0 error.\n" if ( $opt{'D'} );
+					next;
+				}
+				$math_ref->{'result'} /= @{ $line }[ $colIndex ];
+			}
+			else
+			{
+				printf STDERR "*** error unsupported operation '%s'.\n", keys %{$math_ref};
+				exit();
+			}
+			$count_numeric_columns++;
 		}
 	}
+	# Place the result in the '0'th field.
+	unshift @{ $line }, $math_ref->{'result'};
 }
 
 # Computes the difference between this line and the previous and outputs that difference.
