@@ -58,6 +58,11 @@ cat file | pipe.pl -t'c0' | pipe.pl -o'c1,c0'
 Complete list of flags
 ----------------------
 ```
+ -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
+                  'mul', and 'div'. The order of columns is important for subtraction and division 
+                  since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
+                  The result always appears in column 0 (c0), see -o to re-order. See -y to 
+                  change the precision of the result. -? supports math over multiple columns.
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
                   Using -M will allow columns of values from another file to be output if they
                   match an arbitrary, but specific column read from STDIN.
@@ -312,6 +317,7 @@ The order of operations is as follows:
   -r - Randomize line output.
   -s - Sort columns.
   -v - Average numerical values in selected columns.
+  -? - Perform math operations on columns.
   -1 - Increment value in specified columns.
   -3 - Increment value in specified columns by a specific step.
   -4 - Output difference between this and previous line.
@@ -382,6 +388,17 @@ user    1m30.786s
 sys     1m8.059s
 ```
 
+== Simple math operations over columns ==
+```
+$ echo "1|2|0|10|1" | pipe.pl -?sub:c0,c1,c2,c3,c4
+-12|1|2|0|10|1
+$ echo "1|2|0|10|1" | pipe.pl -?add:c0,c1,c2,c3,c4
+14|1|2|0|10|1
+$ echo "1|2|0|10|1" | pipe.pl -?mul:c0,c1,c2,c3,c4
+0|1|2|0|10|1
+$ echo "1|2|0|10|1" | pipe.pl -?div:c0,c1,c2,c3,c4
+0.05|1|2|0|10|1
+```
 
 == Matching values between files
 Sometimes it's handy to be able to reference values in another file and append them to the output conditionally. An example is a list of catalog keys and titles in one file, while the data coming in from STDIN contains an item key. If we wanted to append the title to the data from STDIN referencing the titles from file from -0, we can do that with the -M switch and -0 switch.

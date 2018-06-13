@@ -177,13 +177,11 @@ Example: cat file.lst | pipe.pl -c"c0"
 pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
 All column references are 0 based. Line numbers start at 1.
 
- -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Currently only
-                  'div', 'mul', 'add', 'sub' are supported. Division and subtraction
-                  only work on the first column after the operator and dot '.' delimiter.
-                  All results are output at the start of the line like -A and -J.
-                  Example: divide c1 by c0, '2|10' -?c1:div.c0 => 5 2|10'.
-                  Example: add c0, c2, c3, and c1, '1|2|3|4|5' -?c0:add.c2,c3,c1 => '10 1|2|3|4|5'.
-                  Use -P to add a pipe delimiter instead of a space.
+ -?cn:{opr}{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
+                  'mul', and 'div'. The order of columns is important for subtraction and division 
+                  since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
+                  The result always appears in column 0 (c0), see -o to re-order. See -y to 
+                  change the precision of the result. -? supports math over multiple columns.
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
                   Using -M will allow columns of values from another file to be output if they
                   match an arbitrary, but specific column read from STDIN.
