@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.00 - June 12, 2018 Add simple math operations over columns.
+# 0.49.01 - June 14, 2018 Fix simple math precision display.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.00};
+my $VERSION           = qq{0.49.01};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -2474,7 +2474,7 @@ sub do_math( $ )
 		$count_numeric_columns++;
 	}
 	# Place the result in the '0'th field.
-	unshift @{ $line }, $result;
+	unshift @{ $line }, get_number_format( $result, 0, $PRECISION );
 }
 
 # Computes the difference between this line and the previous and outputs that difference.
