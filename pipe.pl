@@ -593,9 +593,9 @@ sub read_requested_qualified_columns
 				exit();
 			}
 			@list = ();
-			push( @list, $column_string );
+			push( @list, trim( $column_string ) );
 			push( @list, @cols[1 .. @cols -1] );
-			$hash_ref->{$operator} = 0.0; # Incase none of the columns exist or all have non-numeric values.
+			$hash_ref->{$operator} = 1;
 			last;
 		}
 		else
@@ -2427,6 +2427,7 @@ sub do_math( $ )
 {
 	my $line    = shift;
 	my $count_numeric_columns = 0;
+	my $result  = 0.0;
 	foreach my $colIndex ( @MATH_COLUMNS )
 	{
 		$colIndex =~ s/c//i;
@@ -2441,21 +2442,21 @@ sub do_math( $ )
 			# You have to store the first value @line[0] if it exists and is numeric to pre populate the result for mul, div, sub.
 			if ( $count_numeric_columns == 0 )
 			{
-				$math_ref->{'result'} = @{ $line }[ $colIndex ];
+				$result = @{ $line }[ $colIndex ];
 				$count_numeric_columns++;
 				next;
 			}
 			if ( exists $math_ref->{'add'} )
 			{
-				$math_ref->{'result'} += @{ $line }[ $colIndex ];
+				$result += @{ $line }[ $colIndex ];
 			}
 			elsif ( exists $math_ref->{'sub'} )
 			{
-				$math_ref->{'result'} -= @{ $line }[ $colIndex ];
+				$result -= @{ $line }[ $colIndex ];
 			}
 			elsif ( exists $math_ref->{'mul'} )
 			{
-				$math_ref->{'result'} *= @{ $line }[ $colIndex ];
+				$result *= @{ $line }[ $colIndex ];
 			}
 			elsif ( exists $math_ref->{'div'} )
 			{	
@@ -2464,18 +2465,18 @@ sub do_math( $ )
 					printf STDERR "*** error divide by 0 error.\n" if ( $opt{'D'} );
 					next;
 				}
-				$math_ref->{'result'} /= @{ $line }[ $colIndex ];
+				$result /= @{ $line }[ $colIndex ];
 			}
 			else
 			{
 				printf STDERR "*** error unsupported operation '%s'.\n", keys %{$math_ref};
 				exit();
 			}
-			$count_numeric_columns++;
 		}
+		$count_numeric_columns++;
 	}
 	# Place the result in the '0'th field.
-	unshift @{ $line }, $math_ref->{'result'};
+	unshift @{ $line }, $result;
 }
 
 # Computes the difference between this line and the previous and outputs that difference.
