@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.03 - June 29, 2018 Fix so divide by 0 errors report 'NaN', not default value.
+# 0.49.04 - June 29, 2018 Fix -m empty word join initialization error.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.02};
+my $VERSION           = qq{0.49.04};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -1249,14 +1249,15 @@ sub apply_mask( $$ )
         }
         elsif ( $mask_char eq '#' )
         {
-            push @word, shift @chars;
+            push @word, shift @chars if ( @chars );
         }
         else
         {
             push @word, $mask_char;
         }
     }
-    push @word, @chars if ( $mask_char eq '#' );
+    # chomp( @chars );
+    push @word, @chars if ( @chars and $mask_char eq '#' );
     return join '', @word;
 }
 
