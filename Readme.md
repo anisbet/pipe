@@ -64,18 +64,7 @@ Complete list of flags
                   The result always appears in column 0 (c0), see -o to re-order. See -y to 
                   change the precision of the result. -? supports math over multiple columns.
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
-                  Using -M will allow columns of values from another file to be output if they
-                  match an arbitrary, but specific column read from STDIN.
-                  Thus for all rows from STDIN, a given column's value will be compared 
-                  to an arbitrary, but specific column in the file read with -0. 
-                  If the 2 columns match (optionally with -I and -N), the true value(s)
-                  are appended to the current line, and if not an optional set of literal(s) 
-                  will be appended. Multiple values of each are separated by '+' characters.
-                  If there is no match, no literal is specified, and -V is used 
-                  a zero value (0) is used.
-                  Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
-                  Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
-                  Both files must use the same column delimiter, and can be defined with -W.
+                  See -M for additional features relating data from STDIN and another file.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
                   strings. Example: 1 -1c0 => 2, aaa -1c0 => aab, zzz -1c0 => aaaa.
                   You can optionally change the increment step by a given value.
@@ -130,7 +119,7 @@ Complete list of flags
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}: Change the case of a value in a column
+ -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
                   to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
                   An extended set of commands is available starting in version 0.48.00. 
                   These include (spc) to replace multiple white spaces with a single x20
@@ -141,7 +130,7 @@ Complete list of flags
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
- -E{c0:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
+ -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
                   value the field must have to be replaced by r, and optionally
@@ -156,9 +145,9 @@ Complete list of flags
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F{c0:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
- -g{[any|c0:regex,...}: Searches the specified field for the Perl regular expression.
-                  Example data: 1481241, -g"c0:241  produces '1481241'. Use
+ -F{cn:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
+                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
@@ -173,10 +162,10 @@ Complete list of flags
                   If the first column's regex is empty, the value of the first column is used
                   as the regex in subsequent columns' comparisons. "a|b|c|b|d" '-gc1:,c3:' => "a|b|c|b|d"
                   succeeds because the value in c1 matches the value in c3. Behaviour changes
-                  if used in combination with -X and -Y. The -g outputs just the frame that is
-                  bounded by -X and -Y, but if -g matches, only the matching frame is output
-                  to STDERR, while only the -g that matches within the frame is output to STDOUT.
- -G{[any|c0:regex,...}: Inverse of -g, and can be used together to perform AND operation as
+                  if used in combination with -X and -Y. The -g outputs just the frame that is 
+                  bounded by -X and -Y, but if -g matches, only the matching frame is output 
+                  to STDERR, while only the -g that matches within the frame is output to STDOUT. 
+ -G{[any|cn]:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
@@ -192,17 +181,17 @@ Complete list of flags
                   providing a sum over group-like functionality. Does not work if -A is selected
                   (see -A).
  -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
-                  The existing value of the column is stored in an internal variable called '$value'
+                  The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
-                  "13|world"    => -kc0:'$a=3; $b=10; $value = $b + $a;'
-                  "hello|worle" => -kc1:'$value++;'
+                  "13|world"    => -kc0:'\$a=3; \$b=10; \$value = \$b + \$a;'
+                  "hello|worle" => -kc1:'\$value++;'
                   Note use single quotes around your script.
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks instead of the current delimiter between columns (default '|').
                   Turns all columns into rows.
  -l{[any|c0]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
-                  produces 'abcPefP'. 3 white space characters are supported '\s', '\t',
-                  and '\n'. "Hello" -lc0:"e.\t" => 'H       llo'
+                  produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
+                  and '\\n'. "Hello" -lc0:"e.\\t" => 'H       llo'
                   Can be made case insensitive with '-I'. Quote all expressions.
  -L{[[+|-]?n-?m?|skip n]}: Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
                   Examples: '+5', first 5 lines, '-5' last 5 lines, '7-', from line 7 on,
@@ -211,7 +200,7 @@ Complete list of flags
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the -L flag.
- -m{c0:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
+ -m{cn:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
                   If the last character is either '_' or '#', then it will be repeated until
@@ -222,9 +211,19 @@ Complete list of flags
                   Example data: E201501051855331663R,  -m"c0:_####/##/## ##:##:##_"
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
-                  Use '' to escape either '_', ',' or '#'.
- -M             : Deprecated, but does function in conjunction with -0 (zero). See above.
- -n{any|c0,c1,...cn}: Normalize the selected columns, that is, removes all non-word characters
+                  Use '\' to escape either '_', ',' or '#'.
+ -M             : Allows columns of values read from STDIN to be compared to any columns' values
+                  from another file using -0. Thus for all rows, and any column from STDIN,
+                  if a specific column from -0 matches, any columns from the -0 input line are
+                  appended as the last column, and written to STDOUT.
+                  Multiple columns from -0 input are delimited with '+'. 
+                  If no lines from -0 input match, an optional literal is appended as the
+                  last column. Use -V if you want zero (0) used as a literal.
+                  Example: cat {file1} => -0{file2} -M"c1:c0?c1.'None'"
+                  Compare file1, c1 to file2, c0, and if they match output file2, c1 else 'None'.
+                  Both files must use the same column delimiter, and any use of -W will
+                  apply to both. Matching behaviour can also be modified with -I and -N.
+ -n{[any|cn],...}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
                   -I switches for more information.
@@ -240,13 +239,13 @@ Complete list of flags
                   column to the last column in the line. 'last' will output the last column in a row.
                   'reverse' reverses the column order.
                   Once a keyword is encountered, any additional column output request is ignored.
- -O{any|c0,c1,...cn}: Merge columns. The first column is the anchor column, any others are appended to it
+ -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
  -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
-                  '.' character. '123' -pc0:"-5", -pc0:"-5.\s" both do the same thing: '123  '. Literal
+                  '.' character. '123' -pc0:"-5", -pc0:"-5.\\s" both do the same thing: '123  '. Literal
                   digit(s) can be used as padding. '123' -pc0:"-5.0" => '12300'. Spaces are qualified 
-                  with either '\s', '\t', or '\n'. Quote all expressions.
+                  with either '\\s', '\\t', or '\\n'. Quote all expressions.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -269,13 +268,13 @@ Complete list of flags
                   from the end of data can be specified with syntax (n - m), where 'n' is a literal
                   and represents the length of the data, and 'm' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t{any|c0,c1,...cn}: Trim the specified columns of white space front and back.
+ -t{[any|cn],...}: Trim the specified columns of white space front and back.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
- -u{any|c0,c1,...cn}: Encodes strings in specified columns into URL safe versions.
+ -u{[any|cn],...}: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
                   during the comparison. With -C, non-numeric value tests always fail, that is
@@ -284,14 +283,14 @@ Complete list of flags
  -V             : Validate that the output has the same number of columns as the input.
  -w{c0,c1,...cn}: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "^", and " ".
+ -W{delimiter}  : Break on specified delimiter instead of '|' pipes, ie: "\^", and " ".
  -x             : This (help) message.
- -X{any|c0:regex,...}: Like the -g, but once a line matches all subsequent lines are also
+ -X{[any|cn]:regex,...}: Like the -g, but once a line matches all subsequent lines are also
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
  -y{precision}  : Controls precision of computed floating point number output.
- -Y{any|c0:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
+ -Y{[any|cn]:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. See -i.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
 ```
