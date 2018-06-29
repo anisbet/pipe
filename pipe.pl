@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.02 - June 29, 2018 Fix bug in -m that doesn't mutate empty fields.
+# 0.49.03 - June 29, 2018 Fix so divide by 0 errors report 'NaN', not default value.
 #
 ####################################################################################
 
@@ -2471,9 +2471,12 @@ sub do_math( $ )
                 if ( @{ $line }[ $colIndex ] == 0 )
                 {
                     printf STDERR "*** error divide by 0 error.\n" if ( $opt{'D'} );
-                    next;
+                    $result = "NaN";
+                } 
+                else
+                {
+                    $result /= @{ $line }[ $colIndex ];
                 }
-                $result /= @{ $line }[ $colIndex ];
             }
             else
             {
