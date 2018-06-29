@@ -182,6 +182,9 @@ All column references are 0 based. Line numbers start at 1.
                   since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
                   The result always appears in column 0 (c0), see -o to re-order. See -y to 
                   change the precision of the result. -? supports math over multiple columns.
+                  Divide by zero will result in a result of 'NaN'. If a column contains non-numeric
+                  data it is ignored during the calculation, so '1|cat' -?div:c0,c1 => '1', but 
+                  '1|0' -?div:c0,c1 => 'NaN'
  -0{file_name}  : Name of a text file to use as input as alternative to taking input on STDIN.
                   See -M for additional features relating data from STDIN and another file.
  -1{c0,c1,...cn}: Increment the value stored in given column(s). Works on both integers and
