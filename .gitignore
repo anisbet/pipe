@@ -1,2 +1,8 @@
 *.lst
 *.txt
+*.flat
+*.log
+*.data
+*.html
+*.csv
+*.cfg
