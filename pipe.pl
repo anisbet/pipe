@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.04 - June 29, 2018 Fix -m empty word join initialization error.
+# 0.49.05 - July 19, 2018 Fix empty titles output blank title in -TCSV.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.04};
+my $VERSION           = qq{0.49.05};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -2950,7 +2950,7 @@ sub table_output( $ )
                 $out_string .= sprintf "\"%s\",", trim( $title );
             }
             chop( $out_string ); # Take the last ',' off the end of the string.
-            printf "%s\n", $out_string;
+            printf "%s\n", $out_string if ( $out_string );
         }
         # No footer for CSV.
     }
