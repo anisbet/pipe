@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.05 - July 19, 2018 Fix empty titles output blank title in -TCSV.
+# 0.49.06 - July 23, 2018 -W'CSV' to remove CSV formatting.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.05};
+my $VERSION           = qq{0.49.06};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -141,7 +141,7 @@ sub usage()
        -6{cn:[char],...}
        -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
-       -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...}
+       -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...}
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
@@ -241,7 +241,7 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
+ -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...]}: Change the case of a value in a column
                   to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
                   An extended set of commands is available starting in version 0.48.00. 
                   These include (spc) to replace multiple white spaces with a single x20
@@ -252,6 +252,7 @@ All column references are 0 based. Line numbers start at 1.
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
+                  NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -1968,6 +1969,14 @@ sub apply_casing( $$ )
         foreach my $normal ( @normal_cmds )
         {
             my $exps = '\\'.$normal;
+            if ( $normal =~ m/Q/ )
+            {
+                $exps = '\"';
+            }
+            elsif ( $normal =~ m/q/ )
+            {
+                $exps = '\'';
+            }
             $field =~ s/($exps)//g;
         }
     }
@@ -1991,7 +2000,7 @@ sub modify_case_line( $ )
             $exp =~ m/^(uc|lc|mc|us|spc|normal_)/i;
             if ( ! $& )
             {
-                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d)) but got '%s'.\n", $case_ref->{ $i };
+                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d,q|Q)) but got '%s'.\n", $case_ref->{ $i };
                 usage();
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );

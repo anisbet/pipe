@@ -122,7 +122,7 @@ Complete list of flags
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d],...]}: Change the case of a value in a column
+ -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...]}: Change the case of a value in a column
                   to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
                   An extended set of commands is available starting in version 0.48.00. 
                   These include (spc) to replace multiple white spaces with a single x20
@@ -133,6 +133,7 @@ Complete list of flags
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
+                  NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
