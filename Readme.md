@@ -45,6 +45,7 @@ Things pipe.pl can do
 * Take input from named file (see -0).
 * Compute the delta between lines.
 * Histogram values within columns.
+* Math over columns.
 
 A note on usage; because of the way this script works it is quite possible to produce mystifying results. For example, failing to remember that ordering comes before trimming may produce perplexing results. You can do multiple transformations, but if you are not sure you can pipe output from one process to another pipe process. If you order column so that column 1 is output then column 0, but column 0 needs to be trimmed you would have to write:
 ```
@@ -122,12 +123,12 @@ Complete list of flags
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...]}: Change the case of a value in a column
-                  to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
-                  An extended set of commands is available starting in version 0.48.00. 
-                  These include (spc) to replace multiple white spaces with a single x20
-                  character, and (normal_{char}) which allows the removal of classes 
-                  of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
+ -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]]}: Change the case of a value 
+                  in a column to upper case (uc), lower case (lc), mixed case (mc), or
+                  underscore (us). An extended set of commands is available starting in version
+                  0.48.00. These include (spc) to replace multiple white spaces with a
+                  single x20 character, and (normal_{char}) which allows the removal of 
+                  classes of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
                   removes all non-digits from the input string. Different classes are
                   supported based on Perl's regex class qualifiers W,w word, D,d digit,
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
@@ -363,33 +364,6 @@ The order of operations is as follows:
   -j - Remove last delimiter on the last line of data output.
   -N - Normalize summaries, keys before comparisons, abs(result). Strips formatting.
 ```
-## Some performance data.
-Running on a virtualized Ubuntu machine where the native ```wc``` runs at:
-```
-$ time cat sva.csv | wc -l
-3168027
-
-real    0m0.472s
-user    0m0.028s
-sys     0m0.260s
-```
-Running the filtering commands:
-```
-$ time cat sva_all_logs.log | pipe.pl -W'\s+|Ntc\s|dxxx' -oc0,c1,c3,c4,c5 -mc1:#####_ >sva.csv.pipe     
-real    1m57.515s
-user    1m52.612s
-sys     0m1.881s
-```
-Then sorting the output of that file into a CSV.
-```
-$ time cat sva.csv.pipe | pipe.pl -sc0,c1 -TCSV:"Date,Time,Channel,Code,Txt" -zc0 -cc0 >sva.csv
-==     count
- c0: 3168026
-
-real    4m13.818s
-user    1m30.786s
-sys     1m8.059s
-```
 
 == Simple math operations over columns ==
 ```
@@ -421,6 +395,7 @@ $ head a b
 
 ==> b <==
 1000048|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain|
+$
 $ cat a | pipe.pl -0b -Mc0:c0?c1
 1000048|6|15|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
 1000048|10|2|The Berenstain Bears and mama for mayor! / Jan & Mike Berenstain
@@ -1551,7 +1526,12 @@ Linewithlotsofs
 $ echo " 23)  Line with     lots of  #'s!" | ./pipe.pl -ec0:NORMAL_D
 23
 ```
-
+=== Remove CSV formatting 
+If you have a CSV as input and want to convert it back to pipe delimited format for processing by the following.
+```
+$ cat file.csv | pipe.pl -W, -eany:normal_Q 
+```
+  
 
 Using -E to replace fields conditionally.
 -----------------------------------------

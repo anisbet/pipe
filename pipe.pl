@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.06 - July 23, 2018 -W'CSV' to remove CSV formatting.
+# 0.49.07 - July 23, 2018 -e can now normalize to remove quotes and uses 'any' keyword.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.06};
+my $VERSION           = qq{0.49.07};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -141,7 +141,7 @@ sub usage()
        -6{cn:[char],...}
        -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
-       -e{c0:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...}
+       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
@@ -241,12 +241,12 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q],...]}: Change the case of a value in a column
-                  to upper case (uc), lower case (lc), mixed case (mc), or underscore (us).
-                  An extended set of commands is available starting in version 0.48.00. 
-                  These include (spc) to replace multiple white spaces with a single x20
-                  character, and (normal_{char}) which allows the removal of classes 
-                  of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
+ -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]]}: Change the case of a value 
+                  in a column to upper case (uc), lower case (lc), mixed case (mc), or
+                  underscore (us). An extended set of commands is available starting in version
+                  0.48.00. These include (spc) to replace multiple white spaces with a
+                  single x20 character, and (normal_{char}) which allows the removal of 
+                  classes of characters. For example 'NORMAL_d' removes all digits, 'NORMAL_D'
                   removes all non-digits from the input string. Different classes are
                   supported based on Perl's regex class qualifiers W,w word, D,d digit,
                   and S,s whitespace. Multiple qualifiers can be separated with a '|'
@@ -1990,6 +1990,14 @@ sub modify_case_line( $ )
 {
     my $line = shift;
     my $i    = 0;
+    # We fill any line field index with the same normalization values to ensure 'any' is honored reliably and cheaply.
+    if ( exists $case_ref->{$KEYWORD_ANY} )
+    {
+        for ( $i = 0; $i < scalar( @{ $line } ); $i++ )
+        {
+            $case_ref->{ $i } = $case_ref->{$KEYWORD_ANY} if ( not exists $case_ref->{ $i } );
+        }
+    }
     for ( $i = 0; $i < scalar( @{ $line } ); $i++ )
     {
         if ( exists $case_ref->{ $i } )
@@ -3401,9 +3409,9 @@ sub init
         build_encoding_table();
         @U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
     }
-    @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )   if ( $opt{'C'} );
+    @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )    if ( $opt{'C'} );
     @MATH_COLUMNS      = read_requested_qualified_columns( $opt{'?'}, $math_ref )        if ( $opt{'?'} );
-    @CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref )        if ( $opt{'e'} );
+    @CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref, $KEYWORD_ANY )        if ( $opt{'e'} );
     @REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
     @NOT_MATCH_COLUMNS = read_requested_qualified_columns( $opt{'G'}, $not_match_ref, $KEYWORD_ANY )   if ( $opt{'G'} );
     @MATCH_COLUMNS     = read_requested_qualified_columns( $opt{'g'}, $match_ref, $KEYWORD_ANY )       if ( $opt{'g'} );
