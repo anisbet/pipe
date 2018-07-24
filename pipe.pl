@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.07 - July 23, 2018 -e can now normalize to remove quotes and uses 'any' keyword.
+# 0.49.08 - July 24, 2018 -C can now accept ranges.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.07};
+my $VERSION           = qq{0.49.08};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -139,7 +139,7 @@ sub usage()
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
        -6{cn:[char],...}
-       -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}
+       -C{[any|cn]:(gt|ge|eq|le|lt|rg{n+m})|cc(gt|ge|eq|le|lt)cm,...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
        -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
        -E[c0:[r|?c.r[.e]],...}
@@ -223,10 +223,10 @@ All column references are 0 based. Line numbers start at 1.
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}: Compare column and output line if value
-                  in column is greater than (gt), less than (lt), equal to (eq), greater than
-                  or equal to (ge), or less than or equal to (le) the value that follows.
-                  The following value can be numeric, but if it isn't the value's
+ -C{[any|cn]:(gt|ge|eq|le|lt|rg{n+m})|cc(gt|ge|eq|le|lt)cm,...}: Compare column and output line
+                  if value in column is greater than (gt), less than (lt), equal to (eq),
+                  greater than or equal to (ge), or less than or equal to (le) the value that
+                  follows. The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
@@ -237,6 +237,14 @@ All column references are 0 based. Line numbers start at 1.
                   operator, and 'c0' the column who's value is used for comparison. 
                   "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
                   than or equal to the value in c1, which is true, so the line is output.
+                  A range can be specified with the 'rg' modifier. Once set only numeric
+                  values that are greater or equal to the lower bound, and less than equal
+                  to the upper bound will be output. The range is separated with a '+'
+                  character, so outputting rows that have value within range between 
+                  0 and 5 is specified with -Cany:rg0+5. To output rows with values
+                  between -100 and -50 is specified with -Cany:rg-100+-50.
+                  Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
+                  between -5 and 5 inclusive to be output.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -1773,7 +1781,22 @@ sub test_condition_cmp( $$$ )
     my $value       = shift;
     my $result      = 0;
     printf STDERR "'%s' '%s' '%s'.\n", $cmpValue, $cmpOperator, $value if ( $opt{'D'} );
-    if ( $value =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ && $cmpValue =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+    if ( $cmpOperator =~ m/^rg$/i )
+    {
+        my @range = grep { /\S/ } split( /\+/, $cmpValue );
+        if ( scalar @range != 2 )
+        {
+            printf STDERR "**error, malformed range operator '%s'.\n", $cmpValue;
+            exit(1);
+        }
+        if ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+        {
+            printf STDERR "**error, range requires both start and end to be integers, but got '%s'.\n", $cmpValue;
+            exit(1);
+        }
+        $result = 1 if ( $value >= $range[0] && $value <= $range[1] );
+    }
+    elsif ( $value =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ && $cmpValue =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
     {
         if ( $cmpOperator eq 'eq' )
         {
@@ -1837,7 +1860,7 @@ sub test_condition_cmp( $$$ )
     return $result;
 }
 
-# Tests the values in a given field using lt, gt, eq, le, ge.
+# Tests the values in a given field using lt, gt, eq, le, ge, rg.
 # param:  String of line data - pipe-delimited.
 # return: line if the specified condition was met and nothing if it didn't.
 sub test_condition( $ )
@@ -1848,13 +1871,13 @@ sub test_condition( $ )
     {
         my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
         # The first 2 characters determine the type of comparison.
-        $exp =~ m/(cc)?(lt|gt|eq|ge|le)/;
+        $exp =~ m/(cc)?(lt|gt|eq|ge|le|rg)/;
         if ( ! $& )
         {
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
             usage();
         }
-        my $cmpValue    = $';
+        my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0,197'
         my $cmpOperator = $&;
         # Change compare value to the value in a different column (if exists) and requested.
         if ( $exp =~ m/^cc/ )
@@ -1892,7 +1915,7 @@ sub test_condition( $ )
         {
             my $exp = lc $cond_cmp_ref->{$colIndex};
             # The first 2 characters determine the type of comparison.
-            $exp =~ m/(lt|gt|eq|ge|le)/;
+            $exp =~ m/(lt|gt|eq|ge|le|rg)/;
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};

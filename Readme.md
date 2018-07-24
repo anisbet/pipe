@@ -105,10 +105,10 @@ Complete list of flags
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{{[any|cn]:[cc](gt|ge|eq|le|lt)[[c]?n|value]},...}: Compare column and output line if value
-                  in column is greater than (gt), less than (lt), equal to (eq), greater than
-                  or equal to (ge), or less than or equal to (le) the value that follows.
-                  The following value can be numeric, but if it isn't the value's
+ -C{[any|cn]:(gt|ge|eq|le|lt|rg{n+m})|cc(gt|ge|eq|le|lt)cm,...}: Compare column and output line
+                  if value in column is greater than (gt), less than (lt), equal to (eq),
+                  greater than or equal to (ge), or less than or equal to (le) the value that
+                  follows. The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
@@ -119,6 +119,14 @@ Complete list of flags
                   operator, and 'c0' the column who's value is used for comparison. 
                   "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
                   than or equal to the value in c1, which is true, so the line is output.
+                  A range can be specified with the 'rg' modifier. Once set only numeric
+                  values that are greater or equal to the lower bound, and less than equal
+                  to the upper bound will be output. The range is separated with a '+'
+                  character, so outputting rows that have value within range between 
+                  0 and 5 is specified with -Cany:rg0+5. To output rows with values
+                  between -100 and -50 is specified with -Cany:rg-100+-50.
+                  Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
+                  between -5 and 5 inclusive to be output.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
