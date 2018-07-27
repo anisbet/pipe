@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.08 - July 24, 2018 -C can now accept ranges.
+# 0.49.09 - July 27, 2018 Fix hex conversion bug.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.08};
+my $VERSION           = qq{0.49.09};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -145,7 +145,7 @@ sub usage()
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
-       -F[c0:[x|b|d],...}
+       -F[c0:[x|b|d][.[x|b|d]],...}
        -gG{any|cn:[regex],...}
        -H[-q{positive integer}]
        -k{cn:expr,(...)}
@@ -161,20 +161,14 @@ sub usage()
        -W{delimiter}
        -y{precision}
        -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
-Usage notes for pipe.pl. This application is a accumulation of helpful scripts that
-performs common tasks on pipe-delimited files. The count function (-c), for
-example counts the number of non-empty values in the specified columns. Other
-functions work similarly. Stacked functions are operated on in alphabetical
-order by flag letter, that is, if you elect to order columns and trim columns,
-the columns are first ordered, then the columns are trimmed, because -o comes
-before -t. The exceptions to this rule are those commands that require the
-entire file to be read before operations can proceed (-d dedup, -r random, and
--s sort). Those operations will be done first then just before output the
-remaining operations are performed.
+       
+pipe.pl is the Swiss Army knife of text editing on the command line. Over time I have had
+to write and re-write scripts that do many of the operations in pipe.pl. This script wraps
+them with a 'simple' API that allows you to do things that are difficult or tedious 
+in higher languages.
 
-Example: cat file.lst | pipe.pl -c"c0"
-
-pipe.pl only takes input on STDIN. All output is to STDOUT. Errors go to STDERR.
+pipe.pl takes input on STDIN usually, but can take data from a file specified with -0 (zero).
+Generally pipe.pl outputs to STDOUT, however there are notable exceptions. See -5, and -i.
 All column references are 0 based. Line numbers start at 1.
 
  -?{opr}:{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
@@ -276,7 +270,11 @@ All column references are 0 based. Line numbers start at 1.
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F{cn:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -F[c0:[x|b|d][.[x|b|d]],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+                  A single radix defines the desired output and assumes decimal input.
+                  A second radix (delimited from the first with a '.') instructs pipe.pl
+                  to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
+                  the input as binary, and outputs hexidecimal: '1111' -Fc0:b.h => 'f'
  -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
@@ -2333,52 +2331,37 @@ sub replace( $$$$ )
 sub convert_format( $$ )
 {
     my ( $field, $format ) = @_;
-    if ( $field =~ m/^\d+$/ )
+    my @format_parts = split /\./, $format;
+    @format_parts = grep /\S/, @format_parts;
+    if ( $format_parts[1] )
     {
-        if ( $format eq 'b' )
+        if ( $format_parts[0] =~ /b/i )
         {
-            return sprintf( "%0.8b ", $field );
+            $field = oct( "0b" . $field );
         }
-        elsif ( $format eq 'h' )
+        elsif ( $format_parts[0] =~ /h/i )
         {
-            return sprintf( "%0.2x ", $field );
+            $field = oct( "0x" . $field );
         }
-        elsif ( $format eq 'd' )
-        {
-            return sprintf( "%d ", $field );
-        }
-        else
-        {
-            printf STDERR "** error unsupported option: '%s' \n", $format;
-            usage();
-        }
+        $format_parts[0] = $format_parts[1];
     }
-    my @characters = ();
-    my @newString  = ();
-    @characters = split //, $field;
-    while ( @characters )
+    if ( $format_parts[0] =~ /b/i )
     {
-        my $c = shift @characters;
-        if ( $format eq 'b' )
-        {
-            push @newString, sprintf( "%0.8b ", ord( $c ) );
-        }
-        elsif ( $format eq 'h' )
-        {
-            push @newString, sprintf( "%0.2x ", ord( $c ) );
-        }
-        elsif ( $format eq 'd' )
-        {
-            push @newString, sprintf( "%d ", ord( $c ) );
-        }
-        else
-        {
-            printf STDERR "** error unsupported option: '%s' \n", $format;
-            usage();
-        }
+        return sprintf( "%b", $field );
     }
-    chomp @newString;
-    return join '', @newString;
+    elsif ( $format_parts[0] =~ /h/i )
+    {
+        return sprintf( "%x", $field );
+    }
+    elsif ( $format_parts[0] =~ /d/i )
+    {
+        return sprintf( "%d", $field );
+    }
+    else
+    {
+        printf STDERR "** error unsupported option: '%s' \n", $format_parts[0];
+        exit(1);
+    }
 }
 
 # Formats the specified column to the desired base type.
@@ -2392,7 +2375,7 @@ sub format_radix( $ )
     {
         if ( defined $FORMAT_COLUMNS[ $i ] and exists $format_ref->{ $i } )
         {
-            printf STDERR "format expression: '%s' \n", $flip_ref->{$i} if ( $opt{'D'} );
+            printf STDERR "format expression: '%s' \n", $format_ref->{$i} if ( $opt{'D'} );
             @{ $line }[ $i ] = convert_format( @{ $line }[ $i ], lc ( $format_ref->{ $i } ) );
         }
     }

@@ -158,7 +158,11 @@ Complete list of flags
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F{cn:[x|b|d],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+ -F[c0:[x|b|d][.[x|b|d]],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
+                  A single radix defines the desired output and assumes decimal input.
+                  A second radix (delimited from the first with a '.') instructs pipe.pl
+                  to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
+                  the input as binary, and outputs hexidecimal: '1111' -Fc0:b.h => 'f'
  -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
