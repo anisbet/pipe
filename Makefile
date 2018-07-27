@@ -35,7 +35,6 @@ ARGS=-x
 .PHONY: put test production
 put: test production ${APP}
 	scp ${LOCAL}${APP} ${USER}@${TEST_SERVER}:${REMOTE}
-	ssh ${USER}@${TEST_SERVER} '${REMOTE}${APP} ${ARGS}'
 test:
 	perl -c ${APP}
 production: test
