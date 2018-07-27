@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.09 - July 27, 2018 Fix hex conversion bug.
+# 0.49.10 - July 27, 2018 Added 'c' to convert characters to bin, hex, or decimal.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.09};
+my $VERSION           = qq{0.49.10};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -145,7 +145,7 @@ sub usage()
        -E[c0:[r|?c.r[.e]],...}
        -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
-       -F[c0:[x|b|d][.[x|b|d]],...}
+       -F[c0:[b|c|d|h][.[b|c|d|h]],...}
        -gG{any|cn:[regex],...}
        -H[-q{positive integer}]
        -k{cn:expr,(...)}
@@ -270,10 +270,10 @@ All column references are 0 based. Line numbers start at 1.
                   Example: '0000' -f'c0:2.2' => '0020', '0100' -f'c0:1.A?1' => '0A00',
                   '0001' -f'c0:3.B?0.c' => '000c', finally
                   echo '0000000' | pipe.pl -f'c0:3?1.This.That' => 000That000.
- -F[c0:[x|b|d][.[x|b|d]],...}: Outputs the field in hexidecimal (x), binary (b), or decimal (d).
-                  A single radix defines the desired output and assumes decimal input.
-                  A second radix (delimited from the first with a '.') instructs pipe.pl
-                  to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
+ -F[c0:[b|c|d|h][.[b|c|d|h]],...}: Outputs the field in character (c), binary (b), decimal (d)
+                  or hexidecimal (h). A single radix defines the desired output and assumes
+                  decimal input. A second radix (delimited from the first with a '.') instructs
+                  pipe.pl to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
                   the input as binary, and outputs hexidecimal: '1111' -Fc0:b.h => 'f'
  -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
                   Example data: 1481241, -g"c0:241$" produces '1481241'. Use
@@ -2326,25 +2326,48 @@ sub replace( $$$$ )
 
 # Applies format to requested string.
 # param:  String for conversion.
-# param:  Conversion type 'b', 'h', 'd'.
+# param:  Conversion type 'c', 'b', 'h', 'd'.
 # return: String with the specified modifications.
 sub convert_format( $$ )
 {
     my ( $field, $format ) = @_;
-    my @format_parts = split /\./, $format;
-    @format_parts = grep /\S/, @format_parts;
+    my @format_parts       = split /\./, $format;
+    @format_parts          = grep /\S/, @format_parts;
+    # @format_parts can have 1 or 2 radix defined. If there is 1 the radix is
+    # the destination radix. If there are 2 the second is the destination radix
+    # and the source radix is the first value. If the user defines a from radix
+    # no matter what the data is, convert it to decimal, ready for the next step
+    # which will take the decimal number and convert it to the appropriate
+    # destination radix.
+    # To accomadate strings use an array.
+    my @in_array = ();
     if ( $format_parts[1] )
     {
         if ( $format_parts[0] =~ /b/i )
         {
-            $field = oct( "0b" . $field );
+            push @in_array, oct( "0b" . $field );
         }
         elsif ( $format_parts[0] =~ /h/i )
         {
-            $field = oct( "0x" . $field );
+            push @in_array, oct( "0x" . $field );
         }
+        elsif ( $format_parts[0] =~ /c/i )
+        {
+            @in_array = unpack( "C*", $field ); # Converts all values into ints.
+        }
+        else # Decimal
+        {
+            push @in_array, $field;
+        }
+        # Set the destination radix for the remainder of the calculation 
         $format_parts[0] = $format_parts[1];
     }
+    if ( $format_parts[0] =~ /c/i )
+    {
+        return pack( "C*", @in_array);
+    }
+    # So not a string so the value in $in_array[0] should be all there is to convert.
+    $field = join '', @in_array;
     if ( $format_parts[0] =~ /b/i )
     {
         return sprintf( "%b", $field );
