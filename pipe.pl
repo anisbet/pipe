@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.11 - July 30, 2018 Documentation update.
+# 0.49.20 - Sept 20, 2018 Add 'ne' to -C.
 #
 ####################################################################################
 
@@ -37,7 +37,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 
 ### Globals
-my $VERSION           = qq{0.49.11};
+my $VERSION           = qq{0.49.20};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -139,7 +139,7 @@ sub usage()
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
        -6{cn:[char],...}
-       -C{[any|cn]:(gt|ge|eq|le|lt|rg{n+m})|cc(gt|ge|eq|le|lt)cm,...}
+       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...}
        -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
        -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
        -E[c0:[r|?c.r[.e]],...}
@@ -215,10 +215,10 @@ All column references are 0 based. Line numbers start at 1.
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{[any|cn]:(gt|ge|eq|le|lt|rg{n+m})|cc(gt|ge|eq|le|lt)cm,...}: Compare column and output line
-                  if value in column is greater than (gt), less than (lt), equal to (eq),
-                  greater than or equal to (ge), or less than or equal to (le) the value that
-                  follows. The following value can be numeric, but if it isn't the value's
+ -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|lt|ne)cm,...}: Compare column and output line
+                  if value in column is greater than (gt), less than (lt), equal to (eq), greater than 
+                  or equal to (ge), not equal to (ne), or less than or equal to (le) the value
+                  that follows. The following value can be numeric, but if it isn't the value's
                   comparison is made lexically. All specified columns must match to return
                   true, that is -C is logically AND across columns. This behaviour changes
                   if the keyword 'any' is used, in that case test returns true as soon
@@ -1814,6 +1814,10 @@ sub test_condition_cmp( $$$ )
         {
             $result = 1 if ( $value >= $cmpValue );
         }
+        elsif ( $cmpOperator eq 'ne' )
+        {
+            $result = 1 if ( $value != $cmpValue );
+        }
         else
         {
             printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
@@ -1847,6 +1851,10 @@ sub test_condition_cmp( $$$ )
         {
             $result = 1 if ( $value ge $cmpValue );
         }
+        elsif ( $cmpOperator eq 'ne' )
+        {
+            $result = 1 if ( $value ne $cmpValue );
+        }
         else
         {
             printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
@@ -1856,7 +1864,7 @@ sub test_condition_cmp( $$$ )
     return $result;
 }
 
-# Tests the values in a given field using lt, gt, eq, le, ge, rg.
+# Tests the values in a given field using lt, gt, eq, le, ge, ne, rg.
 # param:  String of line data - pipe-delimited.
 # return: line if the specified condition was met and nothing if it didn't.
 sub test_condition( $ )
@@ -1867,7 +1875,7 @@ sub test_condition( $ )
     {
         my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
         # The first 2 characters determine the type of comparison.
-        $exp =~ m/(cc)?(lt|gt|eq|ge|le|rg)/;
+        $exp =~ m/(cc)?(lt|gt|eq|ge|le|ne|rg)/;
         if ( ! $& )
         {
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1911,7 +1919,7 @@ sub test_condition( $ )
         {
             my $exp = lc $cond_cmp_ref->{$colIndex};
             # The first 2 characters determine the type of comparison.
-            $exp =~ m/(lt|gt|eq|ge|le|rg)/;
+            $exp =~ m/(lt|gt|eq|ge|le|ne|rg)/;
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
