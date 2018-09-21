@@ -27,8 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.22 - Sept 21, 2018 Added use utf8. Fixed -C bug that failed to match 
-#           durging UC comparison.
+# 0.49.30 - Sept 21, 2018 Added keyword 'exclude' to -o to select all but
+#           specified columns. Force column number references to be numbers.
 #
 ####################################################################################
 
@@ -39,12 +39,14 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.22};
+my $VERSION           = qq{0.49.30};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
 my $KEYWORD_LAST      = qw{last};
 my $KEYWORD_REVERSE   = qw{reverse};
+my $KEYWORD_EXCLUDE   = qw{exclude};
+my $RELAX_o_EXCLUDE   = 0; # If exclude selected don't validate the line is the same length as the inverted number fields.
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -161,7 +163,7 @@ sub usage()
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
        -nOtu{[any|c0,c1,...,cn]}
-       -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}
+       -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}
        -p{cn:[+|-]countChar+,...}
        -q{n-th} [-Q{n}]
        -s[-IRN]{c0,c1,...,cn}
@@ -371,13 +373,14 @@ All column references are 0 based. Line numbers start at 1.
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}: Order the columns in a different order. 
+ -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}: Order the columns in a different order. 
                   Only the specified columns are output unless the keyword 'remaining', or 'continue'.  
                   The 'remaining' keyword outputs all columns that have not already been specified, 
                   in order. The 'continue' keyword outputs all the columns from the last specified 
                   column to the last column in the line. 'last' will output the last column in a row.
-                  'reverse' reverses the column order.
-                  Once a keyword is encountered, any additional column output request is ignored.
+                  'reverse' reverses the column order. Exclude will output all columns except those mentioned.
+                  The order of the columns cannot be altered with this keyword. Once a keyword is encountered 
+                  (except 'exclude'), any additional column output request is ignored.
  -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
@@ -644,7 +647,7 @@ sub parse_line_ranges( $ )
     my $range_str = shift;
     if ( $range_str =~ m/^skip/ )
     {
-        my $skip = $';
+        my $skip = $' + 0;
         if ( ! $skip or $skip !~ m/\d+/ )
         {
             printf STDERR "** error '-L' skip option takes an integer value greater than 0, supplied '%s'\n", $opt{'L'};
@@ -726,7 +729,7 @@ sub read_requested_columns
         if ( $colNum =~ m/[C|c]\d{1,}/ )
         {
             $colNum =~ s/c//i; # get rid of the 'c' because it causes problems later.
-            push( @list, trim( $colNum ) );
+            push( @list, (trim( $colNum ) + 0) );
         }
         elsif ( $colNum =~ m/^any$/i && grep /($KEYWORD_ANY)/, @allowed_keywords )
         {
@@ -761,6 +764,12 @@ sub read_requested_columns
             # use the last column.
             push( @list, $KEYWORD_REVERSE );
             last; # don't allow user to add more.
+        }
+        elsif ( $colNum =~ m/^exclude$/i && grep /($KEYWORD_EXCLUDE)/, @allowed_keywords )
+        {
+            # use the inverted set of columns.
+            # Add the keyword as the FIRST element, then order_line() will exclude the rest of the listed columns
+            unshift( @list, $KEYWORD_EXCLUDE );
         }
         else
         {
@@ -1021,13 +1030,30 @@ sub order_line( $ )
             @order_columns = reverse @order_columns;
             last;
         }
+        elsif ( $c =~ m/($KEYWORD_EXCLUDE)/i || $RELAX_o_EXCLUDE ) # 'exclude' is the first value.
+        {
+            # this value is set from the first time we encounter 'exclude'.
+            if ( $RELAX_o_EXCLUDE )
+            {
+                foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+                {
+                    push @order_columns, $colIndex if ( ! grep /($colIndex)/, @ORDER_COLUMNS );
+                }
+                last;
+            }
+            else # This is the first time we encounter 'exclude' so set the variable, and the next
+                 # iteration of the loop the set variable will cause the rest of the loop to 
+            {
+                $RELAX_o_EXCLUDE = 1;
+            }
+        }
         else # Standard column output ordering request, and all column ordering requests before 'remaining'.
         {
             push @order_columns, $c;
         }
         # To get here the value has to have been numeric, save it in case the continue keyword is used,
         # then use it to output all the columns from the last index to the end of the line.
-        $count = $c +1;
+        $count = $c +1 if ( ! $RELAX_o_EXCLUDE ); # The exclude keyword appears first, but ignore it.
     }
     if ( $opt{'D'} )
     {
@@ -1046,10 +1072,7 @@ sub order_line( $ )
         }
     }
     @{ $line } = ();
-    foreach my $v ( @newLine )
-    {
-        push @{ $line }, $v;
-    }
+    push @{ $line }, @newLine;
 }
 
 # Returns the key composed of the selected fields.
@@ -2307,7 +2330,14 @@ sub validate( $$$ )
     if ( $opt{'o'} ) # If you select -o this doesn't get done or extra fields are added even if you select 'V'
     {
         # But pad to the width of the columns selected -1, because pipe doesn't add a terminal pipe by default.
-        $count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
+        if ( $RELAX_o_EXCLUDE )
+        {
+            $count = ( scalar( split ( '\|', $original ) -1 )) - ( scalar @ORDER_COLUMNS -1 );
+        }
+        else
+        {
+            $count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
+        }
     }
     if ( $final_count < $count )
     {
@@ -3486,7 +3516,7 @@ sub init
     @NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} )                             if ( $opt{'B'} );
     @NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )               if ( $opt{'n'} );
     @MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )               if ( $opt{'O'} );
-    @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE, $KEYWORD_LAST, $KEYWORD_REVERSE )    if ( $opt{'o'} );
+    @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE, $KEYWORD_LAST, $KEYWORD_REVERSE, $KEYWORD_EXCLUDE )    if ( $opt{'o'} );
     @TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )               if ( $opt{'t'} );
     if ( $opt{'2'} )
     {
