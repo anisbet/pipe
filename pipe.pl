@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.20 - Sept 20, 2018 Add 'ne' to -C.
+# 0.49.30 - Sept 21, 2018 Added keyword 'exclude' to -o to select all but
+#           specified columns. Force column number references to be numbers.
 #
 ####################################################################################
 
@@ -35,14 +36,17 @@ use strict;
 use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
+use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.20};
+my $VERSION           = qq{0.49.30};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
 my $KEYWORD_LAST      = qw{last};
 my $KEYWORD_REVERSE   = qw{reverse};
+my $KEYWORD_EXCLUDE   = qw{exclude};
+my $RELAX_o_EXCLUDE   = 0; # If exclude selected don't validate the line is the same length as the inverted number fields.
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -132,35 +136,45 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
+    usage: [cat file] | pipe.pl [-5ADiIjKLNtUVx] [-0{file} -M]
        -?{opr}:{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
-       -14abBcvwzZ{c0,c1,...,cn}
+       -1{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
+       -4{c0,c1,...,cn}
        -6{cn:[char],...}
-       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...}
-       -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
-       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
-       -E[c0:[r|?c.r[.e]],...}
-       -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
-       -F[c0:[b|c|d|h][.[b|c|d|h]],...}
-       -gG{any|cn:[regex],...}
-       -H[-q{positive integer}]
+       -a{c0,c1,...,cn}
+       -bB{c0,c1,...,cn} [-i]
+       -c{c0,c1,...,cn}
+       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
+       -d[-IRN]{c0,c1,...,cn} [-J{cn}]
+       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
+       -E{c0:[r|?c.r[.e]],...}
+       -f{c0:n.p[?p.q[.r]],...}
+       -F{c0:[b|c|d|h][.[b|c|d|h]],...}
+       -gG{any|cn:[regex],...} [-5i]
+       -h{delimiter}
+       -H [-q{positive integer}]
+       -J{c0,c1,...,cn}
        -k{cn:expr,(...)}
        -l{[any|c0]:n.p,...}
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
-       -noOtu{[any|c0,c1,...,cn]}
-       -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}
+       -nOtu{[any|c0,c1,...,cn]}
+       -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}
        -p{cn:[+|-]countChar+,...}
        -q{n-th} [-Q{n}]
+       -s[-IRN]{c0,c1,...,cn}
        -S{cn:[range],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
+       -v{c0,c1,...,cn}
+       -w{c0,c1,...,cn}
        -W{delimiter}
        -y{precision}
        -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
+       -zZ{c0,c1,...,cn} [-i]
        
 pipe.pl is the Swiss Army knife of text editing on the command line. Over time I have had
 to write and re-write scripts that do many of the operations in pipe.pl. This script wraps
@@ -236,7 +250,7 @@ All column references are 0 based. Line numbers start at 1.
                   0 and 5 is specified with -Cany:rg0+5. To output rows with values
                   between -100 and -50 is specified with -Cany:rg-100+-50.
                   Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
-                  between -5 and 5 inclusive to be output.
+                  between -5 and 5 inclusive to be output. See also -I and -N.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -302,7 +316,7 @@ All column references are 0 based. Line numbers start at 1.
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
- -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+ -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -354,18 +368,19 @@ All column references are 0 based. Line numbers start at 1.
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
                   -I switches for more information.
- -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+ -N             : Normalize keys before comparison when using (-d, -C, and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the -I
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
                   Causes summaries to be output with delimiter to STDERR on last line.
- -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}: Order the columns in a different order. 
+ -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}: Order the columns in a different order. 
                   Only the specified columns are output unless the keyword 'remaining', or 'continue'.  
                   The 'remaining' keyword outputs all columns that have not already been specified, 
                   in order. The 'continue' keyword outputs all the columns from the last specified 
                   column to the last column in the line. 'last' will output the last column in a row.
-                  'reverse' reverses the column order.
-                  Once a keyword is encountered, any additional column output request is ignored.
+                  'reverse' reverses the column order. Exclude will output all columns except those mentioned.
+                  The order of the columns cannot be altered with this keyword. Once a keyword is encountered 
+                  (except 'exclude'), any additional column output request is ignored.
  -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
@@ -460,7 +475,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
-  -I - Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+  -I - Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
@@ -632,7 +647,7 @@ sub parse_line_ranges( $ )
     my $range_str = shift;
     if ( $range_str =~ m/^skip/ )
     {
-        my $skip = $';
+        my $skip = $' + 0;
         if ( ! $skip or $skip !~ m/\d+/ )
         {
             printf STDERR "** error '-L' skip option takes an integer value greater than 0, supplied '%s'\n", $opt{'L'};
@@ -714,7 +729,7 @@ sub read_requested_columns
         if ( $colNum =~ m/[C|c]\d{1,}/ )
         {
             $colNum =~ s/c//i; # get rid of the 'c' because it causes problems later.
-            push( @list, trim( $colNum ) );
+            push( @list, (trim( $colNum ) + 0) );
         }
         elsif ( $colNum =~ m/^any$/i && grep /($KEYWORD_ANY)/, @allowed_keywords )
         {
@@ -750,6 +765,12 @@ sub read_requested_columns
             push( @list, $KEYWORD_REVERSE );
             last; # don't allow user to add more.
         }
+        elsif ( $colNum =~ m/^exclude$/i && grep /($KEYWORD_EXCLUDE)/, @allowed_keywords )
+        {
+            # use the inverted set of columns.
+            # Add the keyword as the FIRST element, then order_line() will exclude the rest of the listed columns
+            unshift( @list, $KEYWORD_EXCLUDE );
+        }
         else
         {
             print STDERR "** Warning: illegal column designation '$colNum', ignoring.\n";
@@ -772,14 +793,14 @@ sub normalize( $ )
 {
     my $line = shift;
     $line =~ s/\W+//g;
-      if ( $opt{'I'} )
-      {
-            return $line;
-      }
-      else
-      {
-            return uc $line;
-      }
+    if ( $opt{'I'} )
+    {
+        return $line;
+    }
+    else
+    {
+        return uc $line;
+    }
 }
 
 # Trim function to remove white space from the start and end of the string.
@@ -937,7 +958,7 @@ sub trim_line( $ )
     }
 }
 
-# Normalizes of specified columns, removing non-word characters.
+# Normalizes specified columns, removing non-word characters.
 # param:  line of columns of data.
 # return: <none>.
 sub normalize_line( $ )
@@ -1009,13 +1030,30 @@ sub order_line( $ )
             @order_columns = reverse @order_columns;
             last;
         }
+        elsif ( $c =~ m/($KEYWORD_EXCLUDE)/i || $RELAX_o_EXCLUDE ) # 'exclude' is the first value.
+        {
+            # this value is set from the first time we encounter 'exclude'.
+            if ( $RELAX_o_EXCLUDE )
+            {
+                foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
+                {
+                    push @order_columns, $colIndex if ( ! grep /($colIndex)/, @ORDER_COLUMNS );
+                }
+                last;
+            }
+            else # This is the first time we encounter 'exclude' so set the variable, and the next
+                 # iteration of the loop the set variable will cause the rest of the loop to 
+            {
+                $RELAX_o_EXCLUDE = 1;
+            }
+        }
         else # Standard column output ordering request, and all column ordering requests before 'remaining'.
         {
             push @order_columns, $c;
         }
         # To get here the value has to have been numeric, save it in case the continue keyword is used,
         # then use it to output all the columns from the last index to the end of the line.
-        $count = $c +1;
+        $count = $c +1 if ( ! $RELAX_o_EXCLUDE ); # The exclude keyword appears first, but ignore it.
     }
     if ( $opt{'D'} )
     {
@@ -1034,10 +1072,7 @@ sub order_line( $ )
         }
     }
     @{ $line } = ();
-    foreach my $v ( @newLine )
-    {
-        push @{ $line }, $v;
-    }
+    push @{ $line }, @newLine;
 }
 
 # Returns the key composed of the selected fields.
@@ -1776,6 +1811,16 @@ sub test_condition_cmp( $$$ )
     my $cmpValue    = shift ;
     my $value       = shift;
     my $result      = 0;
+    if ( $opt{'N'} )  # Normalize, which preserves case.
+    {
+        $value = normalize( $value );
+        $cmpValue = normalize( $cmpValue );
+    }
+    if ( $opt{'I'} )  # Normalize, which preserves case.
+    {
+        $value = uc $value;
+        $cmpValue = uc $cmpValue;
+    }
     printf STDERR "'%s' '%s' '%s'.\n", $cmpValue, $cmpOperator, $value if ( $opt{'D'} );
     if ( $cmpOperator =~ m/^rg$/i )
     {
@@ -1873,9 +1918,9 @@ sub test_condition( $ )
     my $result = 0;
     if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
     {
-        my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
+        my $exp = $cond_cmp_ref->{$KEYWORD_ANY};
         # The first 2 characters determine the type of comparison.
-        $exp =~ m/(cc)?(lt|gt|eq|ge|le|ne|rg)/;
+        $exp =~ m/(cc)?(lt|gt|eq|ge|le|ne|rg)/i;
         if ( ! $& )
         {
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1883,12 +1928,13 @@ sub test_condition( $ )
         }
         my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0,197'
         my $cmpOperator = $&;
+        
         # Change compare value to the value in a different column (if exists) and requested.
-        if ( $exp =~ m/^cc/ )
+        if ( $exp =~ m/^cc/i )
         {
             # we are expecting a col definition like (c|C)\d+, so get that column number
             # strip it if supplied, but the 'c' is optional, but good form.
-            $cmpValue =~ s/^c//;
+            $cmpValue =~ s/^c//i;
             if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
             {
                 if ( defined @{ $line }[ $cmpValue ] )
@@ -1917,9 +1963,9 @@ sub test_condition( $ )
     {
         if ( defined @{ $line }[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
         {
-            my $exp = lc $cond_cmp_ref->{$colIndex};
+            my $exp = $cond_cmp_ref->{$colIndex};
             # The first 2 characters determine the type of comparison.
-            $exp =~ m/(lt|gt|eq|ge|le|ne|rg)/;
+            $exp =~ m/(lt|gt|eq|ge|le|ne|rg)/i;
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
@@ -1929,11 +1975,11 @@ sub test_condition( $ )
             my $cmpOperator = $&;
             # since the m// compares on 'lt' etc, only the exact match is kept in '$&'.
             # This allows us to prefix the operation with almost any keyword combination.
-            if ( $exp =~ m/^cc/ )
+            if ( $exp =~ m/^cc/i )
             {
                 # we are expecting a col definition like (c|C)\d+, so get that column number
                 # strip it if supplied, but the 'c' is optional, but good form.
-                $cmpValue =~ s/^c//;
+                $cmpValue =~ s/^c//i;
                 if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
                 {
                     if ( defined @{ $line }[ $cmpValue ] )
@@ -2284,7 +2330,14 @@ sub validate( $$$ )
     if ( $opt{'o'} ) # If you select -o this doesn't get done or extra fields are added even if you select 'V'
     {
         # But pad to the width of the columns selected -1, because pipe doesn't add a terminal pipe by default.
-        $count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
+        if ( $RELAX_o_EXCLUDE )
+        {
+            $count = ( scalar( split ( '\|', $original ) -1 )) - ( scalar @ORDER_COLUMNS -1 );
+        }
+        else
+        {
+            $count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
+        }
     }
     if ( $final_count < $count )
     {
@@ -3463,7 +3516,7 @@ sub init
     @NO_COMPARE_COLUMNS= read_requested_columns( $opt{'B'} )                             if ( $opt{'B'} );
     @NORMAL_COLUMNS    = read_requested_columns( $opt{'n'}, $KEYWORD_ANY )               if ( $opt{'n'} );
     @MERGE_COLUMNS     = read_requested_columns( $opt{'O'}, $KEYWORD_ANY )               if ( $opt{'O'} );
-    @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE, $KEYWORD_LAST, $KEYWORD_REVERSE )    if ( $opt{'o'} );
+    @ORDER_COLUMNS     = read_requested_columns( $opt{'o'}, $KEYWORD_REMAINING, $KEYWORD_CONTINUE, $KEYWORD_LAST, $KEYWORD_REVERSE, $KEYWORD_EXCLUDE )    if ( $opt{'o'} );
     @TRIM_COLUMNS      = read_requested_columns( $opt{'t'}, $KEYWORD_ANY )               if ( $opt{'t'} );
     if ( $opt{'2'} )
     {
