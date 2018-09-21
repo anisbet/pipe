@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.20 - Sept 20, 2018 Add 'ne' to -C.
+# 0.49.22 - Sept 21, 2018 Added use utf8. Fixed -C bug that failed to match 
+#           durging UC comparison.
 #
 ####################################################################################
 
@@ -35,9 +36,10 @@ use strict;
 use warnings;
 use vars qw/ %opt /;
 use Getopt::Std;
+use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.20};
+my $VERSION           = qq{0.49.22};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -132,35 +134,45 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: [cat file] | pipe.pl [-5ADijLNtUVx] [-0{file}]
+    usage: [cat file] | pipe.pl [-5ADiIjKLNtUVx] [-0{file} -M]
        -?{opr}:{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
-       -14abBcvwzZ{c0,c1,...,cn}
+       -1{c0,c1,...,cn}
        -2{cn:[start,[end]],...}
        -3{c0:n,c1:m,...,cn:p}
+       -4{c0,c1,...,cn}
        -6{cn:[char],...}
-       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...}
-       -ds[-IRN]{c0,c1,...,cn} [-J[cn]]
-       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
-       -E[c0:[r|?c.r[.e]],...}
-       -f[c0:n.p[?p.q[.r]],...}
        -7{n-th match}
-       -F[c0:[b|c|d|h][.[b|c|d|h]],...}
-       -gG{any|cn:[regex],...}
-       -H[-q{positive integer}]
+       -a{c0,c1,...,cn}
+       -bB{c0,c1,...,cn} [-i]
+       -c{c0,c1,...,cn}
+       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
+       -d[-IRN]{c0,c1,...,cn} [-J{cn}]
+       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
+       -E{c0:[r|?c.r[.e]],...}
+       -f{c0:n.p[?p.q[.r]],...}
+       -F{c0:[b|c|d|h][.[b|c|d|h]],...}
+       -gG{any|cn:[regex],...} [-5i]
+       -h{delimiter}
+       -H [-q{positive integer}]
+       -J{c0,c1,...,cn}
        -k{cn:expr,(...)}
        -l{[any|c0]:n.p,...}
        -L{[[+|-]n[[,|-]n]?|skip n]}
        -m{cn:*[_|#]*,...}
-       -noOtu{[any|c0,c1,...,cn]}
+       -nOtu{[any|c0,c1,...,cn]}
        -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse]}
        -p{cn:[+|-]countChar+,...}
        -q{n-th} [-Q{n}]
+       -s[-IRN]{c0,c1,...,cn}
        -S{cn:[range],...}
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
+       -v{c0,c1,...,cn}
+       -w{c0,c1,...,cn}
        -W{delimiter}
        -y{precision}
        -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
+       -zZ{c0,c1,...,cn} [-i]
        
 pipe.pl is the Swiss Army knife of text editing on the command line. Over time I have had
 to write and re-write scripts that do many of the operations in pipe.pl. This script wraps
@@ -236,7 +248,7 @@ All column references are 0 based. Line numbers start at 1.
                   0 and 5 is specified with -Cany:rg0+5. To output rows with values
                   between -100 and -50 is specified with -Cany:rg-100+-50.
                   Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
-                  between -5 and 5 inclusive to be output.
+                  between -5 and 5 inclusive to be output. See also -I and -N.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -302,7 +314,7 @@ All column references are 0 based. Line numbers start at 1.
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
- -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+ -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -354,7 +366,7 @@ All column references are 0 based. Line numbers start at 1.
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
                   -I switches for more information.
- -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+ -N             : Normalize keys before comparison when using (-d, -C, and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the -I
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
@@ -460,7 +472,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
-  -I - Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+  -I - Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
@@ -772,14 +784,14 @@ sub normalize( $ )
 {
     my $line = shift;
     $line =~ s/\W+//g;
-      if ( $opt{'I'} )
-      {
-            return $line;
-      }
-      else
-      {
-            return uc $line;
-      }
+    if ( $opt{'I'} )
+    {
+        return $line;
+    }
+    else
+    {
+        return uc $line;
+    }
 }
 
 # Trim function to remove white space from the start and end of the string.
@@ -937,7 +949,7 @@ sub trim_line( $ )
     }
 }
 
-# Normalizes of specified columns, removing non-word characters.
+# Normalizes specified columns, removing non-word characters.
 # param:  line of columns of data.
 # return: <none>.
 sub normalize_line( $ )
@@ -1776,6 +1788,16 @@ sub test_condition_cmp( $$$ )
     my $cmpValue    = shift ;
     my $value       = shift;
     my $result      = 0;
+    if ( $opt{'N'} )  # Normalize, which preserves case.
+    {
+        $value = normalize( $value );
+        $cmpValue = normalize( $cmpValue );
+    }
+    if ( $opt{'I'} )  # Normalize, which preserves case.
+    {
+        $value = uc $value;
+        $cmpValue = uc $cmpValue;
+    }
     printf STDERR "'%s' '%s' '%s'.\n", $cmpValue, $cmpOperator, $value if ( $opt{'D'} );
     if ( $cmpOperator =~ m/^rg$/i )
     {
@@ -1873,9 +1895,9 @@ sub test_condition( $ )
     my $result = 0;
     if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
     {
-        my $exp = lc $cond_cmp_ref->{$KEYWORD_ANY};
+        my $exp = $cond_cmp_ref->{$KEYWORD_ANY};
         # The first 2 characters determine the type of comparison.
-        $exp =~ m/(cc)?(lt|gt|eq|ge|le|ne|rg)/;
+        $exp =~ m/(cc)?(lt|gt|eq|ge|le|ne|rg)/i;
         if ( ! $& )
         {
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1883,12 +1905,13 @@ sub test_condition( $ )
         }
         my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0,197'
         my $cmpOperator = $&;
+        
         # Change compare value to the value in a different column (if exists) and requested.
-        if ( $exp =~ m/^cc/ )
+        if ( $exp =~ m/^cc/i )
         {
             # we are expecting a col definition like (c|C)\d+, so get that column number
             # strip it if supplied, but the 'c' is optional, but good form.
-            $cmpValue =~ s/^c//;
+            $cmpValue =~ s/^c//i;
             if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
             {
                 if ( defined @{ $line }[ $cmpValue ] )
@@ -1917,9 +1940,9 @@ sub test_condition( $ )
     {
         if ( defined @{ $line }[ $colIndex ] and exists $cond_cmp_ref->{ $colIndex } )
         {
-            my $exp = lc $cond_cmp_ref->{$colIndex};
+            my $exp = $cond_cmp_ref->{$colIndex};
             # The first 2 characters determine the type of comparison.
-            $exp =~ m/(lt|gt|eq|ge|le|ne|rg)/;
+            $exp =~ m/(lt|gt|eq|ge|le|ne|rg)/i;
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
@@ -1929,11 +1952,11 @@ sub test_condition( $ )
             my $cmpOperator = $&;
             # since the m// compares on 'lt' etc, only the exact match is kept in '$&'.
             # This allows us to prefix the operation with almost any keyword combination.
-            if ( $exp =~ m/^cc/ )
+            if ( $exp =~ m/^cc/i )
             {
                 # we are expecting a col definition like (c|C)\d+, so get that column number
                 # strip it if supplied, but the 'c' is optional, but good form.
-                $cmpValue =~ s/^c//;
+                $cmpValue =~ s/^c//i;
                 if ( defined $cmpValue && $cmpValue =~ m/^\d+$/ )
                 {
                     if ( defined @{ $line }[ $cmpValue ] )

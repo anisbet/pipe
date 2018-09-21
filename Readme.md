@@ -93,13 +93,11 @@ Complete list of flags
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
  -7{nth-match}  : Return after 'n'th line match of a search is output. See -g, -G, -X, -Y, -C.
  -a{c0,c1,...cn}: Sum the non-empty values in given column(s).
- -A             : Modifier that outputs the number of key matches from dedup.
-                  The end result is output similar to 'sort | uniq -c' ie: ' 4 1|2|3'
-                  for a line that was duplicated 4 times on a given key. If
-                  -d is not selected, line numbers of successfully matched lines
-                  are output. If the last 10 lines of a file are selected, the output
-                  are numbered from 1 to 10 but if other match functions like -g -G -X or -Y
-                  are used, the successful matched line is reported.
+ -A             : Modifier that outputs line numbers from input, or if -d is used, the number 
+                  of records that match the column key selection that were de-duplicated.
+                  The end result is output similar to 'sort | uniq -c'. In other match
+                  functions like -g, -G, -X, or -Y the line numbers of successful matches
+                  are reported.
  -b{c0,c1,...cn}: Compare fields and output if each is equal to one-another.
  -B{c0,c1,...cn}: Compare fields and output if columns differ.
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
@@ -126,7 +124,7 @@ Complete list of flags
                   0 and 5 is specified with -Cany:rg0+5. To output rows with values
                   between -100 and -50 is specified with -Cany:rg-100+-50.
                   Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
-                  between -5 and 5 inclusive to be output.
+                  between -5 and 5 inclusive to be output. See also -I and -N.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -192,7 +190,7 @@ Complete list of flags
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
- -I             : Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+ -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
                   providing a sum over group-like functionality. Does not work if -A is selected
@@ -244,7 +242,7 @@ Complete list of flags
                   (non-alphanumeric and '_' characters). The -I switch leaves the value's case
                   unchanged. However the default is to change the case to upper case. See -N,
                   -I switches for more information.
- -N             : Normalize keys before comparison when using (-d and -s) dedup and sort.
+ -N             : Normalize keys before comparison when using (-d, -C, and -s) dedup and sort.
                   Normalization removes all non-word characters before comparison. Use the -I
                   switch to preserve keys' case during comparison. See -n, and -I.
                   Outputs absolute value of -a, -v, -1, -3, -4, results.
@@ -355,7 +353,7 @@ The order of operations is as follows:
   -l - Translate character sequence.
   -n - Remove non-word characters in specified columns.
   -t - Trim selected columns.
-  -I - Ignore case on operations -b, -B, -d, -E, -f, -g, -G, -l, -n and -s.
+  -I - Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
   -R - Reverse line order when -d, -4 or -s is used.
   -b - Suppress line output if columns' values differ.
   -B - Only show lines where columns are different.
