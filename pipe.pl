@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.30 - Sept 21, 2018 Added keyword 'exclude' to -o to select all but
-#           specified columns. Force column number references to be numbers.
+# 0.49.31 - Sept 21, 2018 Fix deprecated call warning for split.
 #
 ####################################################################################
 
@@ -39,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.30};
+my $VERSION           = qq{0.49.31};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -1084,7 +1083,7 @@ sub get_key( $$ )
     my $line          = shift;
     my $wantedColumns = shift;
     my $key           = "";
-    my @columns = split( '\|', $line );
+    my @columns = split( /\|/, $line );
     # If the line only has one column that is couldn't be split then return the entire line as
     # key. Duplicate lines will be removed only if they match entirely.
     if ( scalar( @columns ) < 2 )
@@ -2332,7 +2331,8 @@ sub validate( $$$ )
         # But pad to the width of the columns selected -1, because pipe doesn't add a terminal pipe by default.
         if ( $RELAX_o_EXCLUDE )
         {
-            $count = ( scalar( split ( '\|', $original ) -1 )) - ( scalar @ORDER_COLUMNS -1 );
+            my @original_cols = split( /\|/, $original );
+            $count = ( scalar( @original_cols ) -1 ) - ( scalar(@ORDER_COLUMNS) -1 );
         }
         else
         {
