@@ -885,31 +885,31 @@ sub width( $$ )
         {
             my $length = length @{ $line }[ $colIndex ];
             printf STDERR "COL: '%s'::LEN '%d'\n", @{ $line }[ $colIndex ], $length if ( $opt{'D'} );
-            if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
+            if ( ! exists $width_min_ref->{ "c$colIndex" } )
             {
                 $width_line_min_ref->{ "c$colIndex" } = $line_no;
-                $width_line_max_ref->{ "c$colIndex" } = $line_no;
                 $width_min_ref->{ "c$colIndex" } = $length;
+            }
+            if ( ! exists $width_max_ref->{ "c$colIndex" } )
+            {
+                $width_line_max_ref->{ "c$colIndex" } = $line_no;
                 $width_max_ref->{ "c$colIndex" } = $length;
-                next;
             }
             $width_line_min_ref->{ "c$colIndex" } = $line_no if ( $length < $width_min_ref->{ "c$colIndex" } );
-            $width_line_max_ref->{ "c$colIndex" } = $line_no if ( $length > $width_max_ref->{ "c$colIndex" } );
+            $width_line_max_ref->{ "c$colIndex" } = $line_no if ( $length >= $width_max_ref->{ "c$colIndex" } );
             $width_min_ref->{ "c$colIndex" } = $length if ( $length < $width_min_ref->{ "c$colIndex" } );
-            $width_max_ref->{ "c$colIndex" } = $length if ( $length > $width_max_ref->{ "c$colIndex" } );
+            $width_max_ref->{ "c$colIndex" } = $length if ( $length >= $width_max_ref->{ "c$colIndex" } );
         }
         else
         {
-            if ( ! exists $width_min_ref->{ "c$colIndex" } or ! exists $width_max_ref->{ "c$colIndex" } )
-            {
-                $width_line_min_ref->{ "c$colIndex" } = 0;
-                $width_line_max_ref->{ "c$colIndex" } = 0;
-                $width_min_ref->{ "c$colIndex" } = 0;
-                $width_max_ref->{ "c$colIndex" } = 0;
-                next;
-            }
-            $width_line_min_ref->{ "c$colIndex" } = 0;
+            # Update the min width to '0' since other lines might have added a value - regardless this is the shortest.
+            $width_line_min_ref->{ "c$colIndex" } = $line_no; # And this is the last shortest (so far).
             $width_min_ref->{ "c$colIndex" } = 0;
+            if ( ! exists $width_max_ref->{ "c$colIndex" } )
+            {
+                $width_line_max_ref->{ "c$colIndex" } = $line_no;
+                $width_max_ref->{ "c$colIndex" } = 0;
+            }
         }
     }
     $WIDTHS_COLUMNS->{ @{ $line } } = $LINE_NUMBER;
