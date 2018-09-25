@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.31 - Sept 21, 2018 Fix deprecated call warning for split.
+# 0.49.32 - Sept 25, 2018 Fix pad with period character that doesn't display.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.31};
+my $VERSION           = qq{0.49.32};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -383,10 +383,10 @@ All column references are 0 based. Line numbers start at 1.
  -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
- -p{c0:n.char,... }: Pad fields left or right with arbitrary 'n' characters. The expression is separated by a
+ -p{c0:n.char,... }: Pad fields left or right with arbitrary 'N' characters. The expression is separated by a
                   '.' character. '123' -pc0:"-5", -pc0:"-5.\\s" both do the same thing: '123  '. Literal
                   digit(s) can be used as padding. '123' -pc0:"-5.0" => '12300'. Spaces are qualified 
-                  with either '\\s', '\\t', or '\\n'. Quote all expressions.
+                  with either '\\s', '\\t', '\\n', or '_DOT_' for a literal period.
  -P             : Ensures a tailing delimiter is output at the end of all lines.
                   The default delimiter of '|' can be changed with -h.
  -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
@@ -1736,6 +1736,7 @@ sub apply_padding( $$ )
     $replacement =~ s/\\s/\x20/g;
     $replacement =~ s/\\t/\x09/g;
     $replacement =~ s/\\n/\x0A/g;
+    $replacement =~ s/_DOT_/./g;
     printf STDERR "pad expression: '%s' places of '%s' \n", $token, $replacement if ( $opt{'D'} );
     my $count = 0;
     my $character = $replacement;
