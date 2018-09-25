@@ -255,7 +255,6 @@ Complete list of flags
                   'reverse' reverses the column order. Exclude will output all columns except those mentioned.
                   The order of the columns cannot be altered with this keyword. Once a keyword is encountered 
                   (except 'exclude'), any additional column output request is ignored.
-                  Once a keyword is encountered, any additional column output request is ignored.
  -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in column 0.
@@ -285,7 +284,9 @@ Complete list of flags
                   from the end of data can be specified with syntax (n - m), where 'n' is a literal
                   and represents the length of the data, and 'm' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t{[any|cn],...}: Trim the specified columns of white space front and back.
+ -t{[any|cn],...}: Trim the specified columns of white space front and back. If -y is
+                   used, the string is trimmed of any leading, trailing whitespace, then
+                   is truncated (from the back) to the length specified by -y.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
@@ -306,7 +307,8 @@ Complete list of flags
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
- -y{precision}  : Controls precision of computed floating point number output.
+ -y{precision}  : Controls precision of computed floating point number output. Forces -t to
+                  chop selected columns to specific lengths.
  -Y{[any|cn]:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. See -i.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
@@ -325,7 +327,7 @@ The order of operations is as follows:
   -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
-  -y - Specify precision of floating computed variables (see -v).
+  -y - Specify precision of floating computed variables, or trim string to length.
   -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.

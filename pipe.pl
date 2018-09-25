@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.32 - Sept 25, 2018 Fix pad with period character that doesn't display.
+# 0.49.50 - Sept 25, 2018 Added function to trim (-t) that optionally trims
+#           strings to length defined by the -y flag.
 #
 ####################################################################################
 
@@ -38,7 +39,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.32};
+my $VERSION           = qq{0.49.50};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -135,7 +136,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: [cat file] | pipe.pl [-5ADiIjKLNtUVx] [-0{file} -M]
+    usage: [cat file] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M]
        -?{opr}:{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
        -1{c0,c1,...,cn}
@@ -145,7 +146,8 @@ sub usage()
        -6{cn:[char],...}
        -7{n-th match}
        -a{c0,c1,...,cn}
-       -bB{c0,c1,...,cn} [-i]
+       -b{c0,c1,...,cn} [-i]
+       -B{c0,c1,...,cn} [-i]
        -c{c0,c1,...,cn}
        -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
        -d[-IRN]{c0,c1,...,cn} [-J{cn}]
@@ -167,6 +169,7 @@ sub usage()
        -q{n-th} [-Q{n}]
        -s[-IRN]{c0,c1,...,cn}
        -S{cn:[range],...}
+       -t{[any]|[c0,c1,...,cn]} [-y n]
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
        -v{c0,c1,...,cn}
        -w{c0,c1,...,cn}
@@ -409,7 +412,9 @@ All column references are 0 based. Line numbers start at 1.
                   from the end of data can be specified with syntax (n - m), where 'n' is a literal
                   and represents the length of the data, and 'm' represents the number of characters
                   to be trimmed from the end of the line, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t{[any|cn],...}: Trim the specified columns of white space front and back.
+ -t{[any|cn],...}: Trim the specified columns of white space front and back. If -y is
+                   used, the string is trimmed of any leading, trailing whitespace, then
+                   is truncated (from the back) to the length specified by -y.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
@@ -430,7 +435,8 @@ All column references are 0 based. Line numbers start at 1.
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
                   Also allows comparisons across columns.
- -y{precision}  : Controls precision of computed floating point number output.
+ -y{precision}  : Controls precision of computed floating point number output. Forces -t to
+                  chop selected columns to specific lengths.
  -Y{[any|cn]:regex,...}: Turns off further line output after -X match succeeded. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. See -i.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
@@ -444,7 +450,7 @@ The order of operations is as follows:
   -B - Only show lines where columns are different.
   -Z - Show line output if column(s) test empty.
   -z - Suppress line output if column(s) test empty.
-  -y - Specify precision of floating computed variables (see -v).
+  -y - Specify precision of floating computed variables, or trim string to length.
   -0 - Input from named file. (See also -M).
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
@@ -804,12 +810,17 @@ sub normalize( $ )
 
 # Trim function to remove white space from the start and end of the string.
 # param:  string to trim.
+# param:  Trims the string to argument number of characters (optional).
+#         This operation is performed after any white space has been trimmed.
 # return: string without leading or trailing spaces.
-sub trim( $ )
+sub trim
 {
     my $string = shift;
+    my $chop_count = 0;
+    $chop_count = shift if ( @_ );
     $string =~ s/^\s+//;
     $string =~ s/\s+$//;
+    $string = substr( $string, 0, $chop_count ) if ( $chop_count );
     return $string;
 }
 
@@ -943,7 +954,14 @@ sub trim_line( $ )
     {
         foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
         {
-            @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ] );
+            if ( $opt{'y'} )
+            {
+                @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ], $PRECISION );
+            }
+            else
+            {
+                @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ] );
+            }
         }
         return;
     }
@@ -952,7 +970,14 @@ sub trim_line( $ )
         # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] )
         {
-            @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ] );
+            if ( $opt{'y'} )
+            {
+                @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ], $PRECISION );
+            }
+            else
+            {
+                @{ $line }[ $colIndex ] = trim( @{ $line }[ $colIndex ] );
+            }
         }
     }
 }
