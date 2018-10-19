@@ -103,18 +103,18 @@ Complete list of flags
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m})|cc(gt|ge|eq|le|lt|ne)cm,...}: Compare column and output line
-                  if value in column is greater than (gt), less than (lt), equal to (eq), greater than 
-                  or equal to (ge), not equal to (ne), or less than or equal to (le) the value
-                  that follows. The following value can be numeric, but if it isn't the value's
-                  comparison is made lexically. All specified columns must match to return
-                  true, that is -C is logically AND across columns. This behaviour changes
-                  if the keyword 'any' is used, in that case test returns true as soon
-                  as any column comparison matches successfully.
+ -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m}|width{n+m})|cc(gt|ge|eq|le|lt|ne)cm,...}: Compare column and
+                  output line if value in column is greater than (gt), less than (lt), equal to
+                  (eq), greater than or equal to (ge), not equal to (ne), or less than or equal
+                  to (le) the value that follows. The following value can be numeric, but if
+                  it isn't the value's comparison is made lexically. All specified columns
+                  must match to return true, that is -C is logically AND across columns.
+                  This behaviour changes if the keyword 'any' is used, in that case test returns
+                  true as soon as any column comparison matches successfully.
                   -C supports comparisons across columns. Using the modified syntax
                   -Cc1:ccgec0 where 'c1' refers to source of the comparison data,
                   'cc' is the keyword for column comparison, 'ge' - the comparison
-                  operator, and 'c0' the column who's value is used for comparison. 
+                  operator, and 'c0' the column who's value is used for comparison.
                   "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
                   than or equal to the value in c1, which is true, so the line is output.
                   A range can be specified with the 'rg' modifier. Once set only numeric
@@ -125,6 +125,10 @@ Complete list of flags
                   between -100 and -50 is specified with -Cany:rg-100+-50.
                   Further, -Cc0:rg-5+5 is the same as -Cc0:rg-5++5, or c0 must be 
                   between -5 and 5 inclusive to be output. See also -I and -N.
+                  Row output can also be controlled with the 'width' modifier.
+                  Like the 'rg' modifier, you can output rows with columns of a 
+                  given width. "abc|1" => -Cc0:"width0+3", or output the rows if c0
+                  is between 0 and 3 characters wide.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -1433,6 +1437,53 @@ $ cat C.lst | pipe.pl -Cc1:cclec0
 3|2
 ```
 
+Using column comparison to confine comparisons to a range of values (numeric)
+-----------------------------------------------------------------------------
+The -C flag has an additional modifier to compare if a column's data falls within a given range of numbers. For example, consider the following data.
+```
+$ cat dashC.lst
+OVERDUE|2012
+LOST-CLAIM|2013
+OVERDUE|2015
+LOST|2017
+OVERDUE|2018
+```
+Now output the rows from rows where the year in column 1 (c1) lies between 2015 to 2017. Note the range separator is a '+' character, and the range must have a start and end value or a 'malformed range operator' error is issued.
+```
+$ cat dashC.lst | pipe.pl -Cc1:"rg2015+2017"
+OVERDUE|2015
+LOST|2017
+```
+Similarly the range syntax can be used to output fields that have given widths, that is, contain a given number of characters. Using the same data set consider the following examples.
+
+Output rows who's first column is exactly 7 characters wide.
+```
+$ cat dashC.lst | pipe.pl -Cc0:"width7+7" 
+OVERDUE|2012
+OVERDUE|2015
+OVERDUE|2018
+```
+
+Output rows who's first column range from 4 - 7 characters wide.
+```
+$ cat dashC.lst | pipe.pl -Cc0:"width4+7"
+OVERDUE|2012
+OVERDUE|2015
+LOST|2017
+OVERDUE|2018
+```
+
+Output rows who's first column range from 4 - 6 characters wide.
+```
+$ cat dashC.lst | pipe.pl -Cc0:"width4+6"
+LOST|2017
+```
+
+Output rows who's first column are at least 10 characters wide.
+```
+$ cat dashC.lst | pipe.pl -Cc0:"width10+1000"
+LOST-CLAIM|2013
+```
 
 
 Use of '-S', sub strings
