@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.60 - October 19, 2018 Added comparison of widths of fields.
+# 0.49.70 - October 26, 2018 Added comparison of number of columns with '-C'.
 #
 ####################################################################################
 
@@ -38,13 +38,14 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.60};
+my $VERSION           = qq{0.49.70};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
 my $KEYWORD_LAST      = qw{last};
 my $KEYWORD_REVERSE   = qw{reverse};
 my $KEYWORD_EXCLUDE   = qw{exclude};
+my $KEYWORD_NUM_COLS  = qw{num_cols};
 my $RELAX_o_EXCLUDE   = 0; # If exclude selected don't validate the line is the same length as the inverted number fields.
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
@@ -148,7 +149,7 @@ sub usage()
        -b{c0,c1,...,cn} [-i]
        -B{c0,c1,...,cn} [-i]
        -c{c0,c1,...,cn}
-       -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m}|width{n+m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
+       -C{[any|num_cols|cn]:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
        -d[-IRN]{c0,c1,...,cn} [-J{cn}]
        -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
        -E{c0:[r|?c.r[.e]],...}
@@ -230,12 +231,12 @@ All column references are 0 based. Line numbers start at 1.
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m}|width{n+m})|cc(gt|ge|eq|le|lt|ne)cm,...}: Compare column and
-                  output line if value in column is greater than (gt), less than (lt), equal to
-                  (eq), greater than or equal to (ge), not equal to (ne), or less than or equal
-                  to (le) the value that follows. The following value can be numeric, but if
-                  it isn't the value's comparison is made lexically. All specified columns
-                  must match to return true, that is -C is logically AND across columns.
+ -C{[any|num_cols{n-m}|cn]:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}:
+                  Compare column values and output line if value in column is greater than (gt),
+                  less than (lt), equal to (eq), greater than or equal to (ge), not equal to (ne),
+                  or less than or equal to (le) the value that follows. The following value can be
+                  numeric, but if it isn't the value's comparison is made lexically. All specified
+                  columns must match to return true, that is -C is logically AND across columns.
                   This behaviour changes if the keyword 'any' is used, in that case test returns
                   true as soon as any column comparison matches successfully.
                   -C supports comparisons across columns. Using the modified syntax
@@ -256,6 +257,10 @@ All column references are 0 based. Line numbers start at 1.
                   Like the 'rg' modifier, you can output rows with columns of a 
                   given width. "abc|1" => -Cc0:"width0+3", or output the rows if c0
                   is between 0 and 3 characters wide.
+                  Also outputs lines that match a range of expected columns. For example
+                  "2|1" => -Cnum_cols:'width2-10' prints output, because the number of 
+                  columns falls between 2 and 10. 'num_cols' has presidence over 
+                  other comparisons.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
@@ -604,6 +609,27 @@ sub read_requested_qualified_columns
             ## The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
             $nameQualifier[1] =~ s/\\,/,/g;
             $hash_ref->{$KEYWORD_ANY} = trim( $nameQualifier[1] );
+            last;
+        }
+        elsif ( $colNum =~ m/num_cols/i && grep /($KEYWORD_NUM_COLS)/, @allowed_keywords )
+        {
+            my @nameQualifier = ();
+            if ( $colNum =~ m/:/ )
+            {
+                push @nameQualifier, $`;
+                push @nameQualifier, $';
+            }
+            if ( scalar @nameQualifier != 2 )
+            {
+                print STDERR "*** Error missing qualifier '$colNum'. ***\n";
+                usage();
+            }
+            @list = ();
+            push( @list, trim( $nameQualifier[0] ) );
+            ## Add the qualifier to the hash reference too for reference later.
+            ## The ',' char is a field delimiter and has to be escaped, but in regex it has a different meaning and has to be un-escaped.
+            $nameQualifier[1] =~ s/\\,/,/g;
+            $hash_ref->{$KEYWORD_NUM_COLS} = trim( $nameQualifier[1] );
             last;
         }
         elsif ( $colNum =~ m/(add|sub|mul|div)/i )
@@ -1828,6 +1854,36 @@ sub pad_line( $ ) # remove split
     }
 }
 
+# Subroutine to compute parameter ranges. Accepts a string where
+# ranges are expected to be 2 positive integers separated by a '+'
+# character.
+# param:  string of range definition, where a range is defined as
+#         2 positive integers separated by a '+' character.
+# return: @range where $range[0] is the start of the range, and 
+#         $range[1] is the end of the range. There is no guarantee
+#         the end is smaller or larger than the end.
+sub _get_range_( $ )
+{
+    my $rangeString = shift;
+    my @range = grep { /\S/ } split( /\-/, $rangeString );
+    if ( scalar @range != 2 )
+    {
+        printf STDERR "**error, malformed range operator '%s'.\n", $rangeString;
+        exit(1);
+    }
+    # For numberic integer ranges this next line will do. 
+    if ( $range[0] !~ m/^\d{1,}$/ || $range[1] !~ m/^\d{1,}$/ )
+    {
+        printf STDERR "**error, range requires both start and end to be integers, but got '%s'.\n", $rangeString;
+        exit(1);
+    }
+    # In future you could extend the definition of a range here, with other tests.
+    # elsif ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+    $range[0] += 0; # Turn them into numbers.
+    $range[1] += 0;
+    return @range;
+}
+
 # Tests and returns failure or success depending on expression value.
 # param:  comparison operator (lt|gt|lt|eq|ge|le).
 # param:  the value of comparison, what the data will be measured against.
@@ -1852,17 +1908,7 @@ sub test_condition_cmp( $$$ )
     printf STDERR "'%s' '%s' '%s'.\n", $cmpValue, $cmpOperator, $value if ( $opt{'D'} );
     if ( $cmpOperator =~ m/^rg$/i || $cmpOperator =~ m/^width$/i )
     {
-        my @range = grep { /\S/ } split( /\+/, $cmpValue );
-        if ( scalar @range != 2 )
-        {
-            printf STDERR "**error, malformed range operator '%s'.\n", $cmpValue;
-            exit(1);
-        }
-        if ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
-        {
-            printf STDERR "**error, range requires both start and end to be integers, but got '%s'.\n", $cmpValue;
-            exit(1);
-        }
+        my @range = _get_range_( $cmpValue );
         if ( $cmpOperator =~ m/^rg$/i )
         {
             $result = 1 if ( $value >= $range[0] && $value <= $range[1] );
@@ -1951,6 +1997,27 @@ sub test_condition( $ )
 {
     my $line = shift;
     my $result = 0;
+    if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_NUM_COLS)/i )
+    {
+        # The next keyword allowed is stored on the conditional compare ref, in
+        # bucket $KEYWORD_NUM_COLS. It should start with 'width...' but can be
+        # extended.
+        my $exp = $cond_cmp_ref->{$KEYWORD_NUM_COLS};
+        if ( $exp =~ m/^width/i )
+        {
+            my $cmpValue = $';
+            my @range = _get_range_( $cmpValue );
+            if ( scalar( @{ $line } ) >= $range[0] && scalar( @{ $line } ) <= $range[1] )
+            {
+                $result = 1;
+            }
+        }
+        else
+        {
+            printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_NUM_COLS};
+        }
+        return $result;
+    }
     if ( $COND_CMP_COLUMNS[0] =~ m/($KEYWORD_ANY)/i )
     {
         my $exp = $cond_cmp_ref->{$KEYWORD_ANY};
@@ -1961,9 +2028,8 @@ sub test_condition( $ )
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
             usage();
         }
-        my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0,197'
+        my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0+197'
         my $cmpOperator = $&;
-        
         # Change compare value to the value in a different column (if exists) and requested.
         if ( $exp =~ m/^cc/i )
         {
@@ -2000,7 +2066,7 @@ sub test_condition( $ )
         {
             my $exp = $cond_cmp_ref->{$colIndex};
             # The first 2 characters determine the type of comparison.
-            $exp =~ m/(lt|gt|eq|ge|le|ne|rg|width)/i;
+            $exp =~ m/(lt|gt|eq|ge|le|ne|rg|width|num_cols)/i;
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
@@ -3533,7 +3599,7 @@ sub init
         build_encoding_table();
         @U_ENCODE_COLUMNS = read_requested_columns( $opt{'u'}, $KEYWORD_ANY );
     }
-    @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY )    if ( $opt{'C'} );
+    @COND_CMP_COLUMNS  = read_requested_qualified_columns( $opt{'C'}, $cond_cmp_ref, $KEYWORD_ANY, $KEYWORD_NUM_COLS )    if ( $opt{'C'} );
     @MATH_COLUMNS      = read_requested_qualified_columns( $opt{'?'}, $math_ref )        if ( $opt{'?'} );
     @CASE_COLUMNS      = read_requested_qualified_columns( $opt{'e'}, $case_ref, $KEYWORD_ANY )        if ( $opt{'e'} );
     @REPLACE_COLUMNS   = read_requested_qualified_columns( $opt{'E'}, $replace_ref )     if ( $opt{'E'} );
