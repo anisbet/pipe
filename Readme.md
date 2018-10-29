@@ -103,12 +103,12 @@ Complete list of flags
  -c{c0,c1,...cn}: Count the non-empty values in given column(s), that is
                   if a value for a specified column is empty or doesn't exist,
                   don't count otherwise add 1 to the column tally.
- -C{[any|cn]:(gt|ge|eq|le|lt|ne|rg{n+m}|width{n+m})|cc(gt|ge|eq|le|lt|ne)cm,...}: Compare column and
-                  output line if value in column is greater than (gt), less than (lt), equal to
-                  (eq), greater than or equal to (ge), not equal to (ne), or less than or equal
-                  to (le) the value that follows. The following value can be numeric, but if
-                  it isn't the value's comparison is made lexically. All specified columns
-                  must match to return true, that is -C is logically AND across columns.
+ -C{[any|num_cols{n-m}|cn]:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}:
+                  Compare column values and output line if value in column is greater than (gt),
+                  less than (lt), equal to (eq), greater than or equal to (ge), not equal to (ne),
+                  or less than or equal to (le) the value that follows. The following value can be
+                  numeric, but if it isn't the value's comparison is made lexically. All specified
+                  columns must match to return true, that is -C is logically AND across columns.
                   This behaviour changes if the keyword 'any' is used, in that case test returns
                   true as soon as any column comparison matches successfully.
                   -C supports comparisons across columns. Using the modified syntax
@@ -129,6 +129,10 @@ Complete list of flags
                   Like the 'rg' modifier, you can output rows with columns of a 
                   given width. "abc|1" => -Cc0:"width0+3", or output the rows if c0
                   is between 0 and 3 characters wide.
+                  Also outputs lines that match a range of expected columns. For example
+                  "2|1" => -Cnum_cols:'width2-10' prints output, because the number of 
+                  columns falls between 2 and 10. 'num_cols' has presidence over 
+                  other comparisons.
  -d{c0,c1,...cn}: Dedups file by creating a key from specified column values
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
