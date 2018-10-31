@@ -438,7 +438,8 @@ $ cat a | pipe.pl -0b -Mc0:c0?c1
 
 More generally you can specify that matches should be normalized before comparison.
 ```
-$ head M.lst zero.lst                             ==> M.lst <==
+$ head M.lst zero.lst
+==> M.lst <==
 1|one
 2|TWO
 3|ThReE
