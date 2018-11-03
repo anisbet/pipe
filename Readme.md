@@ -296,10 +296,14 @@ Complete list of flags
                    used, the string is trimmed of any leading, trailing whitespace, then
                    is truncated (from the back) to the length specified by -y.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
+                  |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
-                  A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
+                  A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
+                  can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
+                  corresponds to the insertion location of the literal string that follows the keyword.
+                  SKIP will place the literal string every 'n' lines.
  -u{[any|cn],...}: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
@@ -1007,6 +1011,25 @@ cat z.lst | ./pipe.pl -T'CSV:User ID,Profile,Branch,Consent type,Email,Date of l
 21221023942342,"EPL-ADU1FR","EPLMLW","ECONSENT","joseph.stewart@myldsmail.net",20150717
 21221023464206,"EPL-JUV","EPLMNA","EMAILCONV","",20150717
 21221024955293,"EPL-ADULT","EPLJPL","ENOCONSENT","",20150717
+```
+
+Here is an example of how to get a header, footer, and a literal string added in between every 5th line.
+```
+$ cat Y.lst | pipe.pl -TCHUNKED:"BEGIN=This is the start.,END=End text,SKIP=5.Middle 5th row"
+This is the start.
+1|a
+2|b
+3|c
+4|d
+Middle 5th row
+5|e
+1|f
+2|g
+3|h
+4|i
+Middle 5th row
+5|j|andrew
+End text
 ```
 
 Masking and tables
