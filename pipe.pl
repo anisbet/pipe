@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.80 - November 2, 2018 Added a new table type of 'CHUNKED'.
+# 0.49.81 - November 3, 2018 Bug fix for 'CHUNKED' table outputs with -h.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.80};
+my $VERSION           = qq{0.49.81};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -1319,9 +1319,9 @@ sub prepare_table_data( $ )
         foreach my $value ( @{ $line } )
         {
             push @newLine, $value;
-            push @newLine, '|';
+            push @newLine, $DELIMITER;
         }
-        # remove the last '|'.
+        # remove the last delimiter.
         pop @newLine;
         push @newLine, "\n";
     }
