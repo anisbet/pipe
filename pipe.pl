@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.70 - October 26, 2018 Added comparison of number of columns with '-C'.
+# 0.49.80 - November 2, 2018 Added a new table type of 'CHUNKED'.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.70};
+my $VERSION           = qq{0.49.80};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -109,6 +109,7 @@ my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0; my $TABLE_ATTR = ''; # Does the user want to output to a table.
+my $BEGIN_VALUE       = ''; my $SKIP_LINE_TABLE = 0; my $SKIP_VALUE = ''; my $END_VALUE = ''; # Used in CHUNKED tables
 my $WIDTHS_COLUMNS    = {};
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
 my $SKIP_LINE         = 0; # Used for -L for alternate line output.
@@ -171,6 +172,7 @@ sub usage()
        -S{cn:[range],...}
        -t{[any]|[c0,c1,...,cn]} [-y n]
        -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
+            |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
        -v{c0,c1,...,cn}
        -w{c0,c1,...,cn}
        -W{delimiter}
@@ -424,10 +426,14 @@ All column references are 0 based. Line numbers start at 1.
                    used, the string is trimmed of any leading, trailing whitespace, then
                    is truncated (from the back) to the length specified by -y.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
+                  |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
                   CSV:Name,Date,Address,Phone
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
-                  A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'.
+                  A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
+                  can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
+                  corresponds to the insertion location of the literal string that follows the keyword.
+                  SKIP will place the literal string every 'n' lines.
  -u{[any|cn],...}: Encodes strings in specified columns into URL safe versions.
  -U             : Sort numerically. Multiple fields may be selected, but an warning is issued
                   if any of the columns used as a key, combined, produce a non-numeric value
@@ -1243,7 +1249,7 @@ sub sort_list( $ )
     }
 }
 
-# Outputs data from argument line as either HTML or WIKI.
+# Outputs data from argument line as a table of one type or another.
 # param:  String of line data - pipe-delimited.
 # return: <none>.
 sub prepare_table_data( $ )
@@ -1300,6 +1306,22 @@ sub prepare_table_data( $ )
             push @newLine, ',';
         }
         # remove the last ','.
+        pop @newLine;
+        push @newLine, "\n";
+    }
+    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/i )
+    {
+        if ( defined $SKIP_LINE_TABLE && $SKIP_LINE_TABLE > 0 && $LINE_NUMBER % $SKIP_LINE_TABLE == 0 )
+        {
+            push @newLine, $SKIP_VALUE;
+            push @newLine, "\n";
+        }
+        foreach my $value ( @{ $line } )
+        {
+            push @newLine, $value;
+            push @newLine, '|';
+        }
+        # remove the last '|'.
         pop @newLine;
         push @newLine, "\n";
     }
@@ -3161,6 +3183,45 @@ sub table_output( $ )
         }
         # No footer for CSV.
     }
+    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/ )
+    {
+        if ( $placement =~ m/HEAD/ )
+        {
+            # [BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}
+            my @keywords = split ',', $TABLE_ATTR;
+            foreach my $keyword_assignment ( @keywords )
+            {
+                my ( $keyword, $param ) = split /=/, $keyword_assignment;
+                if ( defined $keyword )
+                {
+                    if ( $keyword =~ m/BEGIN/ )
+                    {
+                        $BEGIN_VALUE = $param;
+                    }
+                    elsif ( $keyword =~ m/END/ )
+                    {
+                        $END_VALUE = $param;
+                    }
+                    elsif ( $keyword =~ m/SKIP/ )
+                    {
+                        # parse out the number of lines to skip and the literal.
+                        ( $SKIP_LINE_TABLE, $SKIP_VALUE ) = split '\.', $param;
+                        if ( $SKIP_LINE_TABLE !~ m/^\d+$/ || ( $SKIP_LINE_TABLE + 0 ) < 1 )
+                        {
+                            printf STDERR "**error: invalid skip value requested in chunked table output.\n", $SKIP_LINE_TABLE;
+                            exit 0;
+                        }
+                    }
+                }
+            }
+            printf STDERR "BEGIN='%s' SKIP='%s'.'%s', END='%s'\n", $BEGIN_VALUE, $SKIP_LINE_TABLE, $SKIP_VALUE, $END_VALUE if ( $opt{'D'} );
+            printf "%s\n", $BEGIN_VALUE if ( defined $BEGIN_VALUE && $BEGIN_VALUE !~ m/^$/ );
+        }
+        else # Footer for chunked table types.
+        {
+            printf "%s\n", $END_VALUE if ( defined $END_VALUE && $END_VALUE !~ m/^$/ );
+        }
+    }
 }
 
 # Merges other columns' data into a specific column.
@@ -3688,6 +3749,10 @@ sub init
         elsif ( $opt{'T'} =~ m/CSV/i )
         {
             $TABLE_OUTPUT = "CSV";
+        }
+        elsif ( $opt{'T'} =~ m/CHUNKED/i )
+        {
+            $TABLE_OUTPUT = "CHUNKED";
         }
         else
         {
