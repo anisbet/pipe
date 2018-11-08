@@ -37,6 +37,7 @@ put: test production ${APP}
 	scp ${LOCAL}${APP} ${USER}@${TEST_SERVER}:${REMOTE}
 test:
 	perl -c ${APP}
-production: test
+production: test put 
 	scp ${LOCAL}${APP} ${USER}@${PRODUCTION_SERVER}:${REMOTE}
+	scp ${LOCAL}${APP} ils@epl-ils.epl.ca:/home/ils/bin
 
