@@ -2232,7 +2232,7 @@ sub apply_casing( $$ )
             {
                 my $i = shift @index_old;
                 my $j = shift @index_new;
-                $new_field[$i] = $old_field[$j] if ( defined $i && defined $j );
+                $new_field[$j] = $old_field[$i] if ( defined $i && defined $j );
             }
         }
         $field = join '', @new_field;
