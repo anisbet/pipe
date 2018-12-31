@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.81 - November 3, 2018 Bug fix for 'CHUNKED' table outputs with -h.
+# 0.49.90 - December 7, 2018 Add field rearranging with -e.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.81};
+my $VERSION           = qq{0.49.90};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -108,7 +108,7 @@ my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
-my $TABLE_OUTPUT      = 0; my $TABLE_ATTR = ''; # Does the user want to output to a table.
+my $TABLE_OUTPUT      = 0;  my $TABLE_ATTR = ''; # Does the user want to output to a table.
 my $BEGIN_VALUE       = ''; my $SKIP_LINE_TABLE = 0; my $SKIP_VALUE = ''; my $END_VALUE = ''; # Used in CHUNKED tables
 my $WIDTHS_COLUMNS    = {};
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
@@ -124,11 +124,11 @@ my $PRECISION         = 2; # Default precision of computed floating point number
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
 my $IS_DATA_TO_MERGE  = $FALSE; 
 my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
-my $merge_expression_ref = {};
-my $REF_FILE_DATA_HREF  = {};
+my $merge_expression_ref  = {};
+my $REF_FILE_DATA_HREF    = {};
 my @REF_COLUMN_INDEX_TRUE = ();
-my @REF_LITERALS_FALSE  = ();
-my @MATH_COLUMNS      = (); my $math_ref = {}; # Math operations stored. math_ref contains the operator.
+my @REF_LITERALS_FALSE    = ();
+my @MATH_COLUMNS          = (); my $math_ref = {}; # Math operations stored. math_ref contains the operator.
 
 # Explains the usage of pipe.pl when -x is used or if there was an error with input.
 # Message about this program and how to use it.
@@ -152,7 +152,7 @@ sub usage()
        -c{c0,c1,...,cn}
        -C{[any|num_cols|cn]:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
        -d[-IRN]{c0,c1,...,cn} [-J{cn}]
-       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]}
+       -e{[c0|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|format_{from}-{to}][,...]}
        -E{c0:[r|?c.r[.e]],...}
        -f{c0:n.p[?p.q[.r]],...}
        -F{c0:[b|c|d|h][.[b|c|d|h]],...}
@@ -267,7 +267,8 @@ All column references are 0 based. Line numbers start at 1.
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]]}: Change the case of a value 
+ -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
+                  Change the case, normalize, or order field data   
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands is available starting in version
                   0.48.00. These include (spc) to replace multiple white spaces with a
@@ -279,6 +280,14 @@ All column references are 0 based. Line numbers start at 1.
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
                   NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
+                  The order key word allows character sequences to be ordered within a field
+                  like using -o can order fields, but order names each character within a  
+                  field and allows those named characters to be mapped to new positions 
+                  on output. For example: '123' -ec0:order_xyz-zyx => '321' or 
+                  '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'. If the length of
+                  the input is longer than the variable string, the remainder of the string
+                  is output as is. The input variable declaration must match the output 
+                  in length and character case.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -481,7 +490,7 @@ The order of operations is as follows:
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
-  -e - Change case and normalize strings.
+  -e - Change case, order, and normalize strings.
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
@@ -2176,6 +2185,68 @@ sub apply_casing( $$ )
             $field =~ s/($exps)//g;
         }
     }
+    if ( $instruction =~ m/^order_/i )
+    {
+        # Take the next part of the string as the operation for the string {xyz}-{zyx}.
+        # Each character from the first paren set is stored as a key in table 'a'. Repeated characters add as a new index
+        # to an existing keyed value in table 'a'. The process is repeated for the output character ordering, storing the
+        # values in a table 'b'. Once done, take the positions stored in table 'a' and map them to table 'b's new positions.
+        my @order_vars = split /-/, $';
+        my @from = split //, $order_vars[0];
+        my @to   = split //, $order_vars[1];
+        my $a_ref = {};
+        my $b_ref = {};
+        my $index = 0;
+        # For each variable char, save the index of its position on a string.
+        # Later we will split the string and put field together in that order.
+        foreach my $f ( @from )
+        {
+            $a_ref->{$f} .= $index.',';
+            $index++;
+        }
+        $index = 0;
+        # Store the preferred order.
+        foreach my $t ( @to )
+        {
+            $b_ref->{$t} .= $index.',';
+            $index++;
+        }
+        # a_ref->{'y'} = 0,1,2,3, b_ref->{'y'} = 5,6,7,8,
+        # now take the keys from a_ref
+        ## TODO: Finish by matching the correct ordering 
+        my @old_field = split //, $field;
+        my @new_field = split //, $field;
+        while ( my ($key, $new_value) = each(%$b_ref) )
+        {
+            # The new_value contains the new ordering of the character indices.
+            # For example: 4,5 which means that $new_field[0]=$old_field[4]
+            if ( ! exists $a_ref->{$key} )
+            {
+                printf STDERR "**error, unmatched variable name '%s' in input for ordering with -e flag.\n", $key;
+                exit 0;
+            }
+            my $old_value = $a_ref->{$key};
+            my $new_value = $b_ref->{$key};
+            chop $old_value; # Cut off the trailing ','
+            chop $new_value; # Cut off the trailing ','
+            print "\$old_value=$old_value\n" if ( $opt{'D'} );
+            print "\$new_value=$new_value\n" if ( $opt{'D'} );
+            my @index_old = split /,/, $old_value;
+            my @index_new = split /,/, $new_value;
+            if ( scalar @index_old != scalar @index_new )
+            {
+                printf STDERR "**error, mismatch variable length for '%s' while using -e flag.\n", $key;
+                exit 0;
+            }
+            while ( @index_old )
+            {
+                my $i = shift @index_old;
+                my $j = shift @index_new;
+                $new_field[$j] = $old_field[$i] if ( defined $i && defined $old_field[$i] );
+            }
+        }
+        $field = join '', @new_field;
+    }
     return $field;
 }
 
@@ -2201,10 +2272,10 @@ sub modify_case_line( $ )
             printf STDERR "case specifier: '%s' \n", $case_ref->{ $i } if ( $opt{'D'} );
             my $exp = $case_ref->{ $i };
             # The first 2 characters determine the type of casing.
-            $exp =~ m/^(uc|lc|mc|us|spc|normal_)/i;
+            $exp =~ m/^(uc|lc|mc|us|spc|normal_|order_)/i;
             if ( ! $& )
             {
-                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d,q|Q)) but got '%s'.\n", $case_ref->{ $i };
+                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d,q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
                 usage();
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );

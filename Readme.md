@@ -137,7 +137,8 @@ Complete list of flags
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q][,...]]}: Change the case of a value 
+ -e{[cn|any]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
+                  Change the case, normalize, or order field data   
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands is available starting in version
                   0.48.00. These include (spc) to replace multiple white spaces with a
@@ -149,6 +150,14 @@ Complete list of flags
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
                   NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
+                  The order key word allows character sequences to be ordered within a field
+                  like using -o can order fields, but order names each character within a  
+                  field and allows those named characters to be mapped to new positions 
+                  on output. For example: '123' -ec0:order_xyz-zyx => '321' or 
+                  '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'. If the length of
+                  the input is longer than the variable string, the remainder of the string
+                  is output as is. The input variable declaration must match the output 
+                  in length and character case.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
