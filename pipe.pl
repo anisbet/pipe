@@ -280,6 +280,14 @@ All column references are 0 based. Line numbers start at 1.
                   character. For example normalize removing digits and non-word characters.
                   "23)  Line with     lots of  #'s!" -ec0:"NORMAL_d|W" => "Linewithlotsofs"
                   NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
+                  The order key word allows character sequences to be ordered within a field
+                  like using -o can order fields, but order names each character within a  
+                  field and allows those named characters to be mapped to new positions 
+                  on output. For example: '123' -ec0:order_xyz-zyx => '321' or 
+                  '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'. If the length of
+                  the input is longer than the variable string, the remainder of the string
+                  is output as is. The input variable declaration must match the output 
+                  in length and character case.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -482,7 +490,7 @@ The order of operations is as follows:
   -A - Displays line numbers or summary of duplicates if '-d' is selected.
   -J - Displays sum over group if '-d' is selected.
   -u - Encode specified columns into URL-safe strings.
-  -e - Change case and normalize strings.
+  -e - Change case, order, and normalize strings.
   -E - Replace string in column conditionally.
   -f - Modify character in string based on 0-based index.
   -F - Format column value into bin, hex, or dec.
@@ -2180,26 +2188,28 @@ sub apply_casing( $$ )
     if ( $instruction =~ m/^order_/i )
     {
         # Take the next part of the string as the operation for the string {xyz}-{zyx}.
+        # Each character from the first paren set is stored as a key in table 'a'. Repeated characters add as a new index
+        # to an existing keyed value in table 'a'. The process is repeated for the output character ordering, storing the
+        # values in a table 'b'. Once done, take the positions stored in table 'a' and map them to table 'b's new positions.
         my @order_vars = split /-/, $';
-        # Now has $order_vars[0] = 'xyz', $order_vars[1] = 'zyx'
         my @from = split //, $order_vars[0];
         my @to   = split //, $order_vars[1];
         my $a_ref = {};
         my $b_ref = {};
-        my $count = 0;
+        my $index = 0;
         # For each variable char, save the index of its position on a string.
         # Later we will split the string and put field together in that order.
         foreach my $f ( @from )
         {
-            $a_ref->{$f} .= $count.',';
-            $count++;
+            $a_ref->{$f} .= $index.',';
+            $index++;
         }
-        $count = 0;
+        $index = 0;
         # Store the preferred order.
         foreach my $t ( @to )
         {
-            $b_ref->{$t} .= $count.',';
-            $count++;
+            $b_ref->{$t} .= $index.',';
+            $index++;
         }
         # a_ref->{'y'} = 0,1,2,3, b_ref->{'y'} = 5,6,7,8,
         # now take the keys from a_ref
@@ -2217,10 +2227,10 @@ sub apply_casing( $$ )
             }
             my $old_value = $a_ref->{$key};
             my $new_value = $b_ref->{$key};
-            chop $old_value;
-            chop $new_value;
-            # print "\$old_value=$old_value\n";
-            # print "\$new_value=$new_value\n";
+            chop $old_value; # Cut off the trailing ','
+            chop $new_value; # Cut off the trailing ','
+            print "\$old_value=$old_value\n" if ( $opt{'D'} );
+            print "\$new_value=$new_value\n" if ( $opt{'D'} );
             my @index_old = split /,/, $old_value;
             my @index_new = split /,/, $new_value;
             if ( scalar @index_old != scalar @index_new )
@@ -2232,7 +2242,7 @@ sub apply_casing( $$ )
             {
                 my $i = shift @index_old;
                 my $j = shift @index_new;
-                $new_field[$j] = $old_field[$i] if ( defined $i && defined $j );
+                $new_field[$j] = $old_field[$i] if ( defined $i && defined $old_field[$i] );
             }
         }
         $field = join '', @new_field;
