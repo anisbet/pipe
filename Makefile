@@ -40,4 +40,5 @@ test:
 production: test put 
 	scp ${LOCAL}${APP} ${USER}@${PRODUCTION_SERVER}:${REMOTE}
 	scp ${LOCAL}${APP} ils@epl-ils.epl.ca:/home/ils/bin
+	scp ${LOCAL}${APP} its@epl-el1.epl.ca:/home/its/bin
 
