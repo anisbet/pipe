@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.90 - December 7, 2018 Add field rearranging with -e.
+# 0.49.91 - January 29, 2019 Switch -m fixed so that fields with '0' and empty 
+#           fields are handled consistently.
 #
 ####################################################################################
 
