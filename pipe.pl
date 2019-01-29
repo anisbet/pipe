@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.90};
+my $VERSION           = qq{0.49.91};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -1342,22 +1342,16 @@ sub prepare_table_data( $ )
 }
 
 # Applies the mask specified in argument 2 to string in argument 1.
-# param:  String - target of masking operation.
+# param:  String - target of masking operation, the string data from this column.
 # param:  String - mask specification.
 # return: String modified by mask.
 sub apply_mask( $$ )
 {
-    my $test_param1_exists = shift;
-    my $test_param2_exists = shift;
+    my $column_string = shift; 
+    my $column_mask   = shift;
     my ( @chars, @mask ) = ();
-    if ( $test_param1_exists )
-    {
-        @chars = split '', $test_param1_exists;
-    }
-    if ( $test_param2_exists )
-    {
-        @mask  = split '', $test_param2_exists;
-    }
+    @chars = split '', $column_string;
+    @mask  = split '', $column_mask;
     my @word  = ();
     my $mask_char = '#'; # pre-load so if -m'c0:' will default output line.
     while ( @mask )
