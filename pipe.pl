@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.91 - January 29, 2019 Switch -m fixed so that fields with '0' and empty 
-#           fields are handled consistently.
+# 0.49.92 - April 30, 2019 Switch -J to trim values before computing sum.
 #
 ####################################################################################
 
@@ -39,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.91};
+my $VERSION           = qq{0.49.92};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -2916,9 +2915,10 @@ sub get_column_value( $$ )
     {
         # The user may have requested -W so there may be SUB_DELIMITERs in string.
         $columns[ $wantedColumn ] =~ s/($SUB_DELIMITER)/\|/g;
-        if ( $columns[ $wantedColumn ] =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+        my $trimmed_column = trim( $columns[ $wantedColumn ] );
+        if ( $trimmed_column =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
         {
-            return $columns[ $wantedColumn ];
+            return $trimmed_column;
         }
         else
         {
@@ -2947,7 +2947,7 @@ sub get_number_format
         if ( $input && $input =~ /^[+]?\d+\z/ ){ $summary = sprintf "%d", $input; }
     }
     elsif ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
-    elsif ( $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
+    elsif ( defined $precision && $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
     { $summary = eval("sprintf \"%.".$precision."f\", $input"); }
     elsif ( $input =~ /^([+-]?)(?=\d&\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?\z/ ){ $summary = $input; }
     else { $summary = "NaN"; }
@@ -3006,7 +3006,7 @@ sub dedup_list( $ )
     while ( @tmp )
     {
         my $key = shift @tmp;
-        if ( $opt{ 'A' } or $opt{ 'J' } )
+        if ( $opt{ 'A' } )
         {
             my $summary = '';
             if ( $opt{'P'} )
@@ -3016,6 +3016,19 @@ sub dedup_list( $ )
             else
             {
                 $summary = sprintf " %3s ", get_number_format( $count->{ $key } );
+            }
+            push @ALL_LINES, $summary . $ddup_ref->{ $key };
+        }
+        elsif ( $opt{ 'J' } )
+        {
+            my $summary = '';
+            if ( $opt{'P'} )
+            {
+                $summary = sprintf "%s|", get_number_format( $count->{ $key }, 0, $PRECISION );
+            }
+            else
+            {
+                $summary = sprintf " %3s ", get_number_format( $count->{ $key }, 0, $PRECISION );
             }
             push @ALL_LINES, $summary . $ddup_ref->{ $key };
         }
