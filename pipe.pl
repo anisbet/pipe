@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.92 - April 30, 2019 Switch -J trim white space before trying to calculate sum.
+# 0.49.93 - May 3, 2019 Added -y precision to -m output.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.92};
+my $VERSION           = qq{0.49.93};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -340,8 +340,9 @@ All column references are 0 based. Line numbers start at 1.
  -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
-                  providing a sum over group-like functionality. Does not work if -A is selected
-                  (see -A).
+                  providing a sum over group-like functionality. -J removes leading and trailing
+                  white space before adding the value to the running total.
+                  Does not work if -A is selected (see -A). 
  -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
@@ -374,6 +375,8 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+                  Using -y instructs -m to insert a '.' into the string at -y places from the 
+                  end of the string (See -y). This works on both numeric or alphanumeric strings.
  -M             : Allows columns of values read from STDIN to be compared to any columns' values
                   from another file using -0. Thus for all rows, and any column from STDIN,
                   if a specific column from -0 matches, any columns from the -0 input line are
@@ -1347,7 +1350,8 @@ sub prepare_table_data( $ )
 # return: String modified by mask.
 sub apply_mask( $$ )
 {
-    my $column_string = shift; 
+    my $column_string = shift;
+    return '' if ( ! $column_string ); # return if there is no string to mask on.
     my $column_mask   = shift;
     my ( @chars, @mask ) = ();
     @chars = split '', $column_string;
@@ -1374,9 +1378,18 @@ sub apply_mask( $$ )
             push @word, $mask_char;
         }
     }
-    # chomp( @chars );
+    # Output the remainder of the string if the string ends with '#'
     push @word, @chars if ( @chars and $mask_char eq '#' );
-    return join '', @word;
+    my $word_str = join '', @word;
+    # If precision is set on this then take the result and add a decimal at $PRECISION
+    # places from the end of the string. Used to quickly add fractional parts of numbers
+    # but works on alphabetic strings too.
+    if ( $opt{ 'y' } && $PRECISION <= length $word_str )
+    {
+        my $tmp_str = substr( $word_str, 0, ( length($word_str) - $PRECISION ) );
+        $word_str =~ s/($tmp_str)/$1\./;
+    }
+    return $word_str;
 }
 
 # Outputs masked column data as per specification. See usage().
