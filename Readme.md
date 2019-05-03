@@ -210,8 +210,9 @@ Complete list of flags
  -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
-                  providing a sum over group-like functionality. Does not work if -A is selected
-                  (see -A).
+                  providing a sum over group-like functionality. -J removes leading and trailing
+                  white space before adding the value to the running total.
+                  Does not work if -A is selected (see -A). 
  -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
@@ -244,6 +245,8 @@ Complete list of flags
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+                  Using -y instructs -m to insert a '.' into the string at -y places from the 
+                  end of the string (See -y). This works on both numeric or alphanumeric strings.
  -M             : Allows columns of values read from STDIN to be compared to any columns' values
                   from another file using -0. Thus for all rows, and any column from STDIN,
                   if a specific column from -0 matches, any columns from the -0 input line are

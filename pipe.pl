@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.91 - January 29, 2019 Switch -m fixed so that fields with '0' and empty 
-#           fields are handled consistently.
+# 0.49.93 - May 3, 2019 Added -y precision to -m output.
 #
 ####################################################################################
 
@@ -39,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.91};
+my $VERSION           = qq{0.49.93};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -341,8 +340,9 @@ All column references are 0 based. Line numbers start at 1.
  -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
  -j             : Removes the last delimiter from the last processed line. See -P, -K, -h.
  -J{cn}         : Sums the numeric values in a given column during the dedup process (-d)
-                  providing a sum over group-like functionality. Does not work if -A is selected
-                  (see -A).
+                  providing a sum over group-like functionality. -J removes leading and trailing
+                  white space before adding the value to the running total.
+                  Does not work if -A is selected (see -A). 
  -k{cn:expr,(...)}: Use perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'
                   and can be manipulated and output as per these examples.
@@ -375,6 +375,8 @@ All column references are 0 based. Line numbers start at 1.
                   produces '2015/01/05 18:55:33'.
                   Example: 'ls *.txt | pipe.pl -m"c0:/foo/bar/#"' produces '/foo/bar/README.txt'.
                   Use '\' to escape either '_', ',' or '#'.
+                  Using -y instructs -m to insert a '.' into the string at -y places from the 
+                  end of the string (See -y). This works on both numeric or alphanumeric strings.
  -M             : Allows columns of values read from STDIN to be compared to any columns' values
                   from another file using -0. Thus for all rows, and any column from STDIN,
                   if a specific column from -0 matches, any columns from the -0 input line are
@@ -1348,7 +1350,8 @@ sub prepare_table_data( $ )
 # return: String modified by mask.
 sub apply_mask( $$ )
 {
-    my $column_string = shift; 
+    my $column_string = shift;
+    return '' if ( ! $column_string ); # return if there is no string to mask on.
     my $column_mask   = shift;
     my ( @chars, @mask ) = ();
     @chars = split '', $column_string;
@@ -1375,9 +1378,18 @@ sub apply_mask( $$ )
             push @word, $mask_char;
         }
     }
-    # chomp( @chars );
+    # Output the remainder of the string if the string ends with '#'
     push @word, @chars if ( @chars and $mask_char eq '#' );
-    return join '', @word;
+    my $word_str = join '', @word;
+    # If precision is set on this then take the result and add a decimal at $PRECISION
+    # places from the end of the string. Used to quickly add fractional parts of numbers
+    # but works on alphabetic strings too.
+    if ( $opt{ 'y' } && $PRECISION <= length $word_str )
+    {
+        my $tmp_str = substr( $word_str, 0, ( length($word_str) - $PRECISION ) );
+        $word_str =~ s/($tmp_str)/$1\./;
+    }
+    return $word_str;
 }
 
 # Outputs masked column data as per specification. See usage().
@@ -2916,9 +2928,10 @@ sub get_column_value( $$ )
     {
         # The user may have requested -W so there may be SUB_DELIMITERs in string.
         $columns[ $wantedColumn ] =~ s/($SUB_DELIMITER)/\|/g;
-        if ( $columns[ $wantedColumn ] =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
+        my $trimmed_column = trim( $columns[ $wantedColumn ] );
+        if ( $trimmed_column =~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
         {
-            return $columns[ $wantedColumn ];
+            return $trimmed_column;
         }
         else
         {
@@ -2947,7 +2960,7 @@ sub get_number_format
         if ( $input && $input =~ /^[+]?\d+\z/ ){ $summary = sprintf "%d", $input; }
     }
     elsif ( $input =~ /^[+-]?\d+\z/ )   { $summary = sprintf "%d", $input; }
-    elsif ( $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
+    elsif ( defined $precision && $input =~ /^-?\d+\.?\d*\z/ || $input =~ /^-?(?:\d+(?:\.\d*)?&\.\d+)\z/ )
     { $summary = eval("sprintf \"%.".$precision."f\", $input"); }
     elsif ( $input =~ /^([+-]?)(?=\d&\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?\z/ ){ $summary = $input; }
     else { $summary = "NaN"; }
@@ -3006,7 +3019,7 @@ sub dedup_list( $ )
     while ( @tmp )
     {
         my $key = shift @tmp;
-        if ( $opt{ 'A' } or $opt{ 'J' } )
+        if ( $opt{ 'A' } )
         {
             my $summary = '';
             if ( $opt{'P'} )
@@ -3016,6 +3029,19 @@ sub dedup_list( $ )
             else
             {
                 $summary = sprintf " %3s ", get_number_format( $count->{ $key } );
+            }
+            push @ALL_LINES, $summary . $ddup_ref->{ $key };
+        }
+        elsif ( $opt{ 'J' } )
+        {
+            my $summary = '';
+            if ( $opt{'P'} )
+            {
+                $summary = sprintf "%s|", get_number_format( $count->{ $key }, 0, $PRECISION );
+            }
+            else
+            {
+                $summary = sprintf " %3s ", get_number_format( $count->{ $key }, 0, $PRECISION );
             }
             push @ALL_LINES, $summary . $ddup_ref->{ $key };
         }
@@ -3678,7 +3704,7 @@ sub process_line( $ )
         pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
     }
     # Output line numbering, but if -d selected, output dedup'ed counts instead.
-    if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
+    if ( ( $opt{'A'} or $opt{ 'J' } ) and ! $opt{'d'} )
     {
         return sprintf "%3d %s\n", $LINE_NUMBER, $line;
     }
