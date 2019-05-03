@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.92 - April 30, 2019 Switch -J to trim values before computing sum.
+# 0.49.92 - April 30, 2019 Switch -J trim white space before trying to calculate sum.
 #
 ####################################################################################
 
@@ -3691,7 +3691,7 @@ sub process_line( $ )
         pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
     }
     # Output line numbering, but if -d selected, output dedup'ed counts instead.
-    if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
+    if ( ( $opt{'A'} or $opt{ 'J' } ) and ! $opt{'d'} )
     {
         return sprintf "%3d %s\n", $LINE_NUMBER, $line;
     }
