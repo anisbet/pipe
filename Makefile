@@ -26,19 +26,21 @@
 ########################################################################
 # Change comment below for appropriate server.
 PRODUCTION_SERVER=eplapp.library.ualberta.ca
-TEST_SERVER=edpl-t.library.ualberta.ca
+# TEST_SERVER=edpl-t.library.ualberta.ca
+TEST_SERVER=129.128.216.221
 USER=sirsi
 REMOTE=~/Unicorn/Bincustom/
 LOCAL=~/projects/pipe/
 APP=pipe.pl
 ARGS=-x
-.PHONY: put test production
-put: test production ${APP}
-	scp ${LOCAL}${APP} ${USER}@${TEST_SERVER}:${REMOTE}
-test:
+.PHONY: test production
+
+test: ${APP}
 	perl -c ${APP}
-production: test put 
+production: test 
 	scp ${LOCAL}${APP} ${USER}@${PRODUCTION_SERVER}:${REMOTE}
 	scp ${LOCAL}${APP} ils@epl-ils.epl.ca:/home/ils/bin
 	scp ${LOCAL}${APP} its@epl-el1.epl.ca:/home/its/bin
-
+	scp ${LOCAL}${APP} ilsadmin@epl-olr.epl.ca:/home/ilsadmin/pipe
+	scp ${LOCAL}${APP} ${USER}@${TEST_SERVER}:${REMOTE}
+	sudo cp ${APP} /usr/local/sbin/pipe.pl
