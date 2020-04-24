@@ -4,7 +4,7 @@
 # Perl source file for project pipe.
 #
 # Pipe performs handy operations on pipe delimited files.
-#    Copyright (C) 2015 - 2017  Andrew Nisbet
+#    Copyright (C) 2015 - 2020  Andrew Nisbet
 # The Edmonton Public Library respectfully acknowledges that we sit on
 # Treaty 6 territory, traditional lands of First Nations and Metis people.
 #
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.93 - May 3, 2019 Added -y precision to -m output.
+# 0.49.94_x - April 24, 2020 Bug fix for -TCHUNCKED command to add '.' and newline.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.93};
+my $VERSION           = qq{0.49.94};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -3297,12 +3297,14 @@ sub table_output( $ )
                     elsif ( $keyword =~ m/SKIP/ )
                     {
                         # parse out the number of lines to skip and the literal.
-                        ( $SKIP_LINE_TABLE, $SKIP_VALUE ) = split '\.', $param;
+                        ( $SKIP_LINE_TABLE, my @SKIP_VALUES ) = split '\.', $param;
                         if ( $SKIP_LINE_TABLE !~ m/^\d+$/ || ( $SKIP_LINE_TABLE + 0 ) < 1 )
                         {
                             printf STDERR "**error: invalid skip value requested in chunked table output.\n", $SKIP_LINE_TABLE;
                             exit 0;
                         }
+                        # Preserver literals that contain '.'
+                        $SKIP_VALUE = join '.', @SKIP_VALUES;
                     }
                 }
             }
