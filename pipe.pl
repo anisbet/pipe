@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.94_x - April 24, 2020 Bug fix for -TCHUNCKED command to add '.' and newline.
+# 0.49.94 - April 24, 2020 Bug fix for -TCHUNCKED command to add '.' and newline.
 #
 ####################################################################################
 
@@ -1323,11 +1323,6 @@ sub prepare_table_data( $ )
     }
     elsif ( $TABLE_OUTPUT =~ m/CHUNKED/i )
     {
-        if ( defined $SKIP_LINE_TABLE && $SKIP_LINE_TABLE > 0 && $LINE_NUMBER % $SKIP_LINE_TABLE == 0 )
-        {
-            push @newLine, $SKIP_VALUE;
-            push @newLine, "\n";
-        }
         foreach my $value ( @{ $line } )
         {
             push @newLine, $value;
@@ -1336,6 +1331,15 @@ sub prepare_table_data( $ )
         # remove the last delimiter.
         pop @newLine;
         push @newLine, "\n";
+        # Place the requested literal AFTER the requisite number of skip rows are output.
+        if ( defined $SKIP_LINE_TABLE && $SKIP_LINE_TABLE > 0 )
+        {
+            if ( $LINE_NUMBER % $SKIP_LINE_TABLE == 0 )
+            {
+                  push @newLine, $SKIP_VALUE;
+                  push @newLine, "\n";
+            }
+        }
     }
     @{ $line } = ();
     foreach my $v ( @newLine )
