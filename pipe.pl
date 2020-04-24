@@ -3287,7 +3287,8 @@ sub table_output( $ )
             my @keywords = split ',', $TABLE_ATTR;
             foreach my $keyword_assignment ( @keywords )
             {
-                my ( $keyword, $param ) = split /=/, $keyword_assignment;
+                my ( $keyword, @params ) = split /=/, $keyword_assignment;
+                my $param = join '=', @params;
                 if ( defined $keyword )
                 {
                     if ( $keyword =~ m/BEGIN/ )
@@ -3301,14 +3302,14 @@ sub table_output( $ )
                     elsif ( $keyword =~ m/SKIP/ )
                     {
                         # parse out the number of lines to skip and the literal.
-                        ( $SKIP_LINE_TABLE, my @SKIP_VALUES ) = split '\.', $param;
+                        ( $SKIP_LINE_TABLE, my @skip_values ) = split '\.', $param;
                         if ( $SKIP_LINE_TABLE !~ m/^\d+$/ || ( $SKIP_LINE_TABLE + 0 ) < 1 )
                         {
                             printf STDERR "**error: invalid skip value requested in chunked table output.\n", $SKIP_LINE_TABLE;
                             exit 0;
                         }
                         # Preserver literals that contain '.'
-                        $SKIP_VALUE = join '.', @SKIP_VALUES;
+                        $SKIP_VALUE = join '.', @skip_values;
                     }
                 }
             }
