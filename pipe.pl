@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.94 - April 24, 2020 Bug fix for -TCHUNCKED command to add '.' and newline.
+# 0.49.95 - April 29, 2020 -H now suppressed for matching lines if -i is used.
 #
 ####################################################################################
 
@@ -332,8 +332,9 @@ All column references are 0 based. Line numbers start at 1.
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
- -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -z and -Z. Normally fields are 
+ -H             : Suppress new line on output. If -i is used suppression of new lines is interupted
+                  for the lines that are affected by the switches listed in -i.
+ -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -H, -z and -Z. Normally fields are 
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
@@ -3404,7 +3405,6 @@ sub process_line( $ )
 {
     # Always output if -g, -C, or -G match or not, but if matches additional processing will be done.
     # We turn it on by default so if -g or -G not used the line will get processed as normal.
-    my $continue_to_process_match_C = 1;
     my $line = shift;
     chomp $line;
     # With -W the line will look like this; '11|abc{_PIPE_}def'
@@ -3715,7 +3715,7 @@ sub process_line( $ )
     {
         return sprintf "%3d %s\n", $LINE_NUMBER, $line;
     }
-    if ( $opt{'H'} )
+    if ( $opt{'H'} && ! $continue_to_process_match )
     {
         if ( $opt{'q'} && $LINE_NUMBER % $JOIN_COUNT == 0 ) # Join lines until -q number of lines is emitted.
         {
