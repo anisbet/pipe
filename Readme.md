@@ -310,7 +310,7 @@ Complete list of flags
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
-                  CSV:Name,Date,Address,Phone
+                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , ' to ensure column widths.
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
                   can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.95 - April 29, 2020 -H now suppressed for matching lines if -i is used.
+# 0.49.96 - June 15, 2020 Fix output of CSV with -T to not quote empty strings.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.95};
+my $VERSION           = qq{0.49.96};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -108,7 +108,7 @@ my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
-my $TABLE_OUTPUT      = 0;  my $TABLE_ATTR = ''; # Does the user want to output to a table.
+my $TABLE_OUTPUT      = 0;  my $TABLE_ATTR = '';     my $TOTAL_CSV_COLS = 0; # Does the user want to output to a table.
 my $BEGIN_VALUE       = ''; my $SKIP_LINE_TABLE = 0; my $SKIP_VALUE = ''; my $END_VALUE = ''; # Used in CHUNKED tables
 my $WIDTHS_COLUMNS    = {};
 my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
@@ -441,7 +441,7 @@ All column references are 0 based. Line numbers start at 1.
  -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
                 : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
-                  CSV:Name,Date,Address,Phone
+                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , ' to ensure column widths.
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
                   can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
@@ -1308,7 +1308,7 @@ sub prepare_table_data( $ )
     {
         foreach my $value ( @{ $line } )
         {
-            if ( $value =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
+            if ( $value =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ || $value =~ m/^$/ )
             {
                 push @newLine, $value;
             }
@@ -1317,6 +1317,15 @@ sub prepare_table_data( $ )
                 push @newLine, "\"".$value."\"";
             }
             push @newLine, ',';
+        }
+        # The number of titles indicate the expected width of each row.
+        if ( $TOTAL_CSV_COLS )
+        {
+            # Add trailing delimiters to match expected columns if the row is ragged and short.
+            for ( my $i = scalar(@{ $line }); $i < $TOTAL_CSV_COLS; $i++ )
+            {
+                push @newLine, ',';
+            }
         }
         # remove the last ','.
         pop @newLine;
@@ -3271,6 +3280,8 @@ sub table_output( $ )
         {
             my @titles = split ',', $TABLE_ATTR;
             my $out_string = "";
+            # The number of titles dictates the number of columns which we try to ensure.
+            $TOTAL_CSV_COLS = scalar( @titles );
             for my $title ( @titles )
             {
                 $out_string .= sprintf "\"%s\",", trim( $title );
