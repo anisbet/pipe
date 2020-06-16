@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.96 - June 15, 2020 Fix output of CSV with -T to not quote empty strings.
+# 0.49.97 - June 16, 2020 Fix output to quote only strings that contain commas.
 #
 ####################################################################################
 
@@ -1308,13 +1308,14 @@ sub prepare_table_data( $ )
     {
         foreach my $value ( @{ $line } )
         {
-            if ( $value =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ || $value =~ m/^$/ )
+            # Only quote values that contain ','
+            if ( $value =~ m/,/ )
             {
-                push @newLine, $value;
+                push @newLine, "\"".$value."\"";
             }
             else
             {
-                push @newLine, "\"".$value."\"";
+                push @newLine, $value;
             }
             push @newLine, ',';
         }
@@ -3284,7 +3285,7 @@ sub table_output( $ )
             $TOTAL_CSV_COLS = scalar( @titles );
             for my $title ( @titles )
             {
-                $out_string .= sprintf "\"%s\",", trim( $title );
+                $out_string .= sprintf "%s,", trim( $title );
             }
             chop( $out_string ); # Take the last ',' off the end of the string.
             printf "%s\n", $out_string if ( $out_string );
