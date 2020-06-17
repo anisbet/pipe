@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.97 - June 16, 2020 Fix output to quote only strings that contain commas.
+# 0.49.98 - June 17, 2020 Fix to support quoted and UTF-8 CSV output with -T.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.97};
+my $VERSION           = qq{0.49.98};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -171,7 +171,7 @@ sub usage()
        -s[-IRN]{c0,c1,...,cn}
        -S{cn:[range],...}
        -t{[any]|[c0,c1,...,cn]} [-y n]
-       -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]
+       -THTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8][:col1,col2,...,coln]
             |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
        -v{c0,c1,...,cn}
        -w{c0,c1,...,cn}
@@ -438,10 +438,12 @@ All column references are 0 based. Line numbers start at 1.
  -t{[any|cn],...}: Trim the specified columns of white space front and back. If -y is
                    used, the string is trimmed of any leading, trailing whitespace, then
                    is truncated (from the back) to the length specified by -y.
- -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
+ -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8][:col1,col2,...,coln]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
-                : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
-                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , ' to ensure column widths.
+                : Output as a Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
+                  With CSV or CSV_UTF-8 the attributes become column titles and queue pipe.pl
+                  to consider the width of the rows on output, filling in empty values as required.
+                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , '.
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
                   can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
@@ -1269,7 +1271,7 @@ sub prepare_table_data( $ )
 {
     my $line = shift;
     my @newLine = ();
-    if ( $TABLE_OUTPUT =~ m/HTML/i )
+    if ( $TABLE_OUTPUT =~ m/HTML/ )
     {
         push @newLine, "  <tr><td>";
         foreach my $value ( @{ $line } )
@@ -1281,7 +1283,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "</td></tr>";
     }
-    elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
+    elsif ( $TABLE_OUTPUT =~ m/WIKI/ )
     {
         push @newLine, "\n| ";
         foreach my $value ( @{ $line } )
@@ -1293,7 +1295,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "\n|-";
     }
-    elsif ( $TABLE_OUTPUT =~ m/MD/i )
+    elsif ( $TABLE_OUTPUT =~ m/MD/ )
     {
         foreach my $value ( @{ $line } )
         {
@@ -1304,18 +1306,35 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "\n";
     }
-    elsif ( $TABLE_OUTPUT =~ m/CSV/i )
+    elsif ( $TABLE_OUTPUT =~ m/CSV/ )
     {
         foreach my $value ( @{ $line } )
         {
-            # Only quote values that contain ','
-            if ( $value =~ m/,/ )
+            if ( $TABLE_OUTPUT =~ m/UTF-8/ )
             {
-                push @newLine, "\"".$value."\"";
+                # remove repeated white space
+                $value =~ s/\s+/ /g;
+                # Only quote values that contain ','
+                if ( $value =~ m/,/ || $value =~ m/[\"|\']/ )
+                {
+                    $value =~ s/\"/\"\"/g;
+                    push @newLine, "\"".$value."\"";
+                }
+                else
+                {
+                    push @newLine, $value;
+                }
             }
             else
             {
-                push @newLine, $value;
+                if ( $value =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
+                {
+                    push @newLine, $value;
+                }
+                else
+                {
+                    push @newLine, "\"".$value."\"";
+                }
             }
             push @newLine, ',';
         }
@@ -1332,7 +1351,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "\n";
     }
-    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/i )
+    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/ )
     {
         foreach my $value ( @{ $line } )
         {
@@ -3245,7 +3264,7 @@ sub build_encoding_table()
 sub table_output( $ )
 {
     my $placement = shift;
-    if ( $TABLE_OUTPUT =~ m/HTML/ )
+    if ( $TABLE_OUTPUT =~ m/HTML/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
@@ -3256,7 +3275,7 @@ sub table_output( $ )
             printf "  </tbody>\n</table>\n";
         }
     }
-    elsif ( $TABLE_OUTPUT =~ m/WIKI/ )
+    elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
@@ -3267,7 +3286,7 @@ sub table_output( $ )
             printf "|-\n|}\n";
         }
     }
-    elsif ( $TABLE_OUTPUT =~ m/MD/ )
+    elsif ( $TABLE_OUTPUT =~ m/MD/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
@@ -3275,7 +3294,7 @@ sub table_output( $ )
         }
         # No footer for MarkDown.
     }
-    elsif ( $TABLE_OUTPUT =~ m/CSV/ )
+    elsif ( $TABLE_OUTPUT =~ m/^CSV/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
@@ -3285,14 +3304,21 @@ sub table_output( $ )
             $TOTAL_CSV_COLS = scalar( @titles );
             for my $title ( @titles )
             {
-                $out_string .= sprintf "%s,", trim( $title );
+                if ( $TABLE_OUTPUT =~ m/UTF-8/ )
+                {
+                    $out_string .= sprintf "%s,", trim( $title );
+                }
+                else
+                {
+                    $out_string .= sprintf "\"%s\",", trim( $title );
+                }
             }
             chop( $out_string ); # Take the last ',' off the end of the string.
             printf "%s\n", $out_string if ( $out_string );
         }
         # No footer for CSV.
     }
-    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/ )
+    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
@@ -3859,7 +3885,14 @@ sub init
         }
         elsif ( $opt{'T'} =~ m/CSV/i )
         {
-            $TABLE_OUTPUT = "CSV";
+            if ( $opt{'T'} =~ m/UTF-8:/i )
+            {
+                $TABLE_OUTPUT = "CSV_UTF-8";
+            }
+            else
+            {
+                $TABLE_OUTPUT = "CSV";
+            }
         }
         elsif ( $opt{'T'} =~ m/CHUNKED/i )
         {

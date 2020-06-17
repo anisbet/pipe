@@ -307,10 +307,12 @@ Complete list of flags
  -t{[any|cn],...}: Trim the specified columns of white space front and back. If -y is
                    used, the string is trimmed of any leading, trailing whitespace, then
                    is truncated (from the back) to the length specified by -y.
- -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[:col1,col2,...,coln]}
+ -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8][:col1,col2,...,coln]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
-                : Output as a Wiki table, Markdown, CSV or an HTML table, with attributes.
-                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , ' to ensure column widths.
+                : Output as a Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
+                  With CSV or CSV_UTF-8 the attributes become column titles and queue pipe.pl
+                  to consider the width of the rows on output, filling in empty values as required.
+                  Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , '.
                   HTML also allows for adding CSS or other HTML attributes to the <table> tag.
                   A bootstrap example is '1|2|3' -T'HTML:class="table table-hover"'. CHUNKED tables
                   can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
