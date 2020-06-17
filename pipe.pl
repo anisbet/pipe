@@ -3885,7 +3885,7 @@ sub init
         }
         elsif ( $opt{'T'} =~ m/CSV/i )
         {
-            if ( $opt{'T'} =~ m/UTF-8:/i )
+            if ( $opt{'T'} =~ m/UTF-8/i )
             {
                 $TABLE_OUTPUT = "CSV_UTF-8";
             }
