@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.98 - June 17, 2020 Fix to support quoted and UTF-8 CSV output with -T.
+# 1.00.00 - June 30, 2020 Fix -X and -Y to match same regex.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.98};
+my $VERSION           = qq{1.00.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -3457,15 +3457,15 @@ sub process_line( $ )
     }
     if ( $opt{'X'} || $opt{'Y'} )
     {
-        if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
-        {
-            $continue_to_process_match = 1;
-            $IS_X_MATCH = 1;
-        }
         if ( $opt{'Y'} && $IS_X_MATCH && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
         {
             $IS_Y_MATCH = 1;
             $continue_to_process_match = 0;
+        }
+        if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
+        {
+            $continue_to_process_match = 1;
+            $IS_X_MATCH = 1;
         }
         if ( $IS_X_MATCH )
         {
