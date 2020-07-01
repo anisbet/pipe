@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 0.49.98 - June 17, 2020 Fix to support quoted and UTF-8 CSV output with -T.
+# 1.00.00 - June 30, 2020 Fix -X and -Y to match same regex.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{0.49.98};
+my $VERSION           = qq{1.00.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -92,6 +92,7 @@ my @FORMAT_COLUMNS    = (); my $format_ref    = {}; # Stores the format instruct
 my @MATCH_COLUMNS     = (); my $match_ref     = {}; # Stores regular expressions.
 my @NOT_MATCH_COLUMNS = (); my $not_match_ref = {}; # Stores regular expressions for -G.
 my $IS_X_MATCH        = 0;                          # True if -X matched.
+my $H_MATCH           = -1;                          # between -X and -Y are output on the same line.
 my @FRAME_BUFFER      = ();                         # Store the lines that match 
 my $IS_Y_MATCH        = 0;                          # True if -Y matched. Turns off -X.
 my $IS_DUMPABLE_MATCH = 0;                          # If 1, then '-g' matched during a -X and -Y test.
@@ -309,7 +310,7 @@ All column references are 0 based. Line numbers start at 1.
                   pipe.pl to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
                   the input as binary, and outputs hexidecimal: '1111' -Fc0:b.h => 'f'
  -g{[any|cn]:regex,...}: Searches the specified field for the Perl regular expression.
-                  Example data: 1481241, -g"c0:241$" produces '1481241'. Use
+                  Example data: 1481241, -g"c0:241\$" produces '1481241'. Use
                   escaped commas specify a ',' in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
@@ -332,8 +333,9 @@ All column references are 0 based. Line numbers start at 1.
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
- -H             : Suppress new line on output. If -i is used suppression of new lines is interupted
-                  for the lines that are affected by the switches listed in -i.
+ -H             : Suppress new line on output. Some switches can modify this behaviour. -i will
+                  suppress a new line only if the -g matches. New lines are suppressed starting
+                  with any -X match until a -Y match is found. 
  -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -H, -z and -Z. Normally fields are 
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
@@ -3457,15 +3459,16 @@ sub process_line( $ )
     }
     if ( $opt{'X'} || $opt{'Y'} )
     {
-        if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
-        {
-            $continue_to_process_match = 1;
-            $IS_X_MATCH = 1;
-        }
         if ( $opt{'Y'} && $IS_X_MATCH && is_match( \@columns, $match_y_ref, \@MATCH_Y_COLUMNS ) )
         {
             $IS_Y_MATCH = 1;
             $continue_to_process_match = 0;
+        }
+        if ( $opt{'X'} && is_match( \@columns, $match_start_ref, \@MATCH_START_COLS ) )
+        {
+            $continue_to_process_match = 1;
+            $IS_X_MATCH = 1;
+            $H_MATCH++;
         }
         if ( $IS_X_MATCH )
         {
@@ -3495,6 +3498,7 @@ sub process_line( $ )
             $IS_DUMPABLE_MATCH = 0;
             $IS_X_MATCH = 0;
             $IS_Y_MATCH = 0;
+            $H_MATCH = 1;
         }
         else
         {
@@ -3753,12 +3757,16 @@ sub process_line( $ )
     {
         return sprintf "%3d %s\n", $LINE_NUMBER, $line;
     }
-    if ( $opt{'H'} && ! $continue_to_process_match )
+    if ( $opt{'H'} )
     {
-        if ( $opt{'q'} && $LINE_NUMBER % $JOIN_COUNT == 0 ) # Join lines until -q number of lines is emitted.
+        # The initial value is -1. -X inc count but to avoid an unnecessary '\n' for first -X match.
+        if ( $H_MATCH > 0)
         {
-            return $line . "\n";
+            $H_MATCH = 0; # Set this when -X first match occurs, but reset it until -X matches again.
+            return "\n" . $line;
         }
+        return $line . "\n" if ( $opt{'q'} && $LINE_NUMBER % $JOIN_COUNT == 0 ); # Join lines until -q number of lines is emitted.
+        return $line . "\n" if ( $opt{'i'} && ! $continue_to_process_match ); # Suppress line output on -g match but no other lines.
         return $line;
     }
     return $line . "\n";
