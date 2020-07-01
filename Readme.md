@@ -202,8 +202,10 @@ Complete list of flags
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
  -h             : Change delimiter from the default '|'. Changes -P and -K behaviour, see -P, -K.
- -H             : Suppress new line on output.
- -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -z and -Z. Normally fields are 
+ -H             : Suppress new line on output. Some switches can modify this behaviour. -i will
+                  suppress a new line only if the -g matches. New lines are suppressed starting
+                  with any -X match until a -Y match is found. 
+ -i             : Turns on virtual matching for -b, -B, -C, -g, -G, -H, -z and -Z. Normally fields are 
                   conditionally suppressed or output depending on the above conditional flags. '-i'  
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
@@ -1751,6 +1753,29 @@ And with -P you can ensure that all fields are separated with a single pipe '|'.
 ```
 cat p.lst | pipe.pl -H -P
 1|2|3|1|2|4|1|2|4|1|2|3|
+```
+With -X and -Y matching:
+```
+$ cat test.lst 
+21221000000000
+One line
+21221011111111
+One line
+Two line
+21221022222222
+One line
+Two Line
+Three Line
+21221033333333
+One line
+Two Line
+Three Line
+Four Line
+$ cat test.lst | pipe.pl -Xc0:21221 -Yc0:21221 -H -P
+21221000000000|One line|
+21221011111111|One line|Two line|
+21221022222222|One line|Two Line|Three Line|
+21221033333333|One line|Two Line|Three Line|Four Line|
 ```
 
 Change output delimiter with -h
