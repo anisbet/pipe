@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.00.00 - June 30, 2020 Fix -X and -Y to match same regex.
+# 1.00.01 - July 2, 2020 Fix -X and -Y new line output with -H.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{1.00.00};
+my $VERSION           = qq{1.00.01};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -3498,7 +3498,6 @@ sub process_line( $ )
             $IS_DUMPABLE_MATCH = 0;
             $IS_X_MATCH = 0;
             $IS_Y_MATCH = 0;
-            $H_MATCH = 1;
         }
         else
         {
@@ -3760,8 +3759,8 @@ sub process_line( $ )
     if ( $opt{'H'} )
     {
         # The initial value is -1. -X inc count but to avoid an unnecessary '\n' for first -X match.
-        if ( $H_MATCH > 0)
-        {
+        if ( $H_MATCH > 0 )
+        { 
             $H_MATCH = 0; # Set this when -X first match occurs, but reset it until -X matches again.
             return "\n" . $line;
         }
