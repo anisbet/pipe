@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.00.01 - July 2, 2020 Fix -X and -Y new line output with -H.
+# 1.00.02 - Dec. 8, 2020 Changed internal delimiter to comply with Perl 5.32 regex.
 #
 ####################################################################################
 
@@ -38,7 +38,7 @@ use Getopt::Std;
 use utf8;
 
 ### Globals
-my $VERSION           = qq{1.00.01};
+my $VERSION           = qq{1.00.02};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -61,7 +61,7 @@ my @ALL_LINES         = ();
 # columns working at the same time. We store different columns totals on a hash ref.
 ##### Scripting
 my $DELIMITER         = '|';
-my $SUB_DELIMITER     = "{_PIPE_}";
+my $SUB_DELIMITER     = qq{___PIPE___};
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
