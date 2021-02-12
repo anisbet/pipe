@@ -26,6 +26,7 @@
 ########################################################################
 # Change comment below for appropriate server.
 PRODUCTION_SERVER=eplapp.library.ualberta.ca
+STAGING_SERVER=edpl.sirsidynix.net
 # TEST_SERVER=edpl-t.library.ualberta.ca
 TEST_SERVER=129.128.216.221
 USER=sirsi
@@ -38,6 +39,7 @@ ARGS=-x
 test: ${APP}
 	perl -c ${APP}
 production: test 
+	scp ${LOCAL}${APP} ${USER}@${STAGING_SERVER}:/software/EDPL/Unicorn/Bincustom
 	scp ${LOCAL}${APP} ${USER}@${PRODUCTION_SERVER}:${REMOTE}
 	scp ${LOCAL}${APP} ils@epl-ils.epl.ca:/home/ils/bin
 	scp ${LOCAL}${APP} its@epl-el1.epl.ca:/home/its/bin
