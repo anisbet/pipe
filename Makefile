@@ -25,10 +25,9 @@
 #      0.0 - Dev. 
 ########################################################################
 # Change comment below for appropriate server.
-PRODUCTION_SERVER=eplapp.library.ualberta.ca
-STAGING_SERVER=edpl.sirsidynix.net
-# TEST_SERVER=edpl-t.library.ualberta.ca
-TEST_SERVER=129.128.216.221
+PRODUCTION_SERVER=edpl.sirsidynix.net
+STAGING_SERVER=edpltest.sirsidynix.net
+TEST_SERVER=edpltest.sirsidynix.net
 USER=sirsi
 REMOTE=~/Unicorn/Bincustom/
 LOCAL=~/projects/pipe/

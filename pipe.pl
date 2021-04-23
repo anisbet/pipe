@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.00.03 - Dec. 14, 2020 Add 'any' to -m flag.
+# 1.00.04 - Apr. 23, 2021 Binmode reading and writing streams.
 #
 ####################################################################################
 
@@ -37,8 +37,12 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use utf8;
 
+binmode STDOUT;
+binmode STDERR;
+binmode STDIN;
+
 ### Globals
-my $VERSION           = qq{1.00.03};
+my $VERSION           = qq{1.00.04};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -913,7 +917,6 @@ sub count( $ )
     my $line = shift;
     foreach my $colIndex ( @COUNT_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] and @{ $line }[ $colIndex ] =~ m/\S/ )
         {
             $count_ref->{ "c$colIndex" }++;
@@ -929,7 +932,6 @@ sub sum( $ )
     my $line = shift;
     foreach my $colIndex ( @SUM_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] and trim( @{ $line }[ $colIndex ] ) =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
         {
             $sum_ref->{ "c$colIndex" } += trim( @{ $line }[ $colIndex ] );
@@ -989,7 +991,6 @@ sub average( $ )
     my $line = shift;
     foreach my $colIndex ( @AVG_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] and trim( @{ $line }[ $colIndex ] ) =~ m/^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ )
         {
             $avg_ref->{ "c$colIndex" } += trim( @{ $line }[ $colIndex ] );
@@ -1022,7 +1023,6 @@ sub trim_line( $ )
     }
     foreach my $colIndex ( @TRIM_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] )
         {
             if ( $opt{'y'} )
@@ -1053,7 +1053,6 @@ sub normalize_line( $ )
     }
     foreach my $colIndex ( @NORMAL_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] )
         {
             @{ $line }[ $colIndex ] = normalize( @{ $line }[ $colIndex ] );
@@ -1633,7 +1632,6 @@ sub is_match( $$$ )
                 }
             }
             # Quick exit if -g match and -5 not selected.
-            # printf STDERR "%d", $return_value;
             last if ( $return_value and ! $opt{'5'} );
         }
         printf STDERR "\n" if ( $return_value > 0 and $opt{'5'} ); # print return because we found at least 1 match on this line.
@@ -3245,7 +3243,6 @@ sub url_encode_line( $ )
     }
     foreach my $colIndex ( @U_ENCODE_COLUMNS )
     {
-        # print STDERR "$colIndex\n";
         if ( defined @{ $line }[ $colIndex ] )
         {
             @{ $line }[ $colIndex ] = map_url_characters( @{ $line }[ $colIndex ] );
@@ -4043,6 +4040,7 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
         printf STDERR "<= end\n";
     }
     open $ifh, "<", $opt{'0'} or die $!;
+    binmode $ifh;
     # Read the entire merging file.
     while (<$ifh>)
     {
@@ -4071,16 +4069,19 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
     
     # Now return STDIN as the input stream.
     $ifh = *STDIN;
+    binmode $ifh;
     $is_stdin++;
     $IS_DATA_TO_MERGE = keys %{$REF_FILE_DATA_HREF}; # Set true if there are values stored in the hash reference.
 }
 elsif ( defined $opt{'0'} )
 {
     open $ifh, "<", $opt{'0'} or die $!;
+    binmode $ifh;
 }
 else
 {
     $ifh = *STDIN;
+    binmode $ifh;
     $is_stdin++;
 }
 while (<$ifh>)
