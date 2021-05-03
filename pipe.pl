@@ -4064,7 +4064,10 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
             $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
             # Now replace the user selected delimiter with a pipe.
             $line =~ s/($opt{'W'})/\|/g;
-            $line =~ s/($QUOTED_DELIMITER)/$opt{'W'}/g;
+            my $spc_delim = $opt{'W'};
+            $spc_delim =~ s/\\s[+]?/ /g;
+            $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
+            # $line =~ s/\\s[+]?/ /g if ( $opt{'W'} );
         }
         my @columns = split '\|', $line;
         if ( $opt{'W'} )
@@ -4117,7 +4120,9 @@ while (<$ifh>)
             $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
             # Now replace the user selected delimiter with a pipe.
             $line =~ s/($opt{'W'})/\|/g;
-            $line =~ s/($QUOTED_DELIMITER)/$opt{'W'}/g;
+            my $spc_delim = $opt{'W'};
+            $spc_delim =~ s/\\s[+]?/ /g;
+            $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
         }
         push @ALL_LINES, $line;
     }
