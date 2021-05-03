@@ -4067,7 +4067,6 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
             my $spc_delim = $opt{'W'};
             $spc_delim =~ s/\\s[+]?/ /g;
             $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
-            # $line =~ s/\\s[+]?/ /g if ( $opt{'W'} );
         }
         my @columns = split '\|', $line;
         if ( $opt{'W'} )
