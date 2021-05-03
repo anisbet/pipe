@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.01.00 - Apr. 30, 2021 Remove ',' from quoted strings with '-e'.
+# 1.01.00 - May 03, 2021 Ignore -W characters in double-quoted strings.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.00.04};
+my $VERSION           = qq{1.02.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -66,6 +66,7 @@ my @ALL_LINES         = ();
 ##### Scripting
 my $DELIMITER         = '|';
 my $SUB_DELIMITER     = qq{___PIPE___};
+my $QUOTED_DELIMITER  = qq{___QUOTED_DELIMITER___};
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
 my @INCR_COLUMNS      = ();                          # Columns to increment.
@@ -4055,10 +4056,15 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
         my $line = trim( $_ );
         if ( $opt{'W'} )
         {
+            my @segments = split /"/, $line;  # fix SO syntax highlighting: "
+            push @segments, '' if ( scalar( @segments ) % 2 == 0 );
+            s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
+            $line = join '"', @segments;
             # Replace delimiter selection with '|' pipe.
             $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
             # Now replace the user selected delimiter with a pipe.
             $line =~ s/($opt{'W'})/\|/g;
+            $line =~ s/($QUOTED_DELIMITER)/$opt{'W'}/g;
         }
         my @columns = split '\|', $line;
         if ( $opt{'W'} )
@@ -4103,10 +4109,15 @@ while (<$ifh>)
         $line = trim( $line );
         if ( $opt{'W'} )
         {
+            my @segments = split /"/, $line;  # fix SO syntax highlighting: "
+            push @segments, '' if ( scalar( @segments ) % 2 == 0 );
+            s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
+            $line = join '"', @segments;
             # Replace delimiter selection with '|' pipe.
             $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
             # Now replace the user selected delimiter with a pipe.
             $line =~ s/($opt{'W'})/\|/g;
+            $line =~ s/($QUOTED_DELIMITER)/$opt{'W'}/g;
         }
         push @ALL_LINES, $line;
     }
