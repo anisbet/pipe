@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.00.04 - Apr. 23, 2021 Binmode reading and writing streams.
+# 1.01.00 - Apr. 30, 2021 Remove ',' from quoted strings with '-e'.
 #
 ####################################################################################
 
@@ -157,7 +157,7 @@ sub usage()
        -c{c0,c1,...,cn}
        -C{any|num_cols|c0,c1,...,cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|ne|lt)cm,...} [-i]
        -d[-IRN]{c0,c1,...,cn} [-J{cn}]
-       -e{any|c0,c1,...,cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|format_{from}-{to}][,...]}
+       -e{any|c0,c1,...,cn:[uc|lc|mc|us|spc|csv|normal_[W|w,S|s,D|d,q|Q]|format_{from}-{to}][,...]}
        -E{c0:[r|?c.r[.e]],...}
        -f{c0:n.p[?p.q[.r]],...}
        -F{c0:[b|c|d|h][.[b|c|d|h]],...}
@@ -275,7 +275,7 @@ echo "1|2|3" | pipe.pl -mc1:B#,any:A# produces: 'A1|B2|A3'
                   which is then over written with lines that produce
                   the same key, thus keeping the most recent match. Respects (-r).
  -D             : Debug switch.
- -e{any|cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
+ -e{any|cn:[uc|lc|mc|us|spc|csv|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
                   Change the case, normalize, or order field data   
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands is available starting in version
@@ -295,7 +295,8 @@ echo "1|2|3" | pipe.pl -mc1:B#,any:A# produces: 'A1|B2|A3'
                   '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'. If the length of
                   the input is longer than the variable string, the remainder of the string
                   is output as is. The input variable declaration must match the output 
-                  in length and character case.
+                  in length and character case. 'csv' will remove ',' characters from quoted
+                  strings, replacing them with a single space.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -2219,6 +2220,13 @@ sub apply_casing( $$ )
     {
         $field =~ s/\s+/\x20/g;
     }
+    if ( $instruction =~ m/csv/i )
+    {
+        # remove commas from quoted strings.
+        my @segments = split /"/, $field;  # fix SO syntax highlighting: "
+        s/,/ /g for @segments[ grep $_ % 2, 0 .. $#segments ];
+        $field = join '"', @segments;
+    }
     if ( $instruction =~ m/^normal_/i )
     {
         # Take the next part of the string as the operation for the string.
@@ -2324,10 +2332,10 @@ sub modify_case_line( $ )
             printf STDERR "case specifier: '%s' \n", $case_ref->{ $i } if ( $opt{'D'} );
             my $exp = $case_ref->{ $i };
             # The first 2 characters determine the type of casing.
-            $exp =~ m/^(uc|lc|mc|us|spc|normal_|order_)/i;
+            $exp =~ m/^(uc|lc|mc|us|spc|csv|normal_|order_)/i;
             if ( ! $& )
             {
-                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|normal_(W|w,S|s,D|d,q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
+                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|csv|normal_(W|w,S|s,D|d,q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
                 usage();
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );
