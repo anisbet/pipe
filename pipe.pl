@@ -4,7 +4,7 @@
 # Perl source file for project pipe.
 #
 # Pipe performs handy operations on pipe delimited files.
-#    Copyright (C) 2015 - 2020  Andrew Nisbet
+#    Copyright (C) 2015 - 2021  Andrew Nisbet
 # The Edmonton Public Library respectfully acknowledges that we sit on
 # Treaty 6 territory, traditional lands of First Nations and Metis people.
 #
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.01.00 - May 03, 2021 Ignore -W characters in double-quoted strings.
+# 1.02.00 - June 1, 2021 Added '<&>' operator to -m.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.01.00};
+my $VERSION           = qq{1.02.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -169,7 +169,7 @@ sub usage()
        -k{cn:expr,(...)}
        -l{any|c0,c1,...,cn:n.p,...}
        -L{[[+|-]n[[,|-]n]?|skip n]}
-       -m{any|c0,c1,...,cn:*[_|#]*,...}
+       -m{any|c0,c1,...,cn:*[_|#|<&>]*,...}
        -nOtu{any|c0,c1,...,cn}
        -o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}
        -p{cn:[+|-]countChar+,...}
@@ -375,9 +375,10 @@ echo "1|2|3" | pipe.pl -mc1:B#,any:A# produces: 'A1|B2|A3'
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections in the -L flag.
- -m{any|cn:*[_|#]*} : Mask specified column with the mask defined after a ':', and where '_'
+ -m{any|cn:*[_|#|<&>]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
-                  position will be inserted.
+                  position will be inserted, and '<&>' means output column string as-is within
+                  the masking context. Example, 'bat', -mc0:'ant <&> cat' == 'ant bat cat'.
                   If the last character is either '_' or '#', then it will be repeated until
                   the input line is exhausted.
                   Characters '_', '#' and ',' can be output by escaping them with a back slash.
@@ -1393,6 +1394,12 @@ sub apply_mask( $$ )
     my $column_string = shift;
     return '' if ( ! $column_string ); # return if there is no string to mask on.
     my $column_mask   = shift;
+    # Test if user wants the data inserted into the above string as-is.
+    if ( $column_mask =~ m/<&>/ )
+    {
+        my $amp_index = index( $column_mask, '<&>' );
+        return substr( $column_mask, 0, $amp_index ) . $column_string . substr( $column_mask, ($amp_index + 3) );
+    }
     my ( @chars, @mask ) = ();
     @chars = split '', $column_string;
     @mask  = split '', $column_mask;
