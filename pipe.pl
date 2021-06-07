@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.03.00 - June 7, 2021 Added 'pipe' to '-e'.
+# 1.03.02 - June 7, 2021 Added 'pipe' to '-e'.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.03.01};
+my $VERSION           = qq{1.03.02};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -297,8 +297,8 @@ echo "1|2|3" | pipe.pl -mc1:B#,any:A# produces: 'A1|B2|A3'
                   the input is longer than the variable string, the remainder of the string
                   is output as is. The input variable declaration must match the output 
                   in length and character case. 'csv' will remove ',' characters from quoted
-                  strings, replacing them with a single space. The keyword 'pipe' escapes 
-                  punctuation that is problematic for pipe.pl output, like ',' and ':'.
+                  strings, replacing them with a single space. The keyword 'pipe' removes 
+                  punctuation that is problematic for pipe.pl output, like ',', '|', and ':'.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally, if desired. Similar
                   to the -f flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -2233,7 +2233,7 @@ sub apply_casing( $$ )
     if ( $instruction =~ m/pipe/i )
     {
         # Add additional characters if required.
-        $field =~ s/([,:])/\\$&/g;
+        $field =~ s/([,:\|])//g;
     }
     if ( $instruction =~ m/csv/i )
     {
