@@ -13,9 +13,11 @@
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
 FLAG_TESTED='-M'
+# Set this to the pipe.pl version you want to test.
+PIPE="../pipe.pl"
 LOG_FILE="./pipe-tests.log"
-TMPDIR=/tmp
-TEST_FILE="pipe-test${FLAG_TESTED}.XXXXXXXXXX"
+TMP_DIR=/tmp/pipe-test-scratch
+DATA_FILE="$TMP_DIR/data-input${FLAG_TESTED}.$$.txt"
 VERSION="1.0"
 
 ### Functions
@@ -52,21 +54,30 @@ logit()
     echo -e "[$time] $message" >>$LOG_FILE
 }
 
-# Start up code (if required)
+# Start up. Creates a temp directory for any input and output files.
 init()
 {
-    logit "== Testing $FLAG_TESTED"
+    if [ -d "$TMP_DIR" ]; then 
+        logit "* warning, $TMP_DIR already exits and will be removed."
+        rm -rf $TMP_DIR
+    fi
+    $(mkdir $TMP_DIR) || { echo "Failed to create $TMP_DIR"; exit 1; }
+    ## Create some data to pipe into $PIPE 
+    cat <<EOF_TEST_DATA! >$DATA_FILE
+1|A
+2|B
+EOF_TEST_DATA!
 }
 
 # Cleanup code to remove scratch files.
 clean_up()
 {
-    
-    if [ "$KEEP_TEMP_FILES" == false ]; then 
-        rm -rf $OUT || exit 0;
+    if [ "$KEEP_TEMP_FILES" == true ]; then
+        logit "preserving files in $TMP_DIR. They will be removed when test re-run."
+    else
+        rm -rf $TMP_DIR
     fi
 }
-
 
 ### Parameter handling
 ### Check input parameters.
@@ -109,15 +120,58 @@ do
     esac
     shift
 done
-OUT=$(mktemp $OUT) || { echo "Failed to create $OUT"; exit 1; }
+
+# Test if an error is issued.
+# param: string name of the test.
+# param: string list of parameters to pass to pipe.pl to operate on.
+# param: expected output.
+test()
+{
+    [ -z "$1" ] || [ -z "$2" ] && { logit "**error malformed test."; exit 1; }
+    local test_name="$1"
+    local params="$2"
+    local expected="$3"
+    local err_file=$TMP_DIR/err.txt
+    local results=$TMP_DIR/out.txt
+    cat $DATA_FILE | $PIPE ${params} >$results 2>$err_file
+    if [ -s "$err_file" ]; then
+        logit "*warning '$test_name' output an error"
+        head -n 3 $err_file
+        # remove it or the next test will report an error
+        rm $err_file
+    fi
+    if diff "$results" "$expected" 2>&1 >$TMP_DIR/diff.$test_name; then
+        logit "$test_name: PASS"
+    else
+        # logit "expected"
+        # cat "$expected" | tee -a $LOG_FILE
+        # logit "but got"
+        # cat "$results" | tee -a $LOG_FILE
+        logit "diff reports: <results compared to >expected"
+        cat $TMP_DIR/diff.$test_name | tee -a $LOG_FILE
+    fi
+}
 
 
 ### Main tests run here. ###
 logit "== Testing '$FLAG_TESTED' flag =="
-logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, \$OUT=$OUT, \$KEEP_TEMP_FILES=$KEEP_TEMP_FILES"
+logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, \$DATA_FILE=$DATA_FILE, \$KEEP_TEMP_FILES=$KEEP_TEMP_FILES"
 
-
-
+# Set up the test input file.
+init
+cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_0.txt
+1|A
+2|B
+EXPECTED_OUTPUT
+test "test_no_second_file" "-M'c0:c0?c1.\"N/A\"'" "$TMP_DIR/expected_0.txt"
+cat <<INPUT_DATA > $TMP_DIR/input_0.txt
+2|C
+INPUT_DATA
+cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_1.txt
+1|A|"N/A"
+2|B|C
+EXPECTED_OUTPUT
+test "test_match_on_2" "-Mc0:c0?c1.\"N/A\" -0$TMP_DIR/input_0.txt" "$TMP_DIR/expected_1.txt"
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
 logit "== Test complete =="
