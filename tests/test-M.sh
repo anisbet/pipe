@@ -143,10 +143,6 @@ test()
     if diff "$results" "$expected" 2>&1 >$TMP_DIR/diff.$test_name; then
         logit "$test_name: PASS"
     else
-        # logit "expected"
-        # cat "$expected" | tee -a $LOG_FILE
-        # logit "but got"
-        # cat "$results" | tee -a $LOG_FILE
         logit "diff reports: <results compared to >expected"
         cat $TMP_DIR/diff.$test_name | tee -a $LOG_FILE
     fi
@@ -167,11 +163,21 @@ test "test_no_second_file" "-M'c0:c0?c1.\"N/A\"'" "$TMP_DIR/expected_0.txt"
 cat <<INPUT_DATA > $TMP_DIR/input_0.txt
 2|C
 INPUT_DATA
+
 cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_1.txt
 1|A|"N/A"
 2|B|C
 EXPECTED_OUTPUT
 test "test_match_on_2" "-Mc0:c0?c1.\"N/A\" -0$TMP_DIR/input_0.txt" "$TMP_DIR/expected_1.txt"
+
+
+cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_2.txt
+1|A|"N/A"
+2|B|C|2
+EXPECTED_OUTPUT
+test "test_outputs_more_than_one_column" "-Mc0:c0?c1+c0.\"N/A\" -0$TMP_DIR/input_0.txt" "$TMP_DIR/expected_2.txt"
+
+
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
 logit "== Test complete =="

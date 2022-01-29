@@ -143,10 +143,6 @@ test()
     if diff "$results" "$expected" 2>&1 >$TMP_DIR/diff.$test_name; then
         logit "$test_name: PASS"
     else
-        # logit "expected"
-        # cat "$expected" | tee -a $LOG_FILE
-        # logit "but got"
-        # cat "$results" | tee -a $LOG_FILE
         logit "diff reports: <results compared to >expected"
         cat $TMP_DIR/diff.$test_name | tee -a $LOG_FILE
     fi
