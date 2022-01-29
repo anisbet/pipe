@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.03.02};
+my $VERSION           = qq{1.03.03};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -143,7 +143,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-    usage: [cat file] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M]
+    usage: [cat file] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}]
        -?{opr}:{c0,c1,...,cn}
        -0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]
        -1{c0,c1,...,cn}
@@ -186,17 +186,16 @@ sub usage()
        -X{any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
        -zZ{c0,c1,...,cn} [-i]
        
-pipe.pl is the Swiss Army knife of text editing on the command line. Over time I have had
-to write and re-write scripts that do many of the operations in pipe.pl. This script wraps
-them with a 'simple' API that allows you to do things that are difficult or tedious 
-in higher languages.
+pipe.pl is the Swiss Army knife of text editing for the command line. It script wraps
+allows you to do things that are difficult or tedious in higher languages.
 
-pipe.pl takes input on STDIN usually, but can take data from a file specified with -0 (zero).
-Generally pipe.pl outputs to STDOUT, however there are notable exceptions. See -5, and -i.
-All column references are 0 based. Line numbers start at 1.
+pipe.pl usually uses STDIN as its input, but can take data from a file specified with -0 (zero).
+Generally pipe.pl outputs to STDOUT, however there are notable exceptions, see -5, and -i for example.
 
-The keyword 'any' takes precedence over other column designations. For example,
-echo "1|2|3" | pipe.pl -mc1:B#,any:A# produces: 'A1|B2|A3'
+Columns are zero-indexed while lines numbers start at 1.
+
+The keyword 'any' takes precedence over other column designations and allows the modifier
+flag to operate on all columns on the current line.
 
  -?{opr}:{c0,c1,...,cn}: Use math operation on fields. Supported operators are 'add', 'sub',
                   'mul', and 'div'. The order of columns is important for subtraction and division 
@@ -494,6 +493,7 @@ The order of operations is as follows:
   -z - Suppress line output if column(s) test empty.
   -y - Specify precision of floating computed variables, or trim string to length.
   -0 - Input from named file. (See also -M).
+  -M - Append columns from a second file if a specific column matches the input file.
   -X - Grep values in specified columns, start output, or start searches for -Y values.
   -Y - Grep values in specified columns once greps with -X succeeds.
   -d - De-duplicate selected columns.
