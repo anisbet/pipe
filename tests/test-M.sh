@@ -14,9 +14,8 @@
 KEEP_TEMP_FILES=false
 FLAG_TESTED='-M'
 LOG_FILE="./pipe-tests.log"
-TEST_DIR=/tmp
+TMPDIR=/tmp
 TEST_FILE="pipe-test${FLAG_TESTED}.XXXXXXXXXX"
-OUT="$TEST_DIR/$TEST_FILE"
 VERSION="1.0"
 
 ### Functions
@@ -33,7 +32,6 @@ Flags:
 -l, -log_file, --log_file{/foo/bar.log}: Changes the log file for the tests in this script.
 -p, -preserve_temp_files, --preserve_temp_files: Temp files are preserved. By default
    tmp files are removed. Logs are never touched.
--t, -tmp_dir, --tmp_dir [/foo]: Specifies the temp directory for any scratch files.
 -v, -version, --version: Print watcher.sh version and exits.
 
  Example:
@@ -77,7 +75,7 @@ clean_up()
 # -l is for long options with double dash like --version
 # the comma separates different long options
 # -a is for long options with single dash like -version
-options=$(getopt -l "help,log_file:,preserve_temp_files,tmp_dir:,version" -o "hl:pt:v" -a -- "$@")
+options=$(getopt -l "help,log_file:,preserve_temp_files,version" -o "hl:pv" -a -- "$@")
 if [ $? != 0 ] ; then echo "Failed to parse options...exiting." >&2 ; exit 1 ; fi
 # set --:
 # If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
@@ -100,10 +98,6 @@ do
         # Set true to keep scratch files.
         export KEEP_TEMP_FILES=true
         ;;
-    -t|--tmp_dir)
-        shift
-        export OUT="$1/$TEST_FILE"
-        ;;
     -v|--version)
         echo "$0 version: $VERSION"
         exit 0
@@ -115,9 +109,7 @@ do
     esac
     shift
 done
-# Required flags (default none).
-# : ${TEST_DIR:?Missing -d,--dir}
-OUT=$(mktemp $TEST_DIR/$TEST_FILE) || { echo "Failed to create $TEST_FILE"; exit 1; }
+OUT=$(mktemp $OUT) || { echo "Failed to create $OUT"; exit 1; }
 
 
 ### Main tests run here. ###
