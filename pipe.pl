@@ -129,7 +129,7 @@ my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
 my $IS_DATA_TO_MERGE  = $FALSE; 
-my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN that will be compared with columns in -0 file in.
+my @MERGE_SRC_COLUMNS = (); my @MERGE_REF_COLUMNS = (); # Columns from STDIN to compare with columns from second file (-0).
 my $merge_expression_ref  = {};
 my $REF_FILE_DATA_HREF    = {};
 my @REF_COLUMN_INDEX_TRUE = ();
@@ -3445,9 +3445,9 @@ sub read_whole_number( $ )
 sub merge_reference_file( $ )
 {
     my $line = shift;
-    # Now do a comparison of columns from STDIN and look up the values in the reference file.
-    # To do that take each of the columns in @MERGE_SRC_COLUMNS, get the column from @MERGE_REF_COLUMNS and compare. 
-    # we will have to allow for '-I', and '-N'.
+    # Compare columns from STDIN and look up the values in the reference file
+    # by comparing columns in @MERGE_SRC_COLUMNS and @MERGE_REF_COLUMNS,
+    # allowing for '-I', and '-N' operators.
     my $key = '';
     return if ( ! defined $MERGE_SRC_COLUMNS[0] );
     my $src_col = $MERGE_SRC_COLUMNS[0];
