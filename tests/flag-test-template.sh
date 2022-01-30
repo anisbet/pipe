@@ -34,7 +34,7 @@ Flags:
 -l, -log_file, --log_file{/foo/bar.log}: Changes the log file for the tests in this script.
 -p, -preserve_temp_files, --preserve_temp_files: Temp files are preserved. By default
    tmp files are removed. Logs are never touched.
--v, -version, --version: Print watcher.sh version and exits.
+-v, -version, --version: Print application version and exits.
 
  Example:
     ${0} --tmp_dir=/home/user/dir/*.txt --log_file=/home/user/foo.log
