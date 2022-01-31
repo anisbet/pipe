@@ -175,23 +175,23 @@ logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, data files=${DATA_FILE_PREFIX
 # Set up the test input file.
 init
 ## Create some data to pipe into $PIPE 
-cat <<DATA_FILE_ONE >${DATA_FILE_PREFIX}.1.txt
+cat >${DATA_FILE_PREFIX}.1.txt <<DATA_FILE_ONE 
 1|A
 2|B
 DATA_FILE_ONE
 # Set up second file as input.
-cat <<DATA_FILE_TWO > ${DATA_FILE_PREFIX}.2.txt
+cat > ${DATA_FILE_PREFIX}.2.txt <<DATA_FILE_TWO 
 2|C
 DATA_FILE_TWO
 
 
 # Use case: the command is used correctly but there is no second file as input with '-0'.
 # Expected: error message issued.
-cat <<EXP_OUT > ${EXPECTED_STDOUT}.0.txt
+cat > ${EXPECTED_STDOUT}.0.txt <<EXP_OUT
 1|A
 2|B
 EXP_OUT
-cat <<EXP_ERR > ${EXPECTED_STDERR}.0.txt
+cat > ${EXPECTED_STDERR}.0.txt <<EXP_ERR
 *** -M is obsolete without '-0'.
 See usage (-x) for more information.
 EXP_ERR
@@ -199,17 +199,16 @@ EXP_ERR
 test ${DATA_FILE_PREFIX}.1.txt "test_no_second_file" "-M'c0:c0?c1.\"N/A\"'" "${EXPECTED_STDOUT}.0.txt" "${EXPECTED_STDERR}.0.txt"
 
 
-
 # Use case: No match, and match.
 # Expected: First line does not match and gets default, second line matches and c1 from file 2 is appended.
-cat <<EXP_OUT > ${EXPECTED_STDOUT}.1.txt
+cat > ${EXPECTED_STDOUT}.1.txt <<EXP_OUT
 1|A|"N/A"
 2|B|C
 EXP_OUT
 test ${DATA_FILE_PREFIX}.1.txt "test_no_match_and_match" "-Mc0:c0?c1.\"N/A\" -0${DATA_FILE_PREFIX}.2.txt" "${EXPECTED_STDOUT}.1.txt"
 
 # Use case: no match default, and match append multiple fields from file 2.
-cat <<EXP_OUT > ${EXPECTED_STDOUT}.2.txt
+cat > ${EXPECTED_STDOUT}.2.txt <<EXP_OUT
 1|A|"N/A"
 2|B|C|2
 EXP_OUT
