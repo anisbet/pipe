@@ -14,8 +14,8 @@
 KEEP_TEMP_FILES=false
 ADD_TO_MAKE=true
 MAKE_FILE=./Makefile
-TEMPLATE=flag-test-template.sh
-VERSION="1.1.00"
+TEMPLATE=test-template.sh
+VERSION="1.1.01"
 
 ### Functions
 # Prints out usage message.
