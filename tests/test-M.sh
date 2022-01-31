@@ -12,13 +12,17 @@
 ### Global variables
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
-FLAG_TESTED='-M'
+FLAG_TESTED='M'
 # Set this to the pipe.pl version you want to test.
 PIPE="../pipe.pl"
 LOG_FILE="./pipe-tests.log"
 TMP_DIR=/tmp/pipe-test-scratch
-DATA_FILE="$TMP_DIR/data-input${FLAG_TESTED}.$$.txt"
-VERSION="1.0"
+DATA_FILE_PREFIX="$TMP_DIR/data-input-${FLAG_TESTED}"
+ACTUAL_STDOUT="$TMP_DIR/output-actual-${FLAG_TESTED}"
+ACTUAL_STDERR="$TMP_DIR/error-actual-${FLAG_TESTED}"
+EXPECTED_STDOUT="$TMP_DIR/output-expected-${FLAG_TESTED}"
+EXPECTED_STDERR="$TMP_DIR/error-expected-${FLAG_TESTED}"
+VERSION="1.1"
 
 ### Functions
 # Prints out usage message.
@@ -62,11 +66,6 @@ init()
         rm -rf $TMP_DIR
     fi
     $(mkdir $TMP_DIR) || { echo "Failed to create $TMP_DIR"; exit 1; }
-    ## Create some data to pipe into $PIPE 
-    cat <<EOF_TEST_DATA! >$DATA_FILE
-1|A
-2|B
-EOF_TEST_DATA!
 }
 
 # Cleanup code to remove scratch files.
@@ -122,63 +121,102 @@ do
 done
 
 # Test if an error is issued.
-# param: string name of the test.
-# param: string list of parameters to pass to pipe.pl to operate on.
-# param: expected output.
+# param 1: Required. String name of the input data file.
+# param 2: Required. String name of the test.
+# param 3: Required. String list of parameters to pass to pipe.pl to operate on.
+# param 4: Required. Expected_stdout output.
+# param 5: Optional. Expected_stderr output file name if the output of the test 
+#        is expected on STDERR.
 test()
 {
-    [ -z "$1" ] || [ -z "$2" ] && { logit "**error malformed test."; exit 1; }
-    local test_name="$1"
-    local params="$2"
-    local expected="$3"
-    local err_file=$TMP_DIR/err.txt
-    local results=$TMP_DIR/out.txt
-    cat $DATA_FILE | $PIPE ${params} >$results 2>$err_file
+    [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] && { logit "**error malformed test."; exit 1; }
+    local input="$1"
+    local test_name="$2"
+    local params="$3"
+    local expected_stdout="$4"
+    local expected_stderr="$5"
+    # Destination files for result output if required.
+    local err_file=${ACTUAL_STDERR}.txt
+    local out_file=${ACTUAL_STDOUT}.txt
+    local diff_err=${ACTUAL_STDERR}.diff
+    cat $input | $PIPE ${params} >$out_file 2>$err_file
+    # Some commands output to stderr by default, other tests pass if the expected 
+    # result is a failed condition.
     if [ -s "$err_file" ]; then
-        logit "*warning '$test_name' output an error"
-        head -n 3 $err_file
+        if [ ! -z "$expected_stderr" ] && [ -f "$expected_stderr" ]; then
+            if diff "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
+                logit "PASS: STDERR $test_name"
+            else
+                logit "FAIL: STDERR $test_name"
+                logit "  < actual and > expected"
+                cat $diff_err | tee -a $LOG_FILE
+            fi
+        else
+            logit "WARN: STDERR '$test_name' output an unexpected error"
+            head -n 3 $err_file
+        fi
         # remove it or the next test will report an error
         rm $err_file
     fi
-    if diff "$results" "$expected" 2>&1 >$TMP_DIR/diff.$test_name; then
-        logit "$test_name: PASS"
+    ## Test the stdout produced by running the command.
+    if diff "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
+        logit "PASS: STDOUT $test_name"
     else
-        logit "diff reports: <results compared to >expected"
-        cat $TMP_DIR/diff.$test_name | tee -a $LOG_FILE
+        logit "FAIL: STDOUT $test_name"
+        logit "  < actual and > expected"
+        cat $diff_err | tee -a $LOG_FILE
     fi
 }
 
 
 ### Main tests run here. ###
 logit "== Testing '$FLAG_TESTED' flag =="
-logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, \$DATA_FILE=$DATA_FILE, \$KEEP_TEMP_FILES=$KEEP_TEMP_FILES"
-
+logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, data files=${DATA_FILE_PREFIX}*, \$KEEP_TEMP_FILES=$KEEP_TEMP_FILES"
 # Set up the test input file.
 init
-cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_0.txt
+## Create some data to pipe into $PIPE 
+cat <<DATA_FILE_ONE >${DATA_FILE_PREFIX}.1.txt
 1|A
 2|B
-EXPECTED_OUTPUT
-test "test_no_second_file" "-M'c0:c0?c1.\"N/A\"'" "$TMP_DIR/expected_0.txt"
-cat <<INPUT_DATA > $TMP_DIR/input_0.txt
+DATA_FILE_ONE
+# Set up second file as input.
+cat <<DATA_FILE_TWO > ${DATA_FILE_PREFIX}.2.txt
 2|C
-INPUT_DATA
+DATA_FILE_TWO
 
-cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_1.txt
+
+# Use case: the command is used correctly but there is no second file as input with '-0'.
+# Expected: error message issued.
+cat <<EXP_OUT > ${EXPECTED_STDOUT}.0.txt
+1|A
+2|B
+EXP_OUT
+cat <<EXP_ERR > ${EXPECTED_STDERR}.0.txt
+*** -M is obsolete without '-0'.
+See usage (-x) for more information.
+EXP_ERR
+
+test ${DATA_FILE_PREFIX}.1.txt "test_no_second_file" "-M'c0:c0?c1.\"N/A\"'" "${EXPECTED_STDOUT}.0.txt" "${EXPECTED_STDERR}.0.txt"
+
+
+
+# Use case: No match, and match.
+# Expected: First line does not match and gets default, second line matches and c1 from file 2 is appended.
+cat <<EXP_OUT > ${EXPECTED_STDOUT}.1.txt
 1|A|"N/A"
 2|B|C
-EXPECTED_OUTPUT
-test "test_match_on_2" "-Mc0:c0?c1.\"N/A\" -0$TMP_DIR/input_0.txt" "$TMP_DIR/expected_1.txt"
+EXP_OUT
+test ${DATA_FILE_PREFIX}.1.txt "test_no_match_and_match" "-Mc0:c0?c1.\"N/A\" -0${DATA_FILE_PREFIX}.2.txt" "${EXPECTED_STDOUT}.1.txt"
 
-
-cat <<EXPECTED_OUTPUT > $TMP_DIR/expected_2.txt
+# Use case: no match default, and match append multiple fields from file 2.
+cat <<EXP_OUT > ${EXPECTED_STDOUT}.2.txt
 1|A|"N/A"
 2|B|C|2
-EXPECTED_OUTPUT
-test "test_outputs_more_than_one_column" "-Mc0:c0?c1+c0.\"N/A\" -0$TMP_DIR/input_0.txt" "$TMP_DIR/expected_2.txt"
+EXP_OUT
+test ${DATA_FILE_PREFIX}.1.txt "test_no_match_and_match_multiple_fields" "-Mc0:c0?c1+c0.\"N/A\" -0${DATA_FILE_PREFIX}.2.txt" "${EXPECTED_STDOUT}.2.txt"
 
 
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
-logit "== Test complete =="
+logit "== End test =="
 # EOF
