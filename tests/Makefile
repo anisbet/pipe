@@ -7,3 +7,4 @@ test:
 	./test-P.sh
 	./test-t.sh
 	./test-1.sh
+	./test-0.sh
