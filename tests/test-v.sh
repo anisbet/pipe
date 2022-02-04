@@ -2,7 +2,7 @@
 ###
 #
 # Product: pipe.pl
-# Purpose: test -FLAG_NAME_HERE functionality.
+# Purpose: test -v functionality.
 #
 # Copyright (c) Andrew Nisbet 2022.
 # All code covered by the project's license.
@@ -12,7 +12,7 @@
 ### Global variables
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
-FLAG_TESTED='FLAG_NAME_HERE'
+FLAG_TESTED='v'
 # Set this to the pipe.pl version you want to test.
 PIPE="../pipe.pl"
 LOG_FILE="./pipe-tests.log"
@@ -31,7 +31,7 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Test file for pipe.pl parameter '-FLAG_NAME_HERE'.
+Test file for pipe.pl parameter '-v'.
 
 Flags:
 
@@ -180,34 +180,134 @@ init
 INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
 ## Create input data $PIPE 
 cat >$INPUT_FILE <<FILE_DATA!
-1|A
-2|B
+100
+200
+79
+23
+81.5
 FILE_DATA!
-USE_CASE="Tests flag '-FLAG_NAME_HERE'."
-PARAMETERS="-FLAG_NAME_HERE"
+USE_CASE="Tests flag '-v' - average of non-empty, non-numeric data in arbitrary but specific columns."
+PARAMETERS="-vc0"
 EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
 # Expected: error message issued.
 cat > $EXPECTED_OUT <<EXP_OUT!
-1|A
-2|B
+100
+200
+79
+23
+81.5
 EXP_OUT!
-#### Test results expected when everything goes to plan.
-# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
-test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+==   average
+ c0:   96.70
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
 ((TEST_NUMBER++))
 ### Use case ends
 
+### Use case starts
+INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
+## Create input data $PIPE 
+cat >$INPUT_FILE <<FILE_DATA!
+100
+200
+79
+23
+Text data
+81.5
+FILE_DATA!
 
-########### (OPTIONAL) #############
-#### Test error expected 
-## The error message we expect from the script. 
-# EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
-# cat > $EXPECTED_ERR <<EXP_ERR!
-# Expected stderr message here.
-# EXP_ERR!
+USE_CASE="Tests flag '-v' - average over column with text data."
+PARAMETERS="-vc0"
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: error message issued.
+cat > $EXPECTED_OUT <<EXP_OUT!
+100
+200
+79
+23
+Text data
+81.5
+EXP_OUT!
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+==   average
+ c0:   96.70
+EXP_ERR!
 ## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
-# test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
+((TEST_NUMBER++))
+### Use case ends
 
+### Use case starts
+INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
+## Create input data $PIPE 
+cat >$INPUT_FILE <<FILE_DATA!
+
+100|
+200
+
+
+79
+23
+
+81.5
+FILE_DATA!
+USE_CASE="Tests flag '-v' - average over column with empty values."
+PARAMETERS="-vc0"
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: error message issued.
+cat > $EXPECTED_OUT <<EXP_OUT!
+
+100|
+200
+
+
+79
+23
+
+81.5
+EXP_OUT!
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+==   average
+ c0:   96.70
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
+((TEST_NUMBER++))
+### Use case ends
+
+### Use case starts
+INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
+## Create input data $PIPE 
+cat >$INPUT_FILE <<FILE_DATA!
+This
+That
+Another line of text.
+
+FILE_DATA!
+USE_CASE="Tests flag '-v' - average over columns that have no numeric data."
+PARAMETERS="-vc0"
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: error message issued.
+cat > $EXPECTED_OUT <<EXP_OUT!
+This
+That
+Another line of text.
+
+EXP_OUT!
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+==   average
+ c0:       0
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
+((TEST_NUMBER++))
+### Use case ends
 
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
