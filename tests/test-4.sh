@@ -146,14 +146,14 @@ test()
     if [ -s "$err_file" ]; then
         if [ ! -z "$expected_stderr" ] && [ -f "$expected_stderr" ]; then
             if diff "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
-                logit "PASS: STDERR $test_name"
+                logit "PASS: test $TEST_NUMBER STDERR '$test_name'"
             else
-                logit "FAIL: STDERR $test_name"
+                logit "**FAIL: test $TEST_NUMBER STDERR '$test_name'"
                 logit "  < actual and > expected"
                 cat $diff_err | tee -a $LOG_FILE
             fi
         else
-            logit "WARN: STDERR '$test_name' output an unexpected error"
+            logit "*WARN: test $TEST_NUMBER STDERR '$test_name' output an unexpected error"
             head -n 3 $err_file
         fi
         # remove it or the next test will report an error
@@ -161,9 +161,9 @@ test()
     fi
     ## Test the stdout produced by running the command.
     if diff "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
-        logit "PASS: STDOUT $test_name"
+        logit "PASS: test $TEST_NUMBER STDOUT '$test_name'"
     else
-        logit "FAIL: STDOUT $test_name"
+        logit "**FAIL: test $TEST_NUMBER STDOUT '$test_name'"
         logit "  < actual and > expected"
         cat $diff_err | tee -a $LOG_FILE
     fi
@@ -191,7 +191,8 @@ cat >$INPUT_FILE <<FILE_DATA!
 19|10
 23|10
 FILE_DATA!
-USE_CASE="Tests flag '-4'."
+### Use case starts
+USE_CASE="Tests flag '-4c0'."
 PARAMETERS="-4c0"
 EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
 # Expected: error message issued.
@@ -212,6 +213,31 @@ EXP_OUT!
 # Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
 test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
 ((TEST_NUMBER++))
+### Use case ends
+
+### Use case starts
+USE_CASE="Tests flag '-4c1'."
+PARAMETERS="-4c1"
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: error message issued.
+cat > $EXPECTED_OUT <<EXP_OUT!
+1|10
+2|0
+3|0
+4|0
+5|0
+7|0
+9|0
+11|0
+15|0
+19|0
+23|0
+EXP_OUT!
+#### Test results expected when everything goes to plan.
+# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
+((TEST_NUMBER++))
+### Use case ends
 
 
 ########### (OPTIONAL) #############
