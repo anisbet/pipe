@@ -8,3 +8,4 @@ test:
 	./test-t.sh
 	./test-1.sh
 	./test-0.sh
+	./test-4.sh

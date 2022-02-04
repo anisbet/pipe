@@ -30,7 +30,7 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Test file for pipe.pl parameter 1.
+Test file for pipe.pl parameter '-1'.
 
 Flags:
 

@@ -2,7 +2,7 @@
 ###
 #
 # Product: pipe.pl
-# Purpose: test -FLAG_NAME_HERE functionality.
+# Purpose: test -4 functionality.
 #
 # Copyright (c) Andrew Nisbet 2022.
 # All code covered by the project's license.
@@ -12,7 +12,7 @@
 ### Global variables
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
-FLAG_TESTED='FLAG_NAME_HERE'
+FLAG_TESTED='4'
 # Set this to the pipe.pl version you want to test.
 PIPE="../pipe.pl"
 LOG_FILE="./pipe-tests.log"
@@ -31,7 +31,7 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Test file for pipe.pl parameter '-FLAG_NAME_HERE'.
+Test file for pipe.pl parameter '-4'.
 
 Flags:
 
@@ -179,16 +179,34 @@ init
 INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
 ## Create input data $PIPE 
 cat >$INPUT_FILE <<FILE_DATA!
-1|A
-2|B
+1|10
+2|10
+3|10
+4|10
+5|10
+7|10
+9|10
+11|10
+15|10
+19|10
+23|10
 FILE_DATA!
-USE_CASE="Tests flag '-FLAG_NAME_HERE'."
-PARAMETERS="-FLAG_NAME_HERE"
+USE_CASE="Tests flag '-4'."
+PARAMETERS="-4c0"
 EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
 # Expected: error message issued.
 cat > $EXPECTED_OUT <<EXP_OUT!
-1|A
-2|B
+1|10
+1|10
+1|10
+1|10
+1|10
+2|10
+2|10
+2|10
+4|10
+4|10
+4|10
 EXP_OUT!
 #### Test results expected when everything goes to plan.
 # Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
