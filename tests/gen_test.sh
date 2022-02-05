@@ -15,7 +15,8 @@ KEEP_TEMP_FILES=false
 ADD_TO_MAKE=true
 MAKE_FILE=./Makefile
 TEMPLATE=test-template.sh
-VERSION="1.1.01"
+TEST_SPECIFICATION=''
+VERSION="1.2.00"
 
 ### Functions
 # Prints out usage message.
@@ -23,13 +24,14 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Create a test template script for an arbitrary but specific pipe.pl flag.
+Create a test script for an arbitrary but specific pipe.pl flag.
 
 Flags:
 
 -f, -flag, --flag{flag}: Set the pipe.pl flag to be tested. Required.
 -h, -help, --help: This help message.
 -m, -make, --make{true|false}: Add script to Makefile or not. Default true.
+-s, -spec-file, --spec-file={/foo/bar}: Specification file which defines tests.
 -v, -version, --version: Print application version and exits.
 
  Example:
@@ -45,7 +47,7 @@ EOFU!
 # -l is for long options with double dash like --version
 # the comma separates different long options
 # -a is for long options with single dash like -version
-options=$(getopt -l "flag:,help,make:,version" -o "f:hm:v" -a -- "$@")
+options=$(getopt -l "flag:,help,make:,spec-file:,version" -o "f:hm:s:v" -a -- "$@")
 if [ $? != 0 ] ; then echo "Failed to parse options...exiting." >&2 ; exit 1 ; fi
 # set --:
 # If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
@@ -69,6 +71,12 @@ do
         shift
         export ADD_TO_MAKE=$1
         ;;
+    -s|--spec-file)
+        # Add script to Makefile or not
+        shift
+        export TEST_SPECIFICATION="$1"
+        if [ ! -f "$TEST_SPECIFICATION" ]; then echo "-s called, but no specification file found, exiting."; exit 1; fi
+        ;;
     -v|--version)
         echo "$0 version: $VERSION"
         exit 0
@@ -88,7 +96,13 @@ if [ -f "$TEST_FILE" ]; then
     exit 1
 fi
 if [ -s "$TEMPLATE" ]; then
-    sed "s/FLAG_NAME_HERE/$TEST_FLAG/g" $TEMPLATE > $TEST_FILE
+    if [ -f "$TEST_SPECIFICATION" ]; then
+        awk -f spec.awk test_spec.txt > $TEST_FILE.tmp
+    else
+        cp "$TEMPLATE" $TEST_FILE.tmp
+    fi
+    sed "s/FLAG_NAME_HERE/$TEST_FLAG/g" $TEST_FILE.tmp > $TEST_FILE
+    rm $TEST_FILE.tmp
     chmod 700 $TEST_FILE
     if [ "$ADD_TO_MAKE" == true ]; then
         echo -e "\t./$TEST_FILE" >>$MAKE_FILE
