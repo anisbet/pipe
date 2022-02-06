@@ -11,3 +11,4 @@ test:
 	./test-4.sh
 	./test-v.sh
 	./test-d.sh
+	./test-6.sh

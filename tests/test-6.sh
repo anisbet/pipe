@@ -2,7 +2,7 @@
 ###
 #
 # Product: pipe.pl
-# Purpose: test -FLAG_NAME_HERE functionality.
+# Purpose: test -6 functionality.
 #
 # Copyright (c) Andrew Nisbet 2022.
 # All code covered by the project's license.
@@ -12,7 +12,7 @@
 ### Global variables
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
-FLAG_TESTED='FLAG_NAME_HERE'
+FLAG_TESTED='6'
 # Set this to the pipe.pl version you want to test.
 PIPE="../pipe.pl"
 LOG_FILE="./pipe-tests.log"
@@ -31,7 +31,7 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Test file for pipe.pl parameter '-FLAG_NAME_HERE'.
+Test file for pipe.pl parameter '-6'.
 
 Flags:
 
@@ -176,43 +176,39 @@ logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, data files=${DATA_FILE_PREFIX
 # Set up the test infrastructure.
 init
 
-
-
-
 ### Use case starts
+USE_CASE='Test -6 makes histogram of specified column count.'
+PARAMETERS='-6c1:*'
+
 INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
 ## Create input data $PIPE 
 cat >$INPUT_FILE <<FILE_DATA!
-1|A
-2|B
+2017-09-22|1
+2017-09-23|2
+2017-09-24|3
+2017-09-25|4
+2017-09-26|5
 FILE_DATA!
-USE_CASE="Tests flag '-FLAG_NAME_HERE'."
-PARAMETERS=-FLAG_NAME_HERE
 EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
 # Expected: results issued.
 cat > $EXPECTED_OUT <<EXP_OUT!
-1|A
-2|B
+2017-09-22|*
+2017-09-23|**
+2017-09-24|***
+2017-09-25|****
+2017-09-26|*****
 EXP_OUT!
-#### Test results expected when everything goes to plan.
-# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
-test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
 ((TEST_NUMBER++))
 ### Use case ends
 
 
-########### (OPTIONAL) #############
-#### Test error expected 
-## The error message we expect from the script. 
-# EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
-# cat > $EXPECTED_ERR <<EXP_ERR!
-# Expected stderr message here.
-# EXP_ERR!
-## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
-# test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR
-
-
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
-logit "== End test =="
+logit '== End test =='
 # EOF
+

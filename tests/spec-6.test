@@ -1,0 +1,26 @@
+
+USE_CASE=Test -6 makes histogram of specified column count.
+PARAMS=c1:*
+
+
+BEGIN_INPUT
+2017-09-22|1
+2017-09-23|2
+2017-09-24|3
+2017-09-25|4
+2017-09-26|5
+END_INPUT
+
+
+BEGIN_OUTPUT: # This is the expected output from the command.
+2017-09-22|*
+2017-09-23|**
+2017-09-24|***
+2017-09-25|****
+2017-09-26|*****
+END_OUTPUT
+
+# Next error (required, but may be empty.)
+BEGIN_ERROR
+END_ERROR
+

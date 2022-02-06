@@ -12,11 +12,11 @@
 ### Global variables
 # Set this false if you want to keep the scratch files.
 KEEP_TEMP_FILES=false
-ADD_TO_MAKE=true
+ADD_TO_MAKE=false
 MAKE_FILE=./Makefile
 TEMPLATE=test-template.sh
 TEST_SPECIFICATION=''
-VERSION="1.2.00"
+VERSION="1.2.01"
 
 ### Functions
 # Prints out usage message.
@@ -30,7 +30,7 @@ Flags:
 
 -f, -flag, --flag{flag}: Set the pipe.pl flag to be tested. Required.
 -h, -help, --help: This help message.
--m, -make, --make{true|false}: Add script to Makefile or not. Default true.
+-m, -make, --make{true|false}: Add script to Makefile or not. Default false.
 -s, -spec-file, --spec-file={/foo/bar}: Specification file which defines tests.
 -v, -version, --version: Print application version and exits.
 
@@ -97,7 +97,7 @@ if [ -f "$TEST_FILE" ]; then
 fi
 if [ -s "$TEMPLATE" ]; then
     if [ -f "$TEST_SPECIFICATION" ]; then
-        awk -f spec.awk test_spec.txt > $TEST_FILE.tmp
+        awk -f spec.awk $TEST_SPECIFICATION > $TEST_FILE.tmp
     else
         cp "$TEMPLATE" $TEST_FILE.tmp
     fi

@@ -4,7 +4,7 @@ BEGIN {
     isOutput= 0;
     isError = 0;
     # number of lines to read from the template.
-    templateHeadLength = 178;
+    templateHeadLength = 177;
     totalLines = 0;
     # Read the template file.
     while(( getline line<"test-template.sh") > 0 ) {
@@ -32,6 +32,7 @@ BEGIN {
     print "test $INPUT_FILE \"$USE_CASE\" \"$PARAMETERS\" $EXPECTED_OUT $EXPECTED_ERR ";
     print "((TEST_NUMBER++))";
     print "### Use case ends";
+    print "";
 }
 
 {
@@ -45,6 +46,8 @@ BEGIN {
 /^USE_CASE=/ {
     # start of 'USE_CASE=' is 8th character
     useCaseString = substr($0, 10);
+    print "";
+    print "### Use case starts";
     printf "USE_CASE='%s'\n", useCaseString;
 }
 
@@ -56,7 +59,7 @@ BEGIN {
 
 /^BEGIN_INPUT/ {
     isInput = 1;
-    print "### Use case starts";
+    print "";
     print "INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt";
     print "## Create input data $PIPE ";
     print "cat >$INPUT_FILE <<FILE_DATA!";
@@ -82,5 +85,4 @@ END {
     print "clean_up";
     print "logit '== End test =='";
     print "# EOF";
-    print "";
 }
