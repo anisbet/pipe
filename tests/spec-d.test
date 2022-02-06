@@ -1,0 +1,36 @@
+# Ignore this line
+# 
+# This is the name or description of the test.
+USE_CASE=Test if -d deduplicate text.
+PARAMS=c0
+BEGIN_INPUT # This is the test input. (require)
+10|A
+10|B
+END_INPUT
+
+# Next output (required)
+BEGIN_OUTPUT: # This is the expected output from the command.
+10|B
+END_OUTPUT
+
+# Next error (required, but may be empty.)
+BEGIN_ERROR
+END_ERROR: # This is the expected error if any. (Optional).
+
+
+
+USE_CASE=Test if -A deduplicate outputs the count of duplicates.
+PARAMS=c0 -A
+BEGIN_INPUT # This is the test input. (require)
+10|A
+10|B
+END_INPUT
+
+# Next output (required)
+BEGIN_OUTPUT: # This is the expected output from the command.
+   2 10|B
+END_OUTPUT
+
+# Next error (required, but may be empty.)
+BEGIN_ERROR
+END_ERROR: # This is the expected error if any. (Optional).
