@@ -1,4 +1,8 @@
 ## Turns readme documentation into specs, for conversion into tests.
+## Some rules:
+## 1) Back-ticked 'console' text should be indented one space.
+## 2) Keywords are '# Flag:', 'Parameters:', 'Use case:', 'Input:', and 'Output:'. Everything else is ignored.
+## 3) The script outputs spec-*.test ready code.
 BEGIN {
     RS = "\n";
     FS = ": ";
@@ -26,8 +30,7 @@ BEGIN {
         print "BEGIN_" output;
         printf "%s\n", my_output;
         print "END_" output;
-        print "BEGIN_" error;
-        print "END_" error;
+        lastFileType = output;
     } else {  # Plain back-ticks, and the following data should be exported.
         if (readData == 1) {
             readData = 0;
