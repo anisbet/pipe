@@ -95,11 +95,13 @@ TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/-/, "", $2); print $2}' $TEST_SP
 # If there isn't one that's an error.
 [[ -z "$TEST_FLAG" ]] && { echo "**error no 'FLAG' found in '$TEST_SPECIFICATION', exiting."; exit 1; }
 export TEST_FILE="test-${TEST_FLAG}.sh"
-if [ -f "$TEST_FILE" ] && [ "$CLOBBER_EXISTING_SH_SCRIPTS" == true ]; then
-    rm $TEST_FILE
-else
-    echo "**error, test $TEST_FILE already exists, exiting."
-    exit 1
+if [ -f "$TEST_FILE" ]; then
+    if [ "$CLOBBER_EXISTING_SH_SCRIPTS" == true ]; then
+        rm $TEST_FILE
+    else
+        echo "**error, test $TEST_FILE already exists, exiting."
+        exit 1
+    fi
 fi
 if [ -s "$TEMPLATE" ]; then
     if [ -f "$TEST_SPECIFICATION" ]; then

@@ -22,7 +22,8 @@ ACTUAL_STDOUT="$TMP_DIR/output-actual-${FLAG_TESTED}"
 ACTUAL_STDERR="$TMP_DIR/error-actual-${FLAG_TESTED}"
 EXPECTED_STDOUT="$TMP_DIR/output-expected-${FLAG_TESTED}"
 EXPECTED_STDERR="$TMP_DIR/error-expected-${FLAG_TESTED}"
-VERSION="1.1.01"
+TEST_NUMBER=0
+VERSION="1.1.02"
 
 ### Functions
 # Prints out usage message.
@@ -30,7 +31,7 @@ usage()
 {
     cat << EOFU!
  Usage: $0 [flags]
-Test file for pipe.pl parameter t.
+Test file for pipe.pl parameter '-t'.
 
 Flags:
 
@@ -136,23 +137,23 @@ test()
     local expected_stdout="$4"
     local expected_stderr="$5"
     # Destination files for result output if required.
-    local err_file=${ACTUAL_STDERR}.txt
-    local out_file=${ACTUAL_STDOUT}.txt
-    local diff_err=${ACTUAL_STDERR}.diff
+    local err_file=${ACTUAL_STDERR}.$TEST_NUMBER.txt
+    local out_file=${ACTUAL_STDOUT}.$TEST_NUMBER.txt
+    local diff_err=${ACTUAL_STDERR}.$TEST_NUMBER.diff
     cat $input | $PIPE ${params} >$out_file 2>$err_file
     # Some commands output to stderr by default, other tests pass if the expected 
     # result is a failed condition.
     if [ -s "$err_file" ]; then
         if [ ! -z "$expected_stderr" ] && [ -f "$expected_stderr" ]; then
             if diff "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
-                logit "PASS: STDERR $test_name"
+                logit "PASS: test $TEST_NUMBER STDERR $test_name"
             else
-                logit "FAIL: STDERR $test_name"
+                logit "**FAIL: test $TEST_NUMBER STDERR $test_name"
                 logit "  < actual and > expected"
                 cat $diff_err | tee -a $LOG_FILE
             fi
         else
-            logit "WARN: STDERR '$test_name' output an unexpected error"
+            logit "*WARN: test $TEST_NUMBER STDERR $test_name output an unexpected error"
             head -n 3 $err_file
         fi
         # remove it or the next test will report an error
@@ -160,9 +161,9 @@ test()
     fi
     ## Test the stdout produced by running the command.
     if diff "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
-        logit "PASS: STDOUT $test_name"
+        logit "PASS: test $TEST_NUMBER STDOUT $test_name"
     else
-        logit "FAIL: STDOUT $test_name"
+        logit "**FAIL: test $TEST_NUMBER STDOUT $test_name"
         logit "  < actual and > expected"
         cat $diff_err | tee -a $LOG_FILE
     fi
@@ -175,73 +176,53 @@ logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, data files=${DATA_FILE_PREFIX
 # Set up the test infrastructure.
 init
 
-USE_CASE="Test leading and trailing white space removed from c0,c1,c3"
-PARAMETERS="-tc0,c1,c3"
-INPUT_FILE=${DATA_FILE_PREFIX}.txt
-EXPECTED_OUT=${EXPECTED_STDOUT}.0.txt
-EXPECTED_ERR=${EXPECTED_STDERR}.0.txt
-## Create some data to pipe into $PIPE 
+### Use case starts
+USE_CASE='Trim leading / trailing white space from all columns.'
+PARAMETERS='-tany'
+
+INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
+## Create input data $PIPE 
 cat >$INPUT_FILE <<FILE_DATA!
--rw-r--r--   |1| sirsi|    sirsi |   102193407 Jul | 1  |2014 201406.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   108121444 Aug | 1  |2014 201407.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   104152833 Sep | 1  |2014 201408.hist.Z
+  1 |  2  |  3
 FILE_DATA!
-# Expected: error message issued.
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: results issued.
 cat > $EXPECTED_OUT <<EXP_OUT!
--rw-r--r--|1| sirsi|sirsi|   102193407 Jul | 1  |2014 201406.hist.Z
--rw-r--r--|1| sirsi|sirsi|   108121444 Aug | 1  |2014 201407.hist.Z
--rw-r--r--|1| sirsi|sirsi|   104152833 Sep | 1  |2014 201408.hist.Z
+1|2|3
 EXP_OUT!
-#### Test no error expected
-# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
-test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
+((TEST_NUMBER++))
+### Use case ends
 
-USE_CASE="Test trimming non-existent column has no effect"
-PARAMETERS="-tc100"
-INPUT_FILE=${DATA_FILE_PREFIX}.txt
-EXPECTED_OUT=${EXPECTED_STDOUT}.0.txt
-EXPECTED_ERR=${EXPECTED_STDERR}.0.txt
-## Create some data to pipe into $PIPE 
+
+### Use case starts
+USE_CASE='Trim leading / trailing white space from one columns.'
+PARAMETERS='-tc1'
+
+INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt
+## Create input data $PIPE 
 cat >$INPUT_FILE <<FILE_DATA!
--rw-r--r--   |1| sirsi|    sirsi |   102193407 Jul | 1  |2014 201406.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   108121444 Aug | 1  |2014 201407.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   104152833 Sep | 1  |2014 201408.hist.Z
+1 |  2  |  3
 FILE_DATA!
-# Expected: error message issued.
+EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt
+# Expected: results issued.
 cat > $EXPECTED_OUT <<EXP_OUT!
--rw-r--r--   |1| sirsi|    sirsi |   102193407 Jul | 1  |2014 201406.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   108121444 Aug | 1  |2014 201407.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   104152833 Sep | 1  |2014 201408.hist.Z
+1 |2|  3
 EXP_OUT!
-#### Test no error expected
-# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
-test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
-
-
-USE_CASE="Test keyword 'any' removes all leading - trailing white space on all columns"
-PARAMETERS="-tany"
-INPUT_FILE=${DATA_FILE_PREFIX}.txt
-EXPECTED_OUT=${EXPECTED_STDOUT}.0.txt
-EXPECTED_ERR=${EXPECTED_STDERR}.0.txt
-## Create some data to pipe into $PIPE 
-cat >$INPUT_FILE <<FILE_DATA!
--rw-r--r--   |1| sirsi|    sirsi |   102193407 Jul | 1  |2014 201406.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   108121444 Aug | 1  |2014 201407.hist.Z
--rw-r--r--   |1| sirsi|    sirsi |   104152833 Sep | 1  |2014 201408.hist.Z
-FILE_DATA!
-# Expected: error message issued.
-cat > $EXPECTED_OUT <<EXP_OUT!
--rw-r--r--|1|sirsi|sirsi|102193407 Jul|1|2014 201406.hist.Z
--rw-r--r--|1|sirsi|sirsi|108121444 Aug|1|2014 201407.hist.Z
--rw-r--r--|1|sirsi|sirsi|104152833 Sep|1|2014 201408.hist.Z
-EXP_OUT!
-#### Test no error expected
-# Actual test: input, "test name", "pipe.pl parameters", expected output (file name)
-test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT 
-
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+EXP_ERR!
+## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR 
+((TEST_NUMBER++))
+### Use case ends
 
 
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
 clean_up
-logit "== End test =="
+logit '== End test =='
 # EOF
