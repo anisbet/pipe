@@ -27,14 +27,17 @@ BEGIN {
         print "BEGIN_" input;
         printf "%s\n", my_input;
         print "END_" input;
+        print "";
         print "BEGIN_" output;
         printf "%s\n", my_output;
         print "END_" output;
+        print "";
         lastFileType = output;
     } else {  # Plain back-ticks, and the following data should be exported.
         if (readData == 1) {
             readData = 0;
             print "END_" outputFileType;
+            print "";
             # Save file type state to auto-add error file output if not specified.
             # Error file definitions are required in tests but not in Readme.md's.
             lastFileType = outputFileType;
@@ -57,6 +60,7 @@ BEGIN {
     if (lastFileType == output) {
         print "BEGIN_" error;
         print "END_" error;
+        print "";
         lastFileType = error;
     }
     printf "%s=spec-%s.test\n",startOfScriptSentinal,$2;
@@ -68,6 +72,7 @@ BEGIN {
     if (lastFileType == output) {
         print "BEGIN_" error;
         print "END_" error;
+        print "";
     }
     print "USE_CASE=" $2;
 }
@@ -110,5 +115,6 @@ END {
     if (lastFileType == output) {
         print "BEGIN_" error;
         print "END_" error;
+        print "";
     }
 }

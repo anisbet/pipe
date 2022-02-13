@@ -1,4 +1,4 @@
-
+FLAG=6
 USE_CASE=Test -6 makes histogram of specified column count.
 PARAMS=c1:*
 
