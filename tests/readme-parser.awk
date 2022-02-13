@@ -47,7 +47,7 @@ BEGIN {
     }
 }
 
-/^Flag:/ {
+/(#+ )?Flag:/ {
     # Chunk out each flag in the Readme.md as a separate spec file for testing.
     if ($2 ~ /^-/) {
         gsub(/^-./, "", $2);
@@ -57,7 +57,7 @@ BEGIN {
     lastFileType = "";
 }
 
-/^Use case:/ {
+/(#+ )?Use case:/ {
     if (lastFileType == output) {
         print "BEGIN_" error;
         print "END_" error;
@@ -66,7 +66,7 @@ BEGIN {
 }
 
 # Flags including the flag being tested at the front
-/^Parameters:/ {
+/(#+ )?Parameters:/ {
     # Trim off the leading dash-FLAG if present. Spec.test files don't use them.
     if ($2 ~ /^-/) {
         gsub(/^-./, "", $2);
@@ -75,7 +75,7 @@ BEGIN {
 }
 
 # Special case of one line input and output.
-/^Input:/ {
+/(#+ )?Input:/ {
     outputFileType = input;
     # Output the name of the input file if mentioned.
     if ($2 != "") {
@@ -83,11 +83,11 @@ BEGIN {
     }
 }
 
-/^Output:/ {
+/(#+ )?Output:/ {
     outputFileType = output;
 }
 
-/^Error:/ {
+/(#+ )?Error:/ {
     outputFileType = error;
 }
 
