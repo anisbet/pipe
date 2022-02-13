@@ -1,0 +1,12 @@
+# SPEC_FILE=spec-t.test
+FLAG=t
+USE_CASE=Trim leading / trailing white space from all columns.
+PARAMS=any
+BEGIN_INPUT
+  1 |  2  |  3
+END_INPUT
+BEGIN_OUTPUT
+1|2|3
+END_OUTPUT
+BEGIN_ERROR
+END_ERROR

@@ -52,7 +52,14 @@ BEGIN {
     if ($2 ~ /^-/) {
         gsub(/^-./, "", $2);
     }
-    printf "%s:spec-%s.test\n",startOfScriptSentinal,$2;
+    # When Readme.md contains more than one flag we have to add a 
+    # error output before starting the next Flag:.
+    if (lastFileType == output) {
+        print "BEGIN_" error;
+        print "END_" error;
+        lastFileType = error;
+    }
+    printf "%s=spec-%s.test\n",startOfScriptSentinal,$2;
     printf "FLAG=%s\n", $2;
     lastFileType = "";
 }

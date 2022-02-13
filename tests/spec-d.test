@@ -1,6 +1,7 @@
 # Ignore this line
 # 
 # This is the name or description of the test.
+FLAG=d
 USE_CASE=Test if -d deduplicate text.
 PARAMS=c0
 BEGIN_INPUT # This is the test input. (require)
@@ -9,13 +10,13 @@ BEGIN_INPUT # This is the test input. (require)
 END_INPUT
 
 # Next output (required)
-BEGIN_OUTPUT: # This is the expected output from the command.
+BEGIN_OUTPUT # This is the expected output from the command.
 10|B
 END_OUTPUT
 
 # Next error (required, but may be empty.)
 BEGIN_ERROR
-END_ERROR: # This is the expected error if any. (Optional).
+END_ERROR # This is the expected error if any. (Optional).
 
 
 
@@ -27,10 +28,10 @@ BEGIN_INPUT # This is the test input. (require)
 END_INPUT
 
 # Next output (required)
-BEGIN_OUTPUT: # This is the expected output from the command.
+BEGIN_OUTPUT # This is the expected output from the command.
    2 10|B
 END_OUTPUT
 
 # Next error (required, but may be empty.)
 BEGIN_ERROR
-END_ERROR: # This is the expected error if any. (Optional).
+END_ERROR # This is the expected error if any. (Optional).
