@@ -7,7 +7,7 @@ BEGIN {
     templateHeadLength = 177;
     totalLines = 0;
     # Read the template file.
-    while(( getline line<"test-template.sh") > 0 ) {
+    while(( getline line<"template.sh") > 0 ) {
         if (totalLines < templateHeadLength) {
             print line;
         }

@@ -13,7 +13,8 @@ INPUT_MARKDOWN="Readme.md"
 PARSER="readme-parser.awk"
 TMP_FILE=/tmp/$(basename -s .sh $0).$(date +'%Y%m%d%H%M').test
 FILE_BREAK="# SPEC_FILE"
-VERSION="0.0.01"
+CLOBBER_EXISTING_SPECS=false
+VERSION="0.1.00"
 
 ### Functions
 # Prints out usage message.
@@ -27,6 +28,7 @@ found in a Readme.md file.
 
 Flags:
 
+-f, -force, --force: Force over-write of existing files.
 -h, -help, --help: This help message.
 -m, -markdown, --markdown{/foo/bar/readme.md}: Markdown to parse into tests.
 -v, -version, --version: Print application version and exits.
@@ -43,7 +45,7 @@ EOFU!
 # -l is for long options with double dash like --version
 # the comma separates different long options
 # -a is for long options with single dash like -version
-options=$(getopt -l "help,markdown:,version" -o "hm:v" -a -- "$@")
+options=$(getopt -l "force,help,markdown:,version" -o "fhm:v" -a -- "$@")
 if [ $? != 0 ] ; then echo "Failed to parse options...exiting." >&2 ; exit 1 ; fi
 # set --:
 # If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
@@ -52,6 +54,9 @@ eval set -- "$options"
 while true
 do
     case $1 in
+    -f|--force)
+        CLOBBER_EXISTING_SPECS=true
+        ;;
     -h|--help)
         usage
         exit 0
@@ -89,7 +94,14 @@ do
         [[ -z "$thisSpecFile" ]] && { echo "**error parsing specification file name in '$INPUT_MARKDOWN'"; exit 1; }
         echo "generating spec file: '$thisSpecFile'"
         # Stop repeat runs from appending to the spec.
-        [[ -f "$thisSpecFile" ]] && rm "$thisSpecFile"
+        if [ -f "$thisSpecFile" ]; then
+            if [ "$CLOBBER_EXISTING_SPECS" == true ]; then
+                rm "$thisSpecFile"
+            else
+                echo "cowardly refusing to blow away existing spec file."
+                exit 1
+            fi
+        fi
     fi
     echo "$line" >>"$thisSpecFile"
 done < "$TMP_FILE"
