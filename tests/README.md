@@ -70,13 +70,13 @@ Each section may start with optional title hash (```#```) marks optionally.
 ### Flag:
 Indicates the flag to be tested. Each <pre># Flag:</pre> will be parsed into a separate test script file named ```test-{flag}.sh```. 
 
-The dash '-' or '--' are not required by can be included to improve readability.
+The dash '-' or '--' are not required but can be included to improve readability.
 
 ### Use case:
 Describes a feature of the 'flag' and how it is used. Later this appears in the log output as the name of the test.
 
 ### Parameters:
-Additional flag parameters are added to the flag at time of compilation. Specifying the flag in the parameters is optional and doing so can improve clarity of the documentation, but if missing, the flag will automatically be added at the time of compilation into a test script.
+Additional parameters used by the flag. Specifying the flag itself is optional and doing so can improve clarity of the documentation. The dash '-' or '--' are are also optional.
 
 ### Input: (data)
 Input data is always written to file during testing. You can influence how the file is named by adding a string with no spaces after the colon ':'.

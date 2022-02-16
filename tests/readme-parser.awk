@@ -54,7 +54,7 @@ BEGIN {
     # Chunk out each flag in the Readme.md as a separate spec file for testing.
     if ($2 ~ /^-/) {
         # Remove any and all dashes before the flag.
-        gsub(/^-./, "", $2);
+        gsub(/^(-)+/, "", $2);
     }
     # When Readme.md contains more than one flag we have to add a 
     # error output before starting the next Flag:.
@@ -82,7 +82,7 @@ BEGIN {
 /(#+ )?Parameters:/ {
     # Trim off the leading dash-FLAG if present. Spec.test files don't use them.
     if ($2 ~ /^-/) {
-        gsub(/^-./, "", $2);
+        gsub(/^(-)+./, "", $2);
     }
     print "PARAMS=" $2;
 }
