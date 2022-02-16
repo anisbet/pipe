@@ -53,6 +53,7 @@ BEGIN {
 /(#+ )?Flag:/ {
     # Chunk out each flag in the Readme.md as a separate spec file for testing.
     if ($2 ~ /^-/) {
+        # Remove any and all dashes before the flag.
         gsub(/^-./, "", $2);
     }
     # When Readme.md contains more than one flag we have to add a 

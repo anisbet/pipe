@@ -19,7 +19,7 @@ CLOBBER_EXISTING_FILES=false
 GENERATE_MAKEFILE=false
 GENERATE_TESTS=false
 WORKING_DIR=.
-TEST_MARKDOWN=$WORKING_DIR/Readme.md
+TEST_MARKDOWN=''
 GEN_SPEC=$WORKING_DIR/gen_spec.sh
 GEN_TEST=$WORKING_DIR/gen_test.sh
 MAKE_FILE=$WORKING_DIR/Makefile
@@ -138,13 +138,6 @@ do
     -m|--make)
         # Generate a Makefile in working_dir
         GENERATE_MAKEFILE=true
-        ;;
-
-    -p|--pipeline)
-        # Use Readme.md to generate spec-*.test files if $TEST_MARKDOWN
-        # Convert spec-*.test to test-*.sh
-        # Create Makefile if $GENERATE_MAKEFILE
-        # Run all test-*.sh
         ;;
 
     -s|--spec_markdown)

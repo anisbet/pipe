@@ -74,7 +74,7 @@ do
     -s|--spec-file)
         # /foo/bar/spec-n.test or similar.
         shift
-        export TEST_SPECIFICATION="$1"
+        export TEST_SPECIFICATION=$1
         ;;
     -v|--version)
         echo "$0 version: $VERSION"
@@ -91,7 +91,7 @@ done
 : ${TEST_SPECIFICATION:?Missing -s,--spec-file}
 [[ -f "$TEST_SPECIFICATION" ]] || { echo "**error spec-file not found: '$TEST_SPECIFICATION', exiting."; exit 1; }
 # Test for required -f flag. There can be only one per spec*.test file
-TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/-/, "", $2); print $2}' $TEST_SPECIFICATION)
+TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/(-)+/, "", $2); print $2}' $TEST_SPECIFICATION)
 # If there isn't one that's an error.
 [[ -z "$TEST_FLAG" ]] && { echo "**error no 'FLAG' found in '$TEST_SPECIFICATION', exiting."; exit 1; }
 export TEST_FILE="test-${TEST_FLAG}.sh"

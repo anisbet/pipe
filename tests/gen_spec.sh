@@ -82,7 +82,6 @@ done
 # Test for the awk markdown parser.
 [[ -r "$PARSER" ]] || { echo "**error missing markdown parser awk file '$PARSER'"; exit 1; }
 # Make mast spec file from markdown
-echo "writing test to temp file: '$TMP_FILE'"
 awk -f $PARSER $INPUT_MARKDOWN >$TMP_FILE
 [[ -r "$TMP_FILE" ]] || { echo "**error failed to create '$TMP_FILE'. Is there something wrong with '$INPUT_MARKDOWN'?"; exit 1; }
 # Read in the converted master spec file and parse into individual spec files and shell scripts.
