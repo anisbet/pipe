@@ -65,8 +65,9 @@ Other markdown syntax are ignored.
 ## Markdown rules
 * To be parsed correctly into a ```spec-*.test``` file the markdown documentation must be organized as noted starting in the [Flag section below](#flag).
 * Document parsing starts when the [API Reference section](#api-reference). Any line that starts with triple-back ticks will be interpreted as either input, output, or error examples. If that is not your intention add a leading space.
-* Each section may start with optional title hash (```#```) marks optionally.
-
+* Key words (below) must not be preceded by any spaces, but may be preceded by Markdown title characters ```# ```.
+* When quoting strings in ```Use case:``` sections use double-quotes.
+* When quoting parameters in ```Parameters:``` sections use double-quotes.
 
 ### API Reference
 This is a required section, may include other information or not, but if this section includes code make sure to add a white space character before any line that starts with triple-back ticks.
