@@ -95,7 +95,7 @@ export TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/(-)+/, "", $2); print $2}
 # echo "DEBUG: '$TEST_FLAG'"
 # If there isn't one that's an error.
 [[ -z "$TEST_FLAG" ]] && { echo "**error no 'FLAG' found in '$TEST_SPECIFICATION', exiting."; exit 1; }
-TEST_FILE="./test-${TEST_FLAG}.sh"
+TEST_FILE="test-${TEST_FLAG}.sh"
 if [ -f "$TEST_FILE" ]; then
     if [ "$CLOBBER_EXISTING_SH_SCRIPTS" == true ]; then
         rm "$TEST_FILE"
@@ -106,11 +106,12 @@ if [ -f "$TEST_FILE" ]; then
 fi
 if [ -s "$TEMPLATE" ]; then
     if [ -f "$TEST_SPECIFICATION" ]; then
-        awk -v TEMPLATE_SCRIPT=./template.sh -f spec.awk "$TEST_SPECIFICATION" > "${TEST_FILE}.tmp"
+        awk -v TEMPLATE_SCRIPT="$TEMPLATE" -f spec.awk "$TEST_SPECIFICATION" > "${TEST_FILE}.tmp"
     else
         cp "$TEMPLATE" "${TEST_FILE}.tmp"
     fi
     # Replace the FLAG_NAME_HERE sentinal with TEST_FLAG.
+    echo "generating test file: '$TEST_FILE'"
     awk -v testFlag=$TEST_FLAG '{gsub(/FLAG_NAME_HERE/, testFlag, $0); print $0}' "${TEST_FILE}.tmp" > "$TEST_FILE"
     rm "${TEST_FILE}.tmp"
     chmod 700 "$TEST_FILE"
