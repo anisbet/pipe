@@ -97,7 +97,7 @@ genMakefile()
 .PHONY: test clean
 
 test: clean
-$(ls -c1 test-*.sh | awk '{printf "\t%s\n",$0}')
+$(find . -name test-\*.sh | awk '{printf "\t%s\n",$0}')
 
 clean:
 	-rm *.log
