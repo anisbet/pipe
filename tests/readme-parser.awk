@@ -14,40 +14,51 @@ BEGIN {
     lastFileType = "";
     # Marker for other processes to separate output into another script file.
     startOfScriptSentinal = "# SPEC_FILE";
+    # Until the (#+ )? API Reference section don't interpret any markdown.
+    ignoreMarkdown = 1;
 }
 
 # Triggers start and end of reading data.
 /^```/ {
-    # Special case of '```in-data => out-data```'
-    gsub(/```/, "");
-    pos = index($0," => ");
-    my_input = substr($0, 0, pos -1);
-    my_output= substr($0, pos + 4);
-    if (my_input != ""){
-        print "BEGIN_" input;
-        printf "%s\n", my_input;
-        print "END_" input;
-        print "";
-        print "BEGIN_" output;
-        printf "%s\n", my_output;
-        print "END_" output;
-        print "";
-        lastFileType = output;
-    } else {  # Plain back-ticks, and the following data should be exported.
-        if (readData == 1) {
-            readData = 0;
-            print "END_" outputFileType;
+    # Don't interpret these until we get to the # API Reference.
+    if (ignoreMarkdown == 0) {
+        # Special case of '```in-data => out-data```'
+        gsub(/```/, "");
+        pos = index($0," => ");
+        my_input = substr($0, 0, pos -1);
+        my_output= substr($0, pos + 4);
+        if (my_input != ""){
+            print "BEGIN_" input;
+            printf "%s\n", my_input;
+            print "END_" input;
             print "";
-            # Save file type state to auto-add error file output if not specified.
-            # Error file definitions are required in tests but not in Readme.md's.
-            lastFileType = outputFileType;
-        } else {
-            readData = 1;
-            print "BEGIN_" outputFileType;
+            print "BEGIN_" output;
+            printf "%s\n", my_output;
+            print "END_" output;
+            print "";
+            lastFileType = output;
+        } else {  # Plain back-ticks, and the following data should be exported.
+            if (readData == 1) {
+                readData = 0;
+                print "END_" outputFileType;
+                print "";
+                # Save file type state to auto-add error file output if not specified.
+                # Error file definitions are required in tests but not in Readme.md's.
+                lastFileType = outputFileType;
+            } else {
+                readData = 1;
+                print "BEGIN_" outputFileType;
+            }
+            # Don't output the back-ticks itself.
+            next
         }
-        # Don't output the back-ticks itself.
-        next
     }
+}
+
+# Ignore any markdown until API Reference.
+/(#+ )?API Reference/ {
+    # Currently this stays true until the end of the markdown file.
+    ignoreMarkdown = 0;
 }
 
 /(#+ )?Flag:/ {

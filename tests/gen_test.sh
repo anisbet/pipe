@@ -91,13 +91,14 @@ done
 : ${TEST_SPECIFICATION:?Missing -s,--spec-file}
 [[ -f "$TEST_SPECIFICATION" ]] || { echo "**error spec-file not found: '$TEST_SPECIFICATION', exiting."; exit 1; }
 # Test for required -f flag. There can be only one per spec*.test file
-TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/(-)+/, "", $2); print $2}' $TEST_SPECIFICATION)
+export TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/(-)+/, "", $2); print $2}' "$TEST_SPECIFICATION")
+echo "DEBUG: '$TEST_FLAG'"
 # If there isn't one that's an error.
 [[ -z "$TEST_FLAG" ]] && { echo "**error no 'FLAG' found in '$TEST_SPECIFICATION', exiting."; exit 1; }
-export TEST_FILE="test-${TEST_FLAG}.sh"
+TEST_FILE="./test-${TEST_FLAG}.sh"
 if [ -f "$TEST_FILE" ]; then
     if [ "$CLOBBER_EXISTING_SH_SCRIPTS" == true ]; then
-        rm $TEST_FILE
+        rm "$TEST_FILE"
     else
         echo "**error, test $TEST_FILE already exists, exiting."
         exit 1
@@ -105,15 +106,16 @@ if [ -f "$TEST_FILE" ]; then
 fi
 if [ -s "$TEMPLATE" ]; then
     if [ -f "$TEST_SPECIFICATION" ]; then
-        awk -f spec.awk $TEST_SPECIFICATION > $TEST_FILE.tmp
+        awk -v TEMPLATE_SCRIPT=./template.sh -f spec.awk "$TEST_SPECIFICATION" > "${TEST_FILE}.tmp"
     else
-        cp "$TEMPLATE" $TEST_FILE.tmp
+        cp "$TEMPLATE" "${TEST_FILE}.tmp"
     fi
-    sed "s/FLAG_NAME_HERE/$TEST_FLAG/g" $TEST_FILE.tmp > $TEST_FILE
-    rm $TEST_FILE.tmp
-    chmod 700 $TEST_FILE
+    # Replace the FLAG_NAME_HERE sentinal with TEST_FLAG.
+    awk -v testFlag=$TEST_FLAG '{gsub(/FLAG_NAME_HERE/, testFlag, $0); print $0}' "${TEST_FILE}.tmp" > "$TEST_FILE"
+    rm "${TEST_FILE}.tmp"
+    chmod 700 "$TEST_FILE"
     if [ "$ADD_TO_MAKE" == true ]; then
-        echo -e "\t./$TEST_FILE" >>$MAKE_FILE
+        echo -e "\t./$TEST_FILE" >>"$MAKE_FILE"
     fi
 else
     echo "**error, missing $TEMPLATE exiting."

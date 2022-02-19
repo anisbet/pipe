@@ -86,6 +86,7 @@ awk -f $PARSER $INPUT_MARKDOWN >$TMP_FILE
 [[ -r "$TMP_FILE" ]] || { echo "**error failed to create '$TMP_FILE'. Is there something wrong with '$INPUT_MARKDOWN'?"; exit 1; }
 # Read in the converted master spec file and parse into individual spec files and shell scripts.
 thisSpecFile=''
+echo "reading file: $TMP_FILE"
 while IFS= read -r line
 do
     if echo "$line" | grep "$FILE_BREAK" 2>&1 >/dev/null; then
@@ -104,6 +105,6 @@ do
     fi
     echo "$line" >>"$thisSpecFile"
 done < "$TMP_FILE"
-rm "$TMP_FILE"
+# rm "$TMP_FILE"
 echo "done"
 # EOF

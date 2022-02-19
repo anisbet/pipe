@@ -63,9 +63,13 @@ Pipeline can use the target application's markdown documentation to generate spe
 Other markdown syntax are ignored.
 
 ## Markdown rules
-To be parsed correctly into a ```spec-*.test``` file the markdown documentation must be organized as follows.
+* To be parsed correctly into a ```spec-*.test``` file the markdown documentation must be organized as noted starting in the [Flag section below](#flag).
+* Document parsing starts when the [API Reference section](#api-reference). Any line that starts with triple-back ticks will be interpreted as either input, output, or error examples. If that is not your intention add a leading space.
+* Each section may start with optional title hash (```#```) marks optionally.
 
-Each section may start with optional title hash (```#```) marks optionally.
+
+### API Reference
+This is a required section, may include other information or not, but if this section includes code make sure to add a white space character before any line that starts with triple-back ticks.
 
 ### Flag:
 Indicates the flag to be tested. Each <pre># Flag:</pre> will be parsed into a separate test script file named ```test-{flag}.sh```. 
@@ -80,13 +84,13 @@ Additional parameters used by the flag. Specifying the flag itself is optional a
 
 ### Input: (data)
 Input data is always written to file during testing. You can influence how the file is named by adding a string with no spaces after the colon ':'.
-For example ```Input: file1```
+For example ```Input: file1```. The file input data is expected to start on the next that starts with triple-back ticks (code markdown).
 
 ### Output:
-The expected output produced by using the 'flag' and its parameters.
+The expected output produced by using the 'flag' and its parameters. The output data is expected to start on the next that starts with triple-back ticks (code markdown).
 
 ### Error:
-Optional, includes the text output during an error condition. May be omitted for readability, and if so, a ERROR section is added to the specification file automatically.
+Optional, includes the text output during an error condition. May be omitted for readability, and if so, a ERROR section is added to the specification file automatically. If included, the error data is expected to start on the next that starts with triple-back ticks (code markdown).
 
 ### Example Markdown
 <pre>
