@@ -100,10 +100,9 @@ test: clean
 $(ls -c1 test-*.sh | awk '{printf "\t%s\n",$0}')
 
 clean:
-    -rm *.log
+	-rm *.log
 
 # EOF
-
 EOMAKE!
     echo "make file created."
 }
