@@ -9,3 +9,5 @@
 delete.me
 Readme-*
 *.tar
+spec-*
+test-*
