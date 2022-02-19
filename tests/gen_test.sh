@@ -92,7 +92,7 @@ done
 [[ -f "$TEST_SPECIFICATION" ]] || { echo "**error spec-file not found: '$TEST_SPECIFICATION', exiting."; exit 1; }
 # Test for required -f flag. There can be only one per spec*.test file
 export TEST_FLAG=$(awk 'BEGIN {FS = "="} /FLAG/ {gsub(/(-)+/, "", $2); print $2}' "$TEST_SPECIFICATION")
-echo "DEBUG: '$TEST_FLAG'"
+# echo "DEBUG: '$TEST_FLAG'"
 # If there isn't one that's an error.
 [[ -z "$TEST_FLAG" ]] && { echo "**error no 'FLAG' found in '$TEST_SPECIFICATION', exiting."; exit 1; }
 TEST_FILE="./test-${TEST_FLAG}.sh"

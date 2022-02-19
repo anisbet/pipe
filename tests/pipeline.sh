@@ -74,7 +74,7 @@ genTests()
     if ls -c1 spec-*.test >$tmp; then
         while IFS= read -r line
         do
-            echo "DEBUG: $GEN_TEST --force --spec-file='$line'"
+            # echo "DEBUG: $GEN_TEST --force --spec-file='$line'"
             if [ "$CLOBBER_EXISTING_FILES" == true ]; then
                 $GEN_TEST --force --spec-file="$line"
             else
