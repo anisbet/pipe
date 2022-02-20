@@ -68,6 +68,7 @@ Other markdown syntax are ignored.
 * Key words (below) must not be preceded by any spaces, but may be preceded by Markdown title characters ```# ```.
 * When quoting strings in ```Use case:``` sections use double-quotes.
 * When quoting parameters in ```Parameters:``` sections use double-quotes.
+* Named files allow multiple files to be used in tests. See [Input:](#input-data) for more details.
 
 ### API Reference
 This is a required section, may include other information or not, but if this section includes code make sure to add a white space character before any line that starts with triple-back ticks.
@@ -84,8 +85,8 @@ Describes a feature of the 'flag' and how it is used. Later this appears in the 
 Additional parameters used by the flag. Specifying the flag itself is optional and doing so can improve clarity of the documentation. The dash '-' or '--' are are also optional.
 
 ### Input: (data)
-Input data is always written to file during testing. You can influence how the file is named by adding a string with no spaces after the colon ':'.
-For example ```Input: file1```. The file input data is expected to start on the next that starts with triple-back ticks (code markdown).
+Input data is always written to file during testing. By default pipeline will create file names for you in a scratch directory. You can also use
+named files (```Input: file1```), but they must be defined before any standard ```Input:``` directive. The file may be a relative or absolute path.
 
 ### Output:
 The expected output produced by using the 'flag' and its parameters. The output data is expected to start on the next that starts with triple-back ticks (code markdown).

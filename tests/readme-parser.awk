@@ -94,7 +94,7 @@ BEGIN {
     outputFileType = input;
     # Output the name of the input file if mentioned.
     if ($2 != "") {
-        printf "# INPUT_FILE:%s\n",$2;
+        printf "NAMED_FILE:%s\n",$2;
     }
 }
 

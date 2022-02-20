@@ -3,9 +3,12 @@ BEGIN {
     isInput = 0;
     isOutput= 0;
     isError = 0;
-    # number of lines to read from the template.
-    templateHeadLength = 177;
+    # number of lines to read from the template. 
+    # One less than the line '## ------ Template ends here -----'.
+    templateHeadLength = 186;
     totalLines = 0;
+    # Optional named file input
+    namedFile = "";
     # Read the template file.
     while(( getline line < TEMPLATE_SCRIPT) > 0 ) {
         if (totalLines < templateHeadLength) {
@@ -57,11 +60,24 @@ BEGIN {
     printf "PARAMETERS='-FLAG_NAME_HERE%s'\n", paramString;
 }
 
+/^NAMED_FILE/ {
+    gsub(/NAMED_FILE:/, "");
+    namedFile = $0;
+}
+
 /^BEGIN_INPUT/ {
     isInput = 1;
     print "";
-    print "INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt";
-    print "## Create input data $PIPE ";
+    if (namedFile == "") {
+        print "INPUT_FILE=${DATA_FILE_PREFIX}.$TEST_NUMBER.txt";
+    } else {
+        # Can be a relative or absolute file path.
+        printf "INPUT_FILE=\"%s\"\n", namedFile;
+        printf "SCRATCH_FILES+=(\"%s\")\n", namedFile;
+        # Reset named file for the next name choosen by the user.
+        namedFile = "";
+    }
+    print "## Create input data";
     print "cat >$INPUT_FILE <<FILE_DATA!";
 }
 

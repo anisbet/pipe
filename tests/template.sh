@@ -22,8 +22,10 @@ ACTUAL_STDOUT="$TMP_DIR/output-actual-${FLAG_TESTED}"
 ACTUAL_STDERR="$TMP_DIR/error-actual-${FLAG_TESTED}"
 EXPECTED_STDOUT="$TMP_DIR/output-expected-${FLAG_TESTED}"
 EXPECTED_STDERR="$TMP_DIR/error-expected-${FLAG_TESTED}"
+# This is only used by spec-*.test files that have named files.
+declare -a SCRATCH_FILES
 TEST_NUMBER=0
-VERSION="1.1.02"
+VERSION="1.1.03"
 
 ### Functions
 # Prints out usage message.
@@ -75,6 +77,11 @@ clean_up()
     if [ "$KEEP_TEMP_FILES" == true ]; then
         logit "preserving files in $TMP_DIR. They will be removed when test re-run."
     else
+        # Remove any named files
+        for scratch_file in "${SCRATCH_FILES[@]}"
+        do
+            rm "$scratch_file"
+        done
         rm -rf $TMP_DIR
     fi
 }
@@ -177,6 +184,7 @@ logit "$0, version $VERSION, \$LOG_FILE=$LOG_FILE, data files=${DATA_FILE_PREFIX
 init
 
 
+## ------- Template ends here --------
 
 
 ### Use case starts
