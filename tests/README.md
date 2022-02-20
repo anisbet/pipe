@@ -82,7 +82,7 @@ The dash '-' or '--' are not required but can be included to improve readability
 Describes a feature of the 'flag' and how it is used. Later this appears in the log output as the name of the test.
 
 ### Parameters:
-Additional parameters used by the flag. Specifying the flag itself is optional and doing so can improve clarity of the documentation. The dash '-' or '--' are are also optional.
+Additional parameters used by the flag. Specifying the flag itself is optional and doing so can improve clarity of the documentation. The dash '-' or '--' are are also optional. Make sure the flag you are testing is listed first in the parameters string.
 
 ### Input: (data)
 Input data is always written to file during testing. By default pipeline will create file names for you in a scratch directory. You can also use
