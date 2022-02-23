@@ -14,10 +14,15 @@ BEGIN {
     lastFileType = "";
     # Marker for other processes to separate output into another script file.
     startOfScriptSentinal = "# SPEC_FILE";
+    backTicksImportant = 0;
 }
 
 # Triggers start and end of reading data.
 /^```/ {
+    # If this is a section where ```backticks``` can appear at the start of a line ignore.
+    if (backTicksImportant == 0) {
+        next;
+    }
     # Special case of '```in-data => out-data```'
     gsub(/```/, "");
     pos = index($0," => ");
@@ -53,6 +58,7 @@ BEGIN {
 
 
 /^(#+ )?Flag:/ {
+    backTicksImportant = 0;
     # Chunk out each flag in the Readme.md as a separate spec file for testing.
     if ($2 ~ /^-/) {
         # Remove any and all dashes before the flag.
@@ -91,6 +97,7 @@ BEGIN {
 
 # Special case of one line input and output.
 /^(#+ )?Input:/ {
+    backTicksImportant = 1;
     outputFileType = input;
     # Output the name of the input file if mentioned.
     if ($2 != "") {
@@ -99,10 +106,12 @@ BEGIN {
 }
 
 /^(#+ )?Output:/ {
+    backTicksImportant = 1;
     outputFileType = output;
 }
 
 /^(#+ )?Error:/ {
+    backTicksImportant = 1;
     outputFileType = error;
 }
 
