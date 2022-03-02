@@ -83,6 +83,8 @@ BEGIN {
         print "END_" error;
         print "";
     }
+    # Strip off any single quote and replace with a double quote.
+    gsub(/'/, "\"", $2);
     print "USE_CASE=" $2;
 }
 

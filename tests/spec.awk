@@ -57,6 +57,8 @@ BEGIN {
 /^PARAMS=/ {
     # start of 'PARAMS=' is 8th character
     paramString = substr($0, 8);
+    # Use replacement of single quotes in a literal
+    gsub(/'/, "'\"'\"'", paramString);
     printf "PARAMETERS='-FLAG_NAME_HERE%s'\n", paramString;
 }
 
