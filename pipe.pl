@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.03.02 - June 7, 2021 Added 'pipe' to '-e'.
+# 1.04.00 - March 9, 2022 Don't call usage() on error, just report error.
 #
 ####################################################################################
 
@@ -616,7 +616,7 @@ sub read_requested_qualified_columns
             if ( scalar @nameQualifier != 2 )
             {
                 print STDERR "*** Error missing qualifier '$colNum'. ***\n";
-                usage();
+                exit;
             }
             push( @list, trim( $nameQualifier[0] ) );
             # Add the qualifier to the hash reference too for reference later.
@@ -635,7 +635,7 @@ sub read_requested_qualified_columns
             if ( scalar @nameQualifier != 2 )
             {
                 print STDERR "*** Error missing qualifier '$colNum'. ***\n";
-                usage();
+                exit;
             }
             @list = ();
             push( @list, trim( $nameQualifier[0] ) );
@@ -656,7 +656,7 @@ sub read_requested_qualified_columns
             if ( scalar @nameQualifier != 2 )
             {
                 print STDERR "*** Error missing qualifier '$colNum'. ***\n";
-                usage();
+                exit;
             }
             @list = ();
             push( @list, trim( $nameQualifier[0] ) );
@@ -694,7 +694,7 @@ sub read_requested_qualified_columns
     if ( scalar(@list) == 0 )
     {
         print STDERR "*** Error no valid columns selected. ***\n";
-        usage();
+        exit;
     }
     print STDERR "columns requested: '@list'\n" if ( $opt{'D'} );
     return @list;
@@ -847,7 +847,7 @@ sub read_requested_columns
     if ( scalar(@list) == 0 )
     {
         print STDERR "*** Error no valid columns selected. ***\n";
-        usage();
+        exit;
     }
     print STDERR "columns requested: '@list'\n" if ( $opt{'D'} );
     return @list;
@@ -1533,7 +1533,7 @@ sub sub_string( $ )
             else
             {
                 printf STDERR "*** error invalid end of range specification at '%s'.\n", $end;
-                usage();
+                exit;
             }
             if ( $start =~ m/\d+/ )
             {
@@ -1549,7 +1549,7 @@ sub sub_string( $ )
             else
             {
                 printf STDERR "*** error invalid start of range specification at '%s'.\n", $start;
-                usage();
+                exit;
             }
             printf STDERR "computed start '%d'.\n", $start if ( $opt{'D'} );
             printf STDERR "computed end   '%d'.\n", $end if ( $opt{'D'} );
@@ -1573,7 +1573,7 @@ sub sub_string( $ )
         else # not expected format.
         {
             printf STDERR "*** error invalid range specification at '%s'.\n", $sub_instruction;
-            usage();
+            exit;
         }
     }
     while ( @indexes )
@@ -1878,7 +1878,7 @@ sub apply_padding( $$ )
     if ( ! defined $replacement )
     {
         printf STDERR "*** syntax error in padding instruction: '%s'\n", $instruction;
-        usage();
+        exit;
     }
     $replacement =~ s/\\s/\x20/g;
     $replacement =~ s/\\t/\x09/g;
@@ -1894,7 +1894,7 @@ sub apply_padding( $$ )
     else
     {
         printf STDERR "*** syntax error in padding instruction: '%s'\n", $instruction;
-        usage();
+        exit;
     }
     return $field if ( abs($count) <= length $field );
     my @chars = split '', $field;
@@ -2040,7 +2040,7 @@ sub test_condition_cmp( $$$ )
         else
         {
             printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
-            usage();
+            exit;
         }
     }
     else
@@ -2077,7 +2077,7 @@ sub test_condition_cmp( $$$ )
         else
         {
             printf STDERR "*** error invalid operation '%s'.\n", $cmpOperator if ( $opt{'D'} );
-            usage();
+            exit;
         }
     }
     return $result;
@@ -2119,7 +2119,7 @@ sub test_condition( $ )
         if ( ! $& )
         {
             printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$KEYWORD_ANY};
-            usage();
+            exit;
         }
         my $cmpValue    = $'; # in the case of 'rg' there could be a comma seperated value '0+197'
         my $cmpOperator = $&;
@@ -2144,7 +2144,7 @@ sub test_condition( $ )
             else
             {
                 printf STDERR "*** error malformed column requested '%s'.\n", $cmpValue;
-                usage();
+                exit;
             }
         }
         foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
@@ -2163,7 +2163,7 @@ sub test_condition( $ )
             if ( ! $& )
             {
                 printf STDERR "*** error invalid comparison '%s'\n", $cond_cmp_ref->{$colIndex};
-                usage();
+                exit;
             }
             my $cmpValue    = $';
             my $cmpOperator = $&;
@@ -2189,7 +2189,7 @@ sub test_condition( $ )
                 else
                 {
                     printf STDERR "*** error malformed column requested '%s'.\n", $cmpValue;
-                    usage();
+                    exit;
                 }
             }
             $result += test_condition_cmp( $cmpOperator, $cmpValue, @{ $line }[ $colIndex ] );
@@ -2351,7 +2351,7 @@ sub modify_case_line( $ )
             if ( ! $& )
             {
                 printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|csv|pipe|normal_(W|w,S|s,D|d,q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
-                usage();
+                exit;
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );
         }
@@ -2395,7 +2395,7 @@ sub flip_char_line( $ )
             if ( ! defined $target or ! defined $replacement )
             {
                 printf STDERR "*** syntax error in -f, expected 'index.replacement' but got '%s'\n", $exp;
-                usage();
+                exit;
             }
             if ( $opt{'D'} )
             {
@@ -2437,7 +2437,7 @@ sub apply_flip
     if ( $location !~ m/^\d{1,}$/ )
     {
         printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $location;
-        usage();
+        exit;
     }
     my @f = split //, $field;
     return $field if ( $location >= @f ); # if the location site is past the end of the field just return it untouched.
@@ -2496,7 +2496,7 @@ sub replace_line( $ )
             if ( ! defined $replacement )
             {
                 printf STDERR "*** syntax error in -E, expected replacement string but got '%s'\n", $exp;
-                usage();
+                exit;
             }
             if ( $opt{'D'} )
             {
@@ -2535,7 +2535,7 @@ sub translate_line( $ )
         if ( ! defined $replacement )
         {
             printf STDERR "*** syntax error in translation instruction: '%s'\n", $exp;
-            usage();
+            exit;
         }
         $replacement =~ s/\\s/\x20/i;
         $replacement =~ s/\\t/\x09/i;
@@ -2565,7 +2565,7 @@ sub translate_line( $ )
             if ( ! defined $replacement )
             {
                 printf STDERR "*** syntax error in translation instruction: '%s'\n", $exp;
-                usage();
+                exit;
             }
             $replacement =~ s/\\s/\x20/i;
             $replacement =~ s/\\t/\x09/i;
@@ -3890,7 +3890,7 @@ sub init
         if ( ! is_between_zero_and_hundred( $opt{'r'} ) )
         {
             print STDERR "** error, invalid random percentage selection.\n";
-            usage();
+            exit;
         }
     }
     if ( $opt{'s'} )
