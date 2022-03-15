@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.05.00 - March 15, 2022 Fix line number output with -g, -A, J, -h and -P.
+# 1.06.00 - March 15, 2022 Fix bug in -f.
 #
 ####################################################################################
 
@@ -243,14 +243,14 @@ flag to operate on all columns on the current line.
                   is output as is. The input variable declaration must match the output 
                   in length and is case sensitive.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally. Similar
-                  to the [-f](#flag-f-1) flag but replaces the entire field instead of a specific
+                  to the '-f' flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
                   value the field must have to be replaced by r, and optionally
                   e=replacement if the condition failed.
                   Example: '111|222|333' '-E'c1:nnn' => '111|nnn|333'
                   '111|222|333' '-E'c1:?222.444'     => '111|444|333'
                   '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
- -f{cn:n[.p|?p.q[.r]],...}: Flips an arbitrary but specific character conditionally,
+ -f{cn:n.p[?p[.q]],...}: Flips an arbitrary but specific character conditionally,
                   where 'n' is the 0-based index of the target character. 
                   Use '?' to test the character's value before changing it
                   and optionally use a different character if the test fails.
@@ -2240,49 +2240,35 @@ sub flip_char_line( $ )
         {
             printf STDERR "flip expression: '%s' \n", $flip_ref->{ $i } if ( $opt{'D'} );
             my $exp = $flip_ref->{ $i };
-            my $target;
-            my $replacement;
-            my $condition;
-            my $on_else;
+            my $char_index;
+            my $test;
+            my $condition_true;
+            my $condition_false;
             if ( $exp =~ m/\?/ )
             {
-                $target = $`;
-                ( $condition, $replacement, $on_else ) = split( m/(?<!\\)\./, $' );
-                $condition   =~ s/\\//g; # Strip off the '\' if the delimiter '.' is selected as a condition, replace or else character.
-                $replacement =~ s/\\//g;
-                $on_else     =~ s/\\//g if ( defined $on_else );
+                ( $char_index, $test ) = split '\.', $`;
+                ( $condition_true, $condition_false ) = split( m/(?<!\\)\./, $' );
+                $condition_true   =~ s/\\//g; # Strip off the '\' if the delimiter '.' is part of the change.
+                $condition_false     =~ s/\\//g if ( defined $condition_false );
             }
             else # simple case of n.p
             {
-                ( $target, $replacement ) = split '\.', $exp;
+                ( $char_index, $test ) = split '\.', $exp;
             }
-            if ( ! defined $target or ! defined $replacement )
+            if ( ! defined $char_index or ! defined $test )
             {
-                printf STDERR "*** syntax error in -f, expected 'index.replacement' but got '%s'\n", $exp;
+                printf STDERR "*** syntax error in -f, expected '{integer index}.{test|value}' but got '%s'\n", $exp;
                 exit;
             }
             if ( $opt{'D'} )
             {
-                if ( defined $target )
-                {
-                    printf STDERR " index='%s'", $target;
-                    if ( defined $condition )
-                    {
-                        printf STDERR " c='%s'", $condition;
-                        if ( defined $replacement )
-                        {
-                            printf STDERR " r='%s'", $replacement;
-                            printf STDERR " else='%s'", $on_else if ( defined $on_else );
-                        }
-                    }
-                    elsif ( defined $replacement ) # just an index and a replacement character.
-                    {
-                        printf STDERR " r='%s'", $replacement;
-                    }
-                }
+                printf STDERR " index='%s'", $char_index if ( defined $char_index );
+                printf STDERR " value='%s'", $test if ( defined $test );
+                printf STDERR " true='%s'", $condition_true if ( defined $condition_true );
+                printf STDERR " false='%s'", $condition_false if ( defined $condition_false );
                 printf STDERR "\n";
             }
-            @{ $line }[ $i ] = apply_flip( @{ $line }[ $i ], $target, $replacement, $condition, $on_else );
+            @{ $line }[ $i ] = apply_flip( @{ $line }[ $i ], $char_index, $test, $condition_true, $condition_false );
         }
     }
 }
@@ -2290,43 +2276,45 @@ sub flip_char_line( $ )
 # Flips the specified character to the provided alternate character.
 # param:  String containing the site of the target character.
 # param:  target integer of index into the string of the replacement site.
-# param:  replacement character.
+# param:  Character to test, also equal to replacement character in simple case.
 # param:  character condition to be met before replacing.
 # param:  character replacement if condition not met.
 # return: String with the specified modifications.
 sub apply_flip
 {
-    my ( $field, $location, $replacement, $condition, $on_else ) = @_;
-    # field, location and replacement must be defined, condition and on_else may not be.
-    if ( $location !~ m/^\d{1,}$/ )
+    my ( $field, $char_index, $test_char, $condition_true, $condition_false ) = @_;
+    # field, char_index and test_char must be defined, condition_true and condition_false may not be.
+    if ( $char_index !~ m/^\d{1,}$/ )
     {
-        printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $location;
+        printf STDERR "*** syntax error in -f, expected integer index but got '%s'\n", $char_index;
         exit;
     }
     my @f = split //, $field;
-    return $field if ( $location >= @f ); # if the location site is past the end of the field just return it untouched.
-    my $site = $f[ $location ];
-    if ( defined $condition )
+    return $field if ( $char_index >= @f ); # if the char_index site is past the end of the field just return it untouched.
+    my $site = $f[ $char_index ];
+    if ( defined $condition_true )
     {
         if ( $opt{'I'} )
         {
-            $condition = lc $condition;
+            $test_char = lc $test_char;
             $site = lc $site;
         }
-        if ( $condition eq $site )
+        if ( $site eq $test_char )
         {
-            $f[ $location ] = $replacement;
+            $f[ $char_index ] = $condition_true;
         }
-        elsif ( defined $on_else )
+        else
         {
-            $f[ $location ] = $on_else;
+            if ( defined $condition_false )
+            {
+                $f[ $char_index ] = $condition_false;
+            }
         }
     }
     else # Unconditionally change the site's character.
     {
-        $f[ $location ] = $replacement;
+        $f[ $char_index ] = $test_char;
     }
-    printf STDERR "* '%s', '%s', '%s'\n", $location, $f[ $location ], $replacement if ( $opt{'D'} );
     return join '', @f;
 }
 

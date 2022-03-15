@@ -1165,7 +1165,7 @@ Input:
 ```M|m => 4d|6d```
 
 #### Flag: f
-```-f{cn:n[.p|?p.q[.r]],...}```
+```-f{cn:n.p[?p[.q]],...}```
 
 Flips an arbitrary but specific character conditionally,
 where 'n' is the 0-based index of the target character. 
@@ -1178,21 +1178,30 @@ Parameters: -f c0:2.9
 Input:
 ```0000 => 0090```
 
-TODO: Fix because the if-else doesn't work.
+Use case: If the second character is '1' flip it to 'A', and no change otherwise.
+Parameters: -f c0:1.1?A
+Input:
+```0100 => 0A00```
+
+Use case: Fail to change the character if character 1 is a '1' test fails.
+Parameters: -f c0:1.1?A
+Input:
+```0200 => 0200```
+
 Use case: If the second character is '1' flip it to 'A', and 'B' otherwise.
 Parameters: -f c0:1.1?A.B
 Input:
 ```0100 => 0A00```
 
 Use case: If the second character is '1' flip it to 'A', and 'B' otherwise.
-Parameters: -f c0:3.B?0.c
+Parameters: -f c0:1.1?A.B
 Input:
-```0001 => 000c```
+```0200 => 0B00```
 
-Use case: If the forth character is a '1', insert the string 'This', and to the word 'That' otherwise.
-Parameters: -f c0:3.0?This.That
+Use case: If the forth character is a '0', flip character to 'T', and 't' otherwise.
+Parameters: -f c0:3.0?T.t
 Input:
-```0000000 => 000That000```
+```0000000 => 000T000```
 
 #### Flag: G
 ```-G{any|cn:regex,...}```
