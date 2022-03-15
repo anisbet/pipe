@@ -15,6 +15,7 @@ BEGIN {
     # Marker for other processes to separate output into another script file.
     startOfScriptSentinal = "# SPEC_FILE";
     backTicksImportant = 0;
+    EOF_NL = "IGNORE_LAST_NEWLINE";
 }
 
 # Triggers start and end of reading data.
@@ -110,6 +111,10 @@ BEGIN {
 /^(#+ )?Output:/ {
     backTicksImportant = 1;
     outputFileType = output;
+    if ($2 ~ /Ignore last newline/) {
+        # Add special instruction to trim off last newline in heredoc.
+        printf "SPECIAL_INSTRUCTION:%s\n",EOF_NL;
+    }
 }
 
 /^(#+ )?Error:/ {
@@ -127,6 +132,7 @@ BEGIN {
 
 END {
     if (lastFileType == output) {
+
         print "BEGIN_" error;
         print "END_" error;
         print "";

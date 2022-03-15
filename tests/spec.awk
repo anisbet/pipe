@@ -9,6 +9,7 @@ BEGIN {
     totalLines = 0;
     # Optional named file input
     namedFile = "";
+    # Special instructions can be passed from a spec file like 'SPECIAL_INSTRUCTION:IGNORE_LAST_NEWLINE'
     # Read the template file.
     while(( getline line < TEMPLATE_SCRIPT) > 0 ) {
         if (totalLines < templateHeadLength) {
@@ -67,6 +68,11 @@ BEGIN {
     namedFile = $0;
 }
 
+/^SPECIAL_INSTRUCTION/ {
+    gsub(/SPECIAL_INSTRUCTION:/, "");
+    specialInstruction = $0;
+}
+
 /^BEGIN_INPUT/ {
     isInput = 1;
     print "";
@@ -87,7 +93,11 @@ BEGIN {
     isOutput = 1;
     print "EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt";
     print "# Expected: results issued.";
-    print "cat > $EXPECTED_OUT <<EXP_OUT!";
+    if (specialInstruction == "IGNORE_LAST_NEWLINE") {
+        print "perl -pe 'chomp if eof' > $EXPECTED_OUT <<EXP_OUT!";
+    } else {
+        print "cat > $EXPECTED_OUT <<EXP_OUT!";
+    }
 }
 
 /^BEGIN_ERROR/ {
