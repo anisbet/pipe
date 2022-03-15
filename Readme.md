@@ -576,7 +576,6 @@ Output:
   5 5
 ```
 
-TODO: Fix in pipe.pl
 Use case: Report the line number of each match in conjunction with -g, but add a pipe character between the fields.
 Parameters: -A -gc0:5 -P
 Input:
@@ -589,10 +588,28 @@ Input:
 ```
 Output:
 ```
-  1|5
-  2|5
-  3|5
-  5|5
+1|5|
+2|5|
+3|5|
+5|5|
+```
+
+Use case: Report the line number of each match in conjunction with -g, but change delimiter between the fields.
+Parameters: -A -gc0:5 -P -h,
+Input:
+```
+5
+5
+5
+6
+5
+```
+Output:
+```
+1,5,
+2,5,
+3,5,
+5,5,
 ```
 
 #### Flag: a
@@ -948,6 +965,46 @@ Output:
    2 2|cat
    3 3|bat
    1 3|cat
+```
+
+Use case: De-duplicate data prioritizing column one, then column two, and precede each output with the number of duplicates, separated by a pipe character.
+Parameters: -d c0,c1 -A -P
+Input:
+```
+1|cat
+2|cat
+2|cat
+3|cat
+3|bat
+3|bat
+3|bat
+```
+Output:
+```
+1|1|cat|
+2|2|cat|
+3|3|bat|
+1|3|cat|
+```
+
+Use case: De-duplicate data prioritizing column one, then column two, and precede each output with the number of duplicates, and change delimiter.
+Parameters: -d c0,c1 -A -P -h,
+Input:
+```
+1|cat
+2|cat
+2|cat
+3|cat
+3|bat
+3|bat
+3|bat
+```
+Output:
+```
+1,1,cat,
+2,2,cat,
+3,3,bat,
+1,3,cat,
 ```
 
 #### Flag: E

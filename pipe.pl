@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.04.01 - March 14, 2022 Improved usage message clarity and size.
+# 1.05.00 - March 15, 2022 Fix line number output with -g, -A, J, -h and -P.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.04.01};
+my $VERSION           = qq{1.05.00};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -2913,7 +2913,7 @@ sub dedup_list( $ )
         my $key = get_key( $line, $wantedColumns );
         $key = normalize( $key ) if ( $opt{'N'} );
         $ddup_ref->{ $key } = $line;
-        if ( $opt{ 'A' } )
+        if ( $opt{'A'} )
         {
             $count->{ $key } = 0 if ( ! exists $count->{ $key } );
             $count->{ $key }++;
@@ -2951,12 +2951,13 @@ sub dedup_list( $ )
     while ( @tmp )
     {
         my $key = shift @tmp;
-        if ( $opt{ 'A' } )
+        if ( $opt{'A'} )
         {
             my $summary = '';
             if ( $opt{'P'} )
             {
-                $summary = sprintf "%s|", get_number_format( $count->{ $key } );
+                # Changed for consistency. Previously '|' would have been replaced before output.
+                $summary = sprintf "%s%s", get_number_format( $count->{ $key } ), $DELIMITER;
             }
             else
             {
@@ -2969,7 +2970,7 @@ sub dedup_list( $ )
             my $summary = '';
             if ( $opt{'P'} )
             {
-                $summary = sprintf "%s|", get_number_format( $count->{ $key }, 0, $PRECISION );
+                $summary = sprintf "%s%s", get_number_format( $count->{ $key }, 0, $PRECISION ), $DELIMITER;
             }
             else
             {
@@ -3647,9 +3648,16 @@ sub process_line( $ )
         pop @PREVIOUS_LINES if ( @PREVIOUS_LINES && scalar @PREVIOUS_LINES > $BUFF_SIZE );
     }
     # Output line numbering, but if -d selected, output dedup'ed counts instead.
-    if ( ( $opt{'A'} or $opt{ 'J' } ) and ! $opt{'d'} )
+    if ( ( $opt{'A'} or $opt{'J'} ) and ! $opt{'d'} )
     {
-        return sprintf "%3d %s\n", $LINE_NUMBER, $line;
+        if ( $opt{'P'} )
+        {
+            return sprintf "%d%s%s\n", $LINE_NUMBER, $DELIMITER, $line;
+        }
+        else
+        {
+            return sprintf "%3d %s\n", $LINE_NUMBER, $line;
+        }
     }
     if ( $opt{'H'} )
     {
