@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.01 - March 16, 2022 Added MediaWiki output for -T.
+# 1.07.02 - March 16, 2022 Added MediaWiki output for -T.
 #
 ####################################################################################
 
