@@ -976,6 +976,21 @@ Error:
 
 Displays debugging information.
 
+Use case: Output debugging information about any transformation.
+Parameters: -D
+Input:
+```
+12345
+```
+Output:
+```
+12345
+```
+Error:
+```
+original: 0, modified: 0 fields at line number 1.
+```
+
 #### Flag: d
 ```-d{c0,c1,...cn}```
 
