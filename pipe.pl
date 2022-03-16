@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.06.01 - March 15, 2022 Fix bug in -C rg specification and added floats.
+# 1.06.02 - March 16, 2022 Added header support Markdown table output.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.06.01};
+my $VERSION           = qq{1.06.02};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -1169,13 +1169,13 @@ sub prepare_table_data( $ )
     }
     elsif ( $TABLE_OUTPUT =~ m/MD/ )
     {
+        # Markdown tables start with a '|'
+        push @newLine, ' | ';
         foreach my $value ( @{ $line } )
         {
             push @newLine, $value;
             push @newLine, ' | ';
         }
-        # remove the last ' | '.
-        pop @newLine;
         push @newLine, "\n";
     }
     elsif ( $TABLE_OUTPUT =~ m/CSV/ )
@@ -1812,10 +1812,10 @@ sub pad_line( $ ) # remove split
 }
 
 # Subroutine to compute parameter ranges. Accepts a string where
-# ranges are expected to be 2 positive integers separated by a '-'
+# ranges are expected to be two real numbers separated by a '-'
 # character.
-# param:  string of range definition, where a range is defined as
-#         2 integers separated by a '-' character.
+# param:  string of range definition. '-2-4.14', '-2--4', '2-4', and '2-+4'
+#         the same, and all are valid examples.
 # return: @range where $range[0] is the start of the range, and 
 #         $range[1] is the end of the range. There is no guarantee
 #         the end is smaller or larger than the end.
@@ -1833,23 +1833,19 @@ sub _get_range_( $ )
         printf STDERR "**error, malformed range operator '%s'.\n", $rangeString;
         exit(1);
     }
-    # For positive integer ranges this next line will do. 
-    # if ( $range[0] !~ m/^\d{1,}$/ || $range[1] !~ m/^\d{1,}$/ )
-    # For positive or negative ranges.
+    # Confirm range values are real numbers.
     if ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
     {
         printf STDERR "**error, range requires both start and end to be integers, but got '%s'.\n", $rangeString;
         exit(1);
     }
-    # Now order the range from smallest to end with largest.
+    # Order the range from smallest to end with largest.
     if ( $range[0] > $range[1] )
     {
         my $swp = $range[0];
         $range[0] = $range[1];
         $range[1] = $swp;
     }
-    # In future you could extend to positive / negative floats.
-    # elsif ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
     $range[0] += 0; # Turn them into numbers.
     $range[1] += 0;
     return @range;
@@ -3190,7 +3186,23 @@ sub table_output( $ )
     {
         if ( $placement =~ m/HEAD/ )
         {
-            printf "%s", $TABLE_ATTR;
+            # | **A** | **B** |
+            # |---|---|
+            my @headers = split(/,/, $TABLE_ATTR);
+            printf STDERR "* warning, invalid headers '%s'\n", $TABLE_ATTR if ( scalar( @headers ) == 0);
+            printf " |";
+            foreach my $my_header ( @headers )
+            {
+                printf " **%s** |", trim($my_header);
+            }
+            printf "\n";
+            # Print the header separation bar
+            printf " |";
+            foreach my $my_header ( @headers )
+            {
+                printf "---|";
+            }
+            printf "\n";
         }
         # No footer for MarkDown.
     }
