@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/perl -w
 #####################################################################################
 #
 # Perl source file for project pipe.
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.01 - March 16, 2022 Added MediaWiki output for -T. Hash bang now uses env.
+# 1.07.01 - March 16, 2022 Added MediaWiki output for -T.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.07.01};
+my $VERSION           = qq{1.07.02};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
