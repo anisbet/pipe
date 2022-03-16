@@ -2616,9 +2616,9 @@ Output:
 ```
 
 #### Flag: T
-```-T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8][:col1,col2,...,coln]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]```
+```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]```
 
-Output as a Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
+Output as a Media/Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
 With CSV or CSV_UTF-8 the attributes become column titles and queue pipe.pl
 to consider the width of the rows on output, filling in empty values as required.
 Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , '.
@@ -2729,7 +2729,6 @@ Output:
 </table>
 ```
 
-TODO: Add table headings for WIKI and add similar function for Markdown.
 Use case: Output table data in MediaWiki format.
 Parameters: -TWIKI
 Input:
@@ -2740,14 +2739,118 @@ lister|localhost
 ```
 Output:
 ```
-{| class='wikitable'
+{| class="wikitable"
+|-
 | lynx || 127.0.0.1
 |-
 | piper || 127.0.0.1
 |-
 | lister || localhost
-|-|-
 |}
+```
+
+Use case: Output table data in Wiki format with headers.
+Parameters: -TWIKI:A,B
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+```
+{| class="wikitable"
+|- style="font-weight:bold;"
+! A
+! B
+|-
+| lynx || 127.0.0.1
+|-
+| piper || 127.0.0.1
+|-
+| lister || localhost
+|}
+```
+
+Use case: Output table data in MediaWiki format.
+Parameters: -T MEDIA_WIKI
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+```
+{| class="wikitable"
+|-
+| lynx
+| 127.0.0.1
+|-
+| piper
+| 127.0.0.1
+|-
+| lister
+| localhost
+|}
+```
+
+Use case: Output table data in MediaWiki format with headers.
+Parameters: -T MEDIA_WIKI:A,B
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+```
+{| class="wikitable"
+|- style="font-weight:bold;"
+! A
+! B
+|-
+| lynx
+| 127.0.0.1
+|-
+| piper
+| 127.0.0.1
+|-
+| lister
+| localhost
+|}
+```
+
+Use case: Output table data in Markdown format.
+Parameters: -TMD
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+```
+| lynx | 127.0.0.1 | 
+| piper | 127.0.0.1 | 
+| lister | localhost | 
+```
+
+Use case: Output table data in Markdown format with headers.
+Parameters: -TMD:A,B
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+```
+| **A** | **B** |
+|:---:|---:|
+| lynx | 127.0.0.1 | 
+| piper | 127.0.0.1 | 
+| lister | localhost | 
 ```
 
 #### Flag: t

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 #####################################################################################
 #
 # Perl source file for project pipe.
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.06.02 - March 16, 2022 Added header support Markdown table output.
+# 1.07.01 - March 16, 2022 Added MediaWiki output for -T. Hash bang now uses env.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.06.02};
+my $VERSION           = qq{1.07.01};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -375,9 +375,9 @@ flag to operate on all columns on the current line.
                   to be trimmed from the end of the string, ie '12345' => -S'c0:0-(n -1)' = '1234'.
  -t{any|cn,...}: Trim leading and trailing white space from column data. If -y is
                   used, the string is trimmed of white space then truncated to the length specified by -y.
- -T{HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8][:col1,col2,...,coln]}
+ -T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
-                : Output as a Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
+                : Output as a Media/Wiki, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
                   With CSV or CSV_UTF-8 the attributes become column titles and queue pipe.pl
                   to consider the width of the rows on output, filling in empty values as required.
                   Example: -TCSV:"Name,Date,Address,Phone" or -TCSV:'Name,Date, , '.
@@ -1155,9 +1155,19 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "</td></tr>";
     }
+    elsif ( $TABLE_OUTPUT =~ m/MEDIA_WIKI/ )
+    {
+        push @newLine, "|-\n";
+        foreach my $value ( @{ $line } )
+        {
+            push @newLine, "| ";
+            push @newLine, $value;
+            push @newLine, "\n";
+        }
+    }
     elsif ( $TABLE_OUTPUT =~ m/WIKI/ )
     {
-        push @newLine, "\n| ";
+        push @newLine, "\n|-\n| ";
         foreach my $value ( @{ $line } )
         {
             push @newLine, $value;
@@ -1165,12 +1175,12 @@ sub prepare_table_data( $ )
         }
         # remove the last ' || '.
         pop @newLine;
-        push @newLine, "\n|-";
+        # push @newLine, "\n|-";
     }
     elsif ( $TABLE_OUTPUT =~ m/MD/ )
     {
         # Markdown tables start with a '|'
-        push @newLine, ' | ';
+        push @newLine, '| ';
         foreach my $value ( @{ $line } )
         {
             push @newLine, $value;
@@ -3171,15 +3181,57 @@ sub table_output( $ )
             printf "  </tbody>\n</table>\n";
         }
     }
+    elsif ( $TABLE_OUTPUT =~ m/MEDIA_WIKI/i )
+    {
+        if ( $placement =~ m/HEAD/ )
+        {
+            # {| class="wikitable" 
+            # |- style="font-weight:bold;"
+            # ! A
+            # ! B
+            # |-
+            # printf "{| class='wikitable'%s", $TABLE_ATTR;
+            my @headers = split(/,/, $TABLE_ATTR);
+            printf "{| class=\"wikitable\"\n";
+            if ( scalar( @headers ) > 0)
+            {
+                printf "|- style=\"font-weight:bold;\"\n";
+                foreach my $my_header ( @headers )
+                {
+                    printf "! %s\n", trim($my_header);
+                }
+            }
+            # printf "|-";
+        }
+        else 
+        {
+            printf "|}\n";
+        }
+    }
     elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
     {
         if ( $placement =~ m/HEAD/ )
         {
-            printf "{| class='wikitable'%s", $TABLE_ATTR;
+            # printf "{| class='wikitable'%s", $TABLE_ATTR;
+            # {| class="wikitable" 
+            # |- style="font-weight:bold;"
+            # ! A
+            # ! B
+            # |-
+            my @headers = split(/,/, $TABLE_ATTR);
+            printf "{| class=\"wikitable\"";
+            if ( scalar( @headers ) > 0)
+            {
+                printf "\n|- style=\"font-weight:bold;\"";
+                foreach my $my_header ( @headers )
+                {
+                    printf "\n! %s", trim($my_header);
+                }
+            }
         }
         else
         {
-            printf "|-\n|}\n";
+            printf "\n|}\n";
         }
     }
     elsif ( $TABLE_OUTPUT =~ m/MD/i )
@@ -3189,20 +3241,22 @@ sub table_output( $ )
             # | **A** | **B** |
             # |---|---|
             my @headers = split(/,/, $TABLE_ATTR);
-            printf STDERR "* warning, invalid headers '%s'\n", $TABLE_ATTR if ( scalar( @headers ) == 0);
-            printf " |";
-            foreach my $my_header ( @headers )
+            if ( scalar( @headers ) > 0)
             {
-                printf " **%s** |", trim($my_header);
+                printf "|";
+                foreach my $my_header ( @headers )
+                {
+                    printf " **%s** |", trim($my_header);
+                }
+                printf "\n";
+                # Print the header separation bar
+                printf "|:";
+                foreach my $my_header ( @headers )
+                {
+                    printf "---:|";
+                }
+                printf "\n";
             }
-            printf "\n";
-            # Print the header separation bar
-            printf " |";
-            foreach my $my_header ( @headers )
-            {
-                printf "---|";
-            }
-            printf "\n";
         }
         # No footer for MarkDown.
     }
@@ -3798,6 +3852,10 @@ sub init
         if ( $opt{'T'} =~ m/HTML/i )
         {
             $TABLE_OUTPUT = "HTML";
+        }
+        elsif ( $opt{'T'} =~ m/MEDIA_WIKI/i )
+        {
+            $TABLE_OUTPUT = "MEDIA_WIKI";
         }
         elsif ( $opt{'T'} =~ m/WIKI/i )
         {
