@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.06.00 - March 15, 2022 Fix bug in -f.
+# 1.06.01 - March 15, 2022 Fix bug in -C rg specification and added floats.
 #
 ####################################################################################
 
@@ -203,14 +203,14 @@ flag to operate on all columns on the current line.
                   operator, and 'c0' the column who's value is used for comparison.
                   "2|1" => -Cc0:ccgec1 means compare if the value in c1 is greater
                   than or equal to the value in c1, which is true, so the line is output.
-                  A range can be specified with the 'rg' modifier. Once set only numeric
+                  A range can be specified with the 'rg' modifier. Start and end values may be
+                  [+/-] integers or [+/-] floating values. Once set only numeric
                   values that are greater or equal to the lower bound, and less than equal
                   to the upper bound will be output. The range is separated with a '-'
-                  character, so outputting rows that have value within range between 
-                  0 and 5 is specified with -Cany:rg0-5. To output rows with values
-                  between -100 and -50 is specified with -Cany:rg-100--50.
-                  Further, -Cc0:rg-5-5 is the same as -Cc0:rg-5-+5, or c0 must be 
-                  between -5 and 5 inclusive to be output. See also -I and -N.
+                  character. Outputting rows that have value within the range of 
+                  0 and 5 is as follows ```-Cany:rg0-5```. To output rows with values
+                  between -100 and -50 is specified with ```-Cany:rg-100--50```.
+                  Further, -Cc0:rg-5-5 is the same as -Cc0:rg-5-+5. See also -I and -N.
                   Row output can also be controlled with the 'width' modifier.
                   Like the 'rg' modifier, you can output rows with columns of a 
                   given width. "abc|1" => -Cc0:"width0+3", or output the rows if c0
@@ -1812,29 +1812,43 @@ sub pad_line( $ ) # remove split
 }
 
 # Subroutine to compute parameter ranges. Accepts a string where
-# ranges are expected to be 2 positive integers separated by a '+'
+# ranges are expected to be 2 positive integers separated by a '-'
 # character.
 # param:  string of range definition, where a range is defined as
-#         2 positive integers separated by a '+' character.
+#         2 integers separated by a '-' character.
 # return: @range where $range[0] is the start of the range, and 
 #         $range[1] is the end of the range. There is no guarantee
 #         the end is smaller or larger than the end.
 sub _get_range_( $ )
 {
     my $rangeString = shift;
-    my @range = grep { /\S/ } split( /\-/, $rangeString );
+    # Search for the first '-' after character 1 in case the number is negative.
+    my $rg_pos = index($rangeString, '-', 1);
+    my @range = ();
+    $range[0] = substr($rangeString, 0, $rg_pos);
+    $range[1] = substr($rangeString, $rg_pos + 1);
+    printf STDERR "range arg='%s' len(range)=%d '%d' and '%d'\n", $rangeString, scalar(@range), $range[0], $range[1] if ( $opt{'D'} );
     if ( scalar @range != 2 )
     {
         printf STDERR "**error, malformed range operator '%s'.\n", $rangeString;
         exit(1);
     }
-    # For numberic integer ranges this next line will do. 
-    if ( $range[0] !~ m/^\d{1,}$/ || $range[1] !~ m/^\d{1,}$/ )
+    # For positive integer ranges this next line will do. 
+    # if ( $range[0] !~ m/^\d{1,}$/ || $range[1] !~ m/^\d{1,}$/ )
+    # For positive or negative ranges.
+    if ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
     {
         printf STDERR "**error, range requires both start and end to be integers, but got '%s'.\n", $rangeString;
         exit(1);
     }
-    # In future you could extend the definition of a range here, with other tests.
+    # Now order the range from smallest to end with largest.
+    if ( $range[0] > $range[1] )
+    {
+        my $swp = $range[0];
+        $range[0] = $range[1];
+        $range[1] = $swp;
+    }
+    # In future you could extend to positive / negative floats.
     # elsif ( $range[0] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ || $range[1] !~ m/^[+|-]?\d{1,}(\.\d{1,})?$/ )
     $range[0] += 0; # Turn them into numbers.
     $range[1] += 0;

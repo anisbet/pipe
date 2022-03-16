@@ -706,14 +706,15 @@ operator, and 'c0' the column who's value is used for comparison.
 "2|1" => ```-Cc0:ccgec1``` means compare if the value in c1 is greater
 than or equal to the value in c1, which is true, so the line is output.
 
-A range can be specified with the 'rg' modifier. Once set only numeric
+A range can be specified with the 'rg' modifier. Start and end values may be
+[+/-] integers or [+/-] floating values. Once set only numeric
 values that are greater or equal to the lower bound, and less than equal
 to the upper bound will be output. The range is separated with a '-'
-character, so outputting rows that have value within range between 
-0 and 5 is specified with ```-Cany:rg0-5```. To output rows with values
+character. Outputting rows that have value within the range of 
+0 and 5 is as follows ```-Cany:rg0-5```. To output rows with values
 between -100 and -50 is specified with ```-Cany:rg-100--50```.
-Further, -Cc0:rg-5-5 is the same as -Cc0:rg-5-+5, or c0 must be 
-between -5 and 5 inclusive to be output. See also -I and -N.
+Further, -Cc0:rg-5-5 is the same as -Cc0:rg-5-+5. See also [-I](#flag-i) and [-N](#flag-n).
+
 Row output can also be controlled with the 'width' modifier.
 Like the 'rg' modifier, you can output rows with columns of a 
 given width. "abc|1" => -Cc0:"width0-3", or output the rows if c0
@@ -783,7 +784,6 @@ Output:
 32|16|18|100|18
 ```
 
-
 Use case: Output rows that are between 2 and 4 columns wide.
 Parameters: -C num_cols:width2-4
 Input:
@@ -796,6 +796,24 @@ Input:
 ```
 Output:
 ```
+1|2
+1|2|3
+1|2|3|4
+```
+
+Use case: Output rows that are between -2.1 and 4.5 columns wide.
+Parameters: -C num_cols:width-2.1-4.5
+Input:
+```
+1
+1|2
+1|2|3
+1|2|3|4
+1|2|3|4|5
+```
+Output:
+```
+1
 1|2
 1|2|3
 1|2|3|4
@@ -846,7 +864,6 @@ Output:
 2020|$67053.88
 ```
 
-TODO: Failed testing range fails with negative integers.
 Use case: Output rows if column 2 (c1) has a value between -20 and +40.
 Parameters: -C c1:rg-20-40
 Input:
@@ -859,8 +876,66 @@ Input:
 ```
 Output:
 ```
+54|0|10|35
 73|-19|11|1
 86|39|12|62
+```
+
+Use case: Output a value is between -10 and -40.
+Parameters: -C c0:rg-10--40
+Input:
+```
+15
+10
+5
+0
+-5
+-10
+-15
+```
+Output:
+```
+-10
+-15
+```
+
+Use case: Output a value is between 10 and -10.
+Parameters: -C c0:rg10--10
+Input:
+```
+15
+10
+5
+0
+-5
+-10
+-15
+```
+Output:
+```
+10
+5
+0
+-5
+-10
+```
+
+Use case: Output a value is between 1.9 and 2.1.
+Parameters: -C c0:rg1.9-2.1
+Input:
+```
+1.7
+1.8
+1.9
+2.0
+2.1
+2.2
+```
+Output:
+```
+1.9
+2.0
+2.1
 ```
 
 #### Flag: c
