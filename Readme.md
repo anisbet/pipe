@@ -3397,9 +3397,9 @@ c0|c1|c2|c3|c4
 ```
 
 ## API Cheat Sheet
-  ```console
-  [cat file|echo value] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}] [options]
-  ```
+```console
+[cat file|echo value] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}] [options]
+
 [-?](#flag-?) {opr}:{c0,c1,...,cn}
 [-0](#flag-0) {file_name}[-Mcn:cm?cp[+cq...][.{literal}]
 [-1](#flag-1) {c0,c1,...,cn}
@@ -3439,4 +3439,4 @@ c0|c1|c2|c3|c4
 [-y](#flag-y-1) {integer}
 [-X](#flag-x) {any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
 [-z](#flag-z-1)|Z {c0,c1,...,cn} [-i]
-
+```
