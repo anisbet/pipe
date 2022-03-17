@@ -90,7 +90,7 @@ Other markdown syntax are ignored.
 This is a required section, may include other information or not, but if this section includes code make sure to add a white space character before any line that starts with triple-back ticks.
 
 ### Flag:
-Indicates the flag to be tested. Each <pre># Flag:</pre> will be parsed into a separate test script file named ```test-{flag}.sh```. 
+Indicates the flag to be tested. Each <pre># Flag: {SOME_FLAG}</pre> will be parsed into a separate test script file named ```test-{flag}.sh```. 
 
 The dash '-' or '--' are not required but can be included to improve readability.
 
