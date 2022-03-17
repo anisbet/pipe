@@ -41,14 +41,15 @@ Flags:
 -f, -force, --force: Over write any existing specs or test scripts.
 -h, -help, --help: This help message.
 -m, -make, --make: Create a Makefile for testing.
--s, -spec_markdown, --spec_markdown={/foo/bar/readme.md}: Specifiys the markdown
+-s, -spec_markdown, --spec_markdown={/foo/bar/readme.md}: Specifies the markdown
   file used to generate spec-*.test files, and generates the spec-*.test files.
   in the working directory. (See -w to set working directory).
 -t, -test, --test: Generate test scripts. Searches for given spec-*.test 
-  files and converts them into executeable test-*.sh scripts.
+  files and converts them into executable test-*.sh scripts.
 -v, -version, --version: Print application version and exits.
 -w, -working_dir, --working_dir{/foo/bar}: Sets the working directory for
   searching and writing any files. Default the current directory.
+  Note that pipeline.sh will look for helper awk files in the working directory.
 
  Example:
     ${0} --flag=t

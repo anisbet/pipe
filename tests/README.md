@@ -11,16 +11,32 @@ This set of scripts is used as a pipeline of tests for pipe.pl but can be applie
 7) ```Makefile``` - Automates test runs.
 8) ```pipe-test.log``` - Log of all the test results. Additional testing results are appended.
 
+# Usage: pipeline
 Pipeline has the following switch options.
-```--spec_markdown{/foo/bar/Readme.md}``` will read the markdown and parse it into specification files, one for each flag automatically.
-```--test``` will convert any specification files in the $WORKING_DIR to test script files.
-```--make``` will generate a Makefile with all test scripts under a rule for test. A clean rule is also added to remove any previous log file.
+```console
+-f, -force, --force: Over write any existing specs or test scripts.
+-h, -help, --help: This help message.
+-m, -make, --make: Create a Makefile for testing.
+-s, -spec_markdown, --spec_markdown={/foo/bar/readme.md}: Specifies the markdown
+  file used to generate spec-*.test files, and generates the spec-*.test files.
+  in the working directory. (See -w to set working directory).
+-t, -test, --test: Generate test scripts. Searches for given spec-*.test 
+  files and converts them into executable test-*.sh scripts.
+-v, -version, --version: Print application version and exits.
+-w, -working_dir, --working_dir{/foo/bar}: Sets the working directory for
+  searching and writing any files. Default the current directory.
+```
 
-Using all of these switches will run the pipeline in order.
+The pipeline for conversion of a Markdown Readme is as follows.
 Markdown => specifications => test scripts + Makefile
 
-To run the tests type ```$ make test```.
-To overwrite or update existing specifications or test scripts use the ```--force```.
+## Running pipeline
+In the ```tests\``` directory you will find ```pipeline.sh``` and its associated awk files. Once in that directory you can generate all tests from ```pipe.pl```'s Readme.md file with the following.
+```./pipeline.sh --spec_markdown=../Readme.md --make --force --test```
+
+Once all the spec files are generated and converted to shell scripts you will be able to run any test manually with ```./test-{flag}.sh``` or use the ```./test-{flag}.sh --help``` for more options.
+
+All tests can be run by typing ```make```. Then ```grep``` the logs for any failures with ```grep FAIL pipe-tests.log```.
 
 # Specification files (spec-*.test)
 Specification files are a set of tests related to a single option. They can be created by hand or from markdown, but all must follow the same pattern of organization.
