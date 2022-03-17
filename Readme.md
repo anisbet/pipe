@@ -1494,6 +1494,8 @@ Output:
 
 Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c-1), [-d](#flag-d-1), [-E](#flag-e), [-f](#flag-f-1), [-g](#flag-g-1), [-G](#flag-g), [-l](#flag-l-1), [-n](#flag-n-1) and [-s](#flag-s-1).
 
+By default sorts are case-sensitive, -I sorts ascending order or decending if -R is used.
+
 Use case: Compare two columns with [-b](#flag-b-1) ignoring differences in case.
 Parameters: -I -b c0,c1
 Input:
@@ -1508,7 +1510,19 @@ a|A
 B|b
 ```
 
-TODO: This doesn't work. Check implementation and adjust accordingly.
+Use case: Output lines where two columns differ ignoring differences in case.
+Parameters: -I -B c0,c1
+Input:
+```
+a|A
+B|b
+A|c
+```
+Output:
+```
+A|c
+```
+
 Use case: De-duplicate data but ignore case.
 Parameters: -I -d c0
 Input:
@@ -1523,8 +1537,8 @@ baT
 ```
 Output:
 ```
-CAT
 baT
+CAT
 ```
 
 Use case: Grep for a string case insensitively.
@@ -1545,6 +1559,137 @@ Cat
 cAt
 caT
 CAT
+```
+
+Use case: Find all items that are not 'cat', ignoring case.
+Parameters: -I -G c0:cat
+Input:
+```
+Cat
+cAt
+caT
+CAT
+BAT
+bAt
+baT
+```
+Output:
+```
+BAT
+bAt
+baT
+```
+
+Use case: Compare values in columns with -C, ignoring case.
+Parameters: -I -C c0:eqCAT
+Input:
+```
+Cat
+cAt
+caT
+CAT
+BAT
+bAt
+baT
+```
+Output:
+```
+Cat
+cAt
+caT
+CAT
+```
+
+Use case: Replace column two (c1) with 'bbb' if the value of the column is just 'A's , regardless of case.
+Parameters: -I -E c1:?aaa.BBB
+Input:
+```
+111|AaA|333
+111|nnn|333
+```
+Output:
+```
+111|BBB|333
+111|nnn|333
+```
+
+Use case: Flip the third character (index 2) to a 'z' if the current character is either 'c' or 'C'.
+Parameters: -I -f c0:2.c?z
+Input:
+```ABCD => ABzD```
+
+Use case: Change any "a" or "A" character to a "*".
+Parameters: -I -l c0:a.*
+Input:
+```AbracAdabrA => *br*c*d*br*```
+
+Use case: Remove all spaces and non-alphanumeric characters but preserve case.
+Parameters: -I -nc0
+Input:
+```
+cats And Dogs
+120
+123_b
+123.f
+124_C
+```
+Output:
+```
+catsAndDogs
+120
+123_b
+123f
+124_C
+```
+
+Use case: Sort in ascending order.
+Parameters: -I -sc0
+Input:
+```
+c
+D
+a
+d
+B
+C
+A
+b
+```
+Output:
+```
+a
+A
+B
+b
+c
+C
+D
+d
+```
+
+Use case: Sort in descending order.
+Parameters: -I -sc0 -R
+Input:
+```
+c
+D
+a
+d
+B
+C
+A
+b
+```
+Output:
+```
+d
+D
+C
+c
+b
+B
+A
+a
 ```
 
 #### Flag: i
@@ -1583,7 +1728,7 @@ Output:
 ```-J{cn}```
 
 Sums de-duplicated values for an arbitrary but specific column, providing a sum over group-like functionality.
-See [-d](#flag-d-1), [-A](#flag-a), [-J](#flag-j), and [-P](#flag-p). 
+See [-d](#flag-d-1), [-*](#flag-a), [-J](#flag-j), and [-P](#flag-p). 
 
 Flag [-A](#flag-a) and [-J](#flag-j) are mutually exclusive.
 
@@ -2613,6 +2758,56 @@ Output:
 4
 5
 10
+```
+
+Use case: Sort in ascending order.
+Parameters: -sc0 -I
+Input:
+```
+c
+D
+a
+d
+B
+C
+A
+b
+```
+Output:
+```
+a
+A
+B
+b
+c
+C
+D
+d
+```
+
+Use case: Sort in descending order.
+Parameters: -sc0 -R -I
+Input:
+```
+c
+D
+a
+d
+B
+C
+A
+b
+```
+Output:
+```
+d
+D
+C
+c
+b
+B
+A
+a
 ```
 
 #### Flag: T

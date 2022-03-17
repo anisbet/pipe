@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.02 - March 16, 2022 Added MediaWiki output for -T.
+# 1.07.03 - March 16, 2022 Fix ascending/descending order sort bug.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.07.02};
+my $VERSION           = qq{1.07.03};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -291,6 +291,7 @@ flag to operate on all columns on the current line.
                   allows further modifications on lines that match these conditions, while allowing 
                   all other lines to pass through, in order, unmodified.
  -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
+                  By default sorts are case-sensitive, -I sorts ascending order or decending if -R is used.
  -j             : Removes the last delimiter from the last line of output when using -P, -K, or -h.
  -J{cn}         : Sums de-duplicated values for an arbitrary but specific column, providing a sum over group-like functionality.
                   See -d, -A, -J, -j, and -P).
@@ -1111,6 +1112,10 @@ sub sort_list( $ )
         {
             @sortedKeysArray = sort { $b <=> $a } @tempKeys;
         }
+        elsif ( $opt{'I'})
+        {
+            @sortedKeysArray = sort { lc($b) cmp lc($a) } @tempKeys;
+        }
         else
         {
             @sortedKeysArray = sort { $b cmp $a } @tempKeys;
@@ -1122,9 +1127,13 @@ sub sort_list( $ )
         {
             @sortedKeysArray = sort { $a <=> $b } @tempKeys;
         }
+        elsif ( $opt{'I'})
+        {
+            @sortedKeysArray = sort { lc($a) cmp lc($b) } @tempKeys;
+        }
         else
         {
-            @sortedKeysArray = sort @tempKeys;
+            @sortedKeysArray = sort { $a cmp $b } @tempKeys;
         }
     }
     # now remove the key from the start of the entry for each line in the array.
@@ -2919,6 +2928,7 @@ sub dedup_list( $ )
         my $line = shift @ALL_LINES;
         chomp $line;
         my $key = get_key( $line, $wantedColumns );
+        $key = lc( $key ) if ( $opt{'I'} );
         $key = normalize( $key ) if ( $opt{'N'} );
         $ddup_ref->{ $key } = $line;
         if ( $opt{'A'} )
