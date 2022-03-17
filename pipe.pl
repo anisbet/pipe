@@ -355,9 +355,9 @@ flag to operate on all columns on the current line.
  -P             : Terminates each row with the defined delimiter. By default '|' but can be changed. 
                   See '-h' for more information. When used in conjunction with -d, -J, and -A,
                   a pipe character is inserted between the count and output data.
- -q{lines}      : Modifies '-H' behaviour to allow new lines for every n-th line of output.
+ -q{integer}    : Modifies '-H' behaviour to allow new lines for every n-th line of output.
                   This has the effect of joining n-number of lines into one line.
- -Q{lines}      : Output 'n' lines before and line after a -g, or -G match to STDERR. Used to
+ -Q{integer}    : Output 'n' lines before and line after a -g, or -G match to STDERR. Used to
                   view the context around a match, that is, the line before the match and the line after.
                   The lines are written to STDERR, and are immutable. The line preceding a match
                   is denoted by '<=', the line after by '=>'. If the match occurs on the first line

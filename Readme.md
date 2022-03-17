@@ -52,73 +52,73 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 
 ## API Reference
 
-[-?](#flag-?) - Perform math operations on columns.
-[-0](#flag-0) - Input from named file. (See also [-M](#flag-m)).
-[-1](#flag-1) - Increment value in specified columns.
-[-2](#flag-2) - Add an auto-increment field to output.
-[-3](#flag-3) - Increment value in specified columns by a specific step.
-[-4](#flag-4) - Output difference between this and previous line.
-[-5](#flag-5) - Output all [-g](#flag-g-1) 'any' keyword matches to STDERR.
-[-6](#flag-6) - Histogram values in column(s).
-[-7](#flag-7) - Stop search after n-th match.
-[-A](#flag-a) - Displays line numbers or summary of duplicates if '[-d](#flag-d-1)' is selected.
-[-a](#flag-a-1) - Sum of numeric values in specific columns.
-[-B](#flag-b) - Only show lines where columns are different.
-[-b](#flag-b-1) - Suppress line output if columns' values differ.
-[-C](#flag-c) - Conditionally test column values.
-[-c](#flag-c-1) - Count numeric values in specified columns.
-[-D](#flag-d) - Turn on debugging.
-[-d](#flag-d-1) - De-duplicate selected columns.
-[-E](#flag-e) - Replace string in column conditionally.
-[-e](#flag-e-1) - Change case and normalize strings.
-[-F](#flag-f) - Format column value into bin, hex, or dec.
-[-f](#flag-f-1) - Modify character in string based on 0-based index.
-[-G](#flag-g) - Inverse grep specified columns.
-[-g](#flag-g-1) - Grep values in specified columns.
-[-H](#flag-h) - Suppress new line on output.
-[-h](#flag-h-1) - Replace default delimiter.
-[-I](#flag-i) - Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-d](#flag-d-1), [-E](#flag-e), [-f](#flag-f-1), [-g](#flag-g-1), [-G](#flag-g), [-l](#flag-l-1), [-n](#flag-n-1) and [-s](#flag-s-1).
-[-i](#flag-i-1) - Output all lines, but process only if [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G](#flag-g), [-z](#flag-z-1) or [-Z](#flag-z) match.
-[-J](#flag-j) - Displays sum over group if '[-d](#flag-d-1)' is selected.
-[-j](#flag-j-1) - Remove last delimiter on the last line of data output.
-[-K](#flag-k) - Output everything as a single column.
-[-k](#flag-k-1) - Run perl script on column data.
-[-L](#flag-l) - Output only specified lines, or range of lines.
-[-l](#flag-l-1) - Translate character sequence.
-[-m](#flag-m) - Merge and compare columns across two files. See [-0](#flag-0).
-[-m](#flag-m-1) - Mask specified column values.
-[-N](#flag-n) - Normalize summaries, keys before comparisons, abs(result). Strips formatting.
-[-n](#flag-n-1) - Remove non-word characters in specified columns.
-[-O](#flag-o) - Merge selected columns.
-[-o](#flag-o-1) - Order selected columns.
-[-P](#flag-p) - Add additional delimiter if required.
-[-p](#flag-p-1) - Pad fields to specified width with an arbitrary character.
-[-Q](#flag-q) - Output 'n' lines before and after a '[-g](#flag-g-1)', or '[-G](#flag-g)' match to STDERR.
-[-q](#flag-q-1) - Selectively allow new line output of '[-H](#flag-h)'.
-[-R](#flag-r) - Reverse line order when [-d](#flag-d-1), [-4](#flag-4) or [-s](#flag-s-1) is used.
-[-r](#flag-r-1) - Randomize line output.
-[-S](#flag-s) - Sub string column values.
-[-s](#flag-s-1) - Sort columns.
-[-T](#flag-t) - Output in table form.
-[-t](#flag-t-1) - Trim selected columns.
-[-U](#flag-u) - Prioritize sorts in numerical order.
-[-u](#flag-u-1) - Encode specified columns into URL-safe strings.
-[-V](#flag-v) - Ensure output and input have same number of columns. Deprecated.
-[-v](#flag-v-1) - Average numerical values in selected columns.
-[-W](#flag-w) - Change the delimiter of input data.
-[-w](#flag-w-1) - Output minimum an maximum width of column data.
-[-X](#flag-x) - Grep values in specified columns, start output, or start searches for [-Y](#flag-y) values.
-[-x](#flag-x-1) - Displays usage message then exits.
-[-Y](#flag-y) - Stops -X output once -Y succeeds.
-[-y](#flag-y-1) - Specify precision of floating computed variables, or trim string to length.
-[-Z](#flag-z) - Show line output if column(s) test empty.
-[-z](#flag-z-1) - Suppress line output if column(s) test empty.
+[-?](#flag-?) - Perform math operations on columns.  
+[-0](#flag-0) - Input from named file. (See also [-M](#flag-m)).  
+[-1](#flag-1) - Increment value in specified columns.  
+[-2](#flag-2) - Add an auto-increment field to output.  
+[-3](#flag-3) - Increment value in specified columns by a specific step.  
+[-4](#flag-4) - Output difference between this and previous line.  
+[-5](#flag-5) - Output all [-g](#flag-g-1) 'any' keyword matches to STDERR.  
+[-6](#flag-6) - Histogram values in column(s).  
+[-7](#flag-7) - Stop search after n-th match.  
+[-A](#flag-a) - Displays line numbers or summary of duplicates if '[-d](#flag-d-1)' is selected.  
+[-a](#flag-a-1) - Sum of numeric values in specific columns.  
+[-B](#flag-b) - Only show lines where columns are different.  
+[-b](#flag-b-1) - Suppress line output if columns' values differ.  
+[-C](#flag-c) - Conditionally test column values.  
+[-c](#flag-c-1) - Count numeric values in specified columns.  
+[-D](#flag-d) - Turn on debugging.  
+[-d](#flag-d-1) - De-duplicate selected columns.  
+[-E](#flag-e) - Replace string in column conditionally.  
+[-e](#flag-e-1) - Change case and normalize strings.  
+[-F](#flag-f) - Format column value into bin, hex, or dec.  
+[-f](#flag-f-1) - Modify character in string based on 0-based index.  
+[-G](#flag-g) - Inverse grep specified columns.  
+[-g](#flag-g-1) - Grep values in specified columns.  
+[-H](#flag-h) - Suppress new line on output.  
+[-h](#flag-h-1) - Replace default delimiter.  
+[-I](#flag-i) - Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-d](#flag-d-1), [-E](#flag-e), [-f]  (#flag-f-1), [-g](#flag-g-1), [-G](#flag-g), [-l](#flag-l-1), [-n](#flag-n-1) and [-s](#flag-s-1).
+[-i](#flag-i-1) - Output all lines, but process only if [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G]  (#flag-g), [-z](#flag-z-1) or [-Z](#flag-z) match.
+[-J](#flag-j) - Displays sum over group if '[-d](#flag-d-1)' is selected.  
+[-j](#flag-j-1) - Remove last delimiter on the last line of data output.  
+[-K](#flag-k) - Output everything as a single column.  
+[-k](#flag-k-1) - Run perl script on column data.  
+[-L](#flag-l) - Output only specified lines, or range of lines.  
+[-l](#flag-l-1) - Translate character sequence.  
+[-m](#flag-m) - Merge and compare columns across two files. See [-0](#flag-0).  
+[-m](#flag-m-1) - Mask specified column values.  
+[-N](#flag-n) - Normalize summaries, keys before comparisons, abs(result). Strips formatting.  
+[-n](#flag-n-1) - Remove non-word characters in specified columns.  
+[-O](#flag-o) - Merge selected columns.  
+[-o](#flag-o-1) - Order selected columns.  
+[-P](#flag-p) - Add additional delimiter if required.  
+[-p](#flag-p-1) - Pad fields to specified width with an arbitrary character.  
+[-Q](#flag-q) - Output 'n' lines before and after a '[-g](#flag-g-1)', or '[-G](#flag-g)' match to STDERR.  
+[-q](#flag-q-1) - Selectively allow new line output of '[-H](#flag-h)'.  
+[-R](#flag-r) - Reverse line order when [-d](#flag-d-1), [-4](#flag-4) or [-s](#flag-s-1) is used.  
+[-r](#flag-r-1) - Randomize line output.  
+[-S](#flag-s) - Sub string column values.  
+[-s](#flag-s-1) - Sort columns.  
+[-T](#flag-t) - Output in table form.  
+[-t](#flag-t-1) - Trim selected columns.  
+[-U](#flag-u) - Prioritize sorts in numerical order.  
+[-u](#flag-u-1) - Encode specified columns into URL-safe strings.  
+[-V](#flag-v) - Ensure output and input have same number of columns. Deprecated.  
+[-v](#flag-v-1) - Average numerical values in selected columns.  
+[-W](#flag-w) - Change the delimiter of input data.  
+[-w](#flag-w-1) - Output minimum an maximum width of column data.  
+[-X](#flag-x) - Grep values in specified columns, start output, or start searches for [-Y](#flag-y) values.  
+[-x](#flag-x-1) - Displays usage message then exits.  
+[-Y](#flag-y) - Stops -X output once -Y succeeds.  
+[-y](#flag-y-1) - Specify precision of floating computed variables, or trim string to length.  
+[-Z](#flag-z) - Show line output if column(s) test empty.  
+[-z](#flag-z-1) - Suppress line output if column(s) test empty.  
 
 
 
 
 #### Flag: ?
- ```-?{opr}:{c0,c1,...,cn}``` 
+```-?{opr}:{c0,c1,...,cn}``` 
 
 Performs math operations over multiple columns. Supported operators are 'add', 'sub',
 'mul', and 'div'. The order of columns is important for subtraction and division 
@@ -160,7 +160,7 @@ Input:
 ```1|cat|2 => 3|1|cat|2```
 
 #### Flag: 1
- ```-1{c0,c1,...cn}```
+```-1{c0,c1,...cn}```
 
 Increment a numeric value stored in given column(s).
 
@@ -666,7 +666,7 @@ Output:
 ```
 
 #### Flag: b
- ```-b{c0,c1,...cn}```
+```-b{c0,c1,...cn}```
 
 Compare fields and output if each is equal to one-another.
 
@@ -688,7 +688,7 @@ Output:
 ```
 
 #### Flag: C
- ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```
+```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```
 
 Compare column values and output line if value in column is greater than (gt),
 less than (lt), equal to (eq), greater than or equal to (ge), not equal to (ne),
@@ -939,7 +939,7 @@ Output:
 ```
 
 #### Flag: c
- ```-c{c0,c1,...cn}```
+```-c{c0,c1,...cn}```
 
 Count the non-empty values in given column(s), that is if a value for a specified column is empty or doesn't exist,
 don't count otherwise add 1 to the column tally.
@@ -2061,7 +2061,7 @@ Output:
 ```
 
 #### Flag: m
-```-m{any|cn:*[_|#]*}``
+```-m{any|cn:*[_|#]*}```
 
 Mask specified column with the mask defined after a ':', and where '_'
 means suppress, '#' means output character, any other character at that
@@ -2373,7 +2373,7 @@ Output:
 ```
 
 #### Flag: p
- ```-p{cn:N.char,... }```
+```-p{cn:N.char,... }```
 
 Pad fields left or right with arbitrary 'N' characters. The expression is separated by a
 '.' character. '123' -pc0:"-5", -pc0:"-5.\s" both do the same thing: '123  '. Literal
@@ -2402,7 +2402,7 @@ Input:
 
 
 #### Flag: Q
- ```-Q{lines}```
+```-Q{integer}```
 
 Output 'n' lines before and line after a -g, or -G match to STDERR. Used to
 view the context around a match, that is, the line before the match and the line after.
@@ -2607,7 +2607,7 @@ Output:
 ```
 
 #### Flag: r
- ```-r{percent}```
+```-r{percent}```
 
 Output a random percentage of records, ie: -r100 output all lines in random order. 
 -r15 outputs 15% of the input in random order. -r0 produces all output in order.
@@ -3356,7 +3356,7 @@ Input:
 
 #### Flag: Z
 
- ```-Z{c0,c1,...cn}```
+```-Z{c0,c1,...cn}```
 
 Express line if the specified column(s) are empty, or don't exist. Works with the virtualization flag ([-i](#flag-i-1)).
 
@@ -3399,44 +3399,50 @@ c0|c1|c2|c3|c4
 ## API Cheat Sheet
 ```console
 [cat file|echo value] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}] [options]
-
-[-?](#flag-?) {opr}:{c0,c1,...,cn}
-[-0](#flag-0) {file_name}[-Mcn:cm?cp[+cq...][.{literal}]
-[-1](#flag-1) {c0,c1,...,cn}
-[-2](#flag-2) {cn:[start,[end]],...}
-[-3](#flag-3) {c0:n,c1:m,...,cn:p}
-[-4](#flag-4) {c0,c1,...,cn}
-[-6](#flag-6) {cn:[char],...}
-[-7](#flag-7) {positive integer}
-[-a](#flag-a-1) {c0,c1,...,cn}
-[-B](#flag-b)|b {c0,c1,...,cn} [-i]
-[-c](#flag-c-1) {c0,c1,...,cn}
-[-C](#flag-c) {any|num_cols|c0,c1,...,cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|ne|lt)cm,[...]}  [-i]
-[-d](#flag-d-1) [-IRN]{c0,c1,...,cn} [-J{cn}]
-[-e](#flag-e-1) {any|c0,c1,...,cn:[uc|lc|mc|us|spc|csv|pipe|normal_[W|w,S|s,D|d,q|Q]|format_{from}-{to}][,[...]} 
-[-E](#flag-e) {c0:[r|?c.r[.e]],...}
-[-f](#flag-f-1) {c0:n.p[?p.q[.r]],...}
-[-F](#flag-f) {c0:[b|c|d|h][.[b|c|d|h]],...}
-[-g](#flag-g-1)|G {any|c0,c1,...,cn:[regex],...} [-5i]
-[-h](#flag-h-1) {delimiter}
-[-H](#flag-h)  [-q{positive integer}]
-[-J](#flag-j) {c0,c1,...,cn}
-[-k](#flag-k-1) {cn:expr,(...)}
-[-l](#flag-l-1) {any|c0,c1,...,cn:n.p,...}
-[-L](#flag-l) {[[+|-]n[[,|-]n]?|skip n]}
-[-m](#flag-m-1) {any|c0,c1,...,cn:*[_|#|<&>]*,...}
-[-n](#flag-n-1) Otu{any|c0,c1,...,cn}
-[-o](#flag-o-1) {c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}
-[-p](#flag-p-1) {cn:[+|-]countChar+,...}
-[-q](#flag-q-1) {n-th} [-Q{n}]
-[-s](#flag-s-1) {c0,c1,...,cn} [-IRN]
-[-S](#flag-s) {cn:[range],...}
-[-t](#flag-t-1) {any|c0,c1,...,cn} [-y {integer}]
-[-T](#flag-t) [HTML[:attributes]|WIKI[:attributes]|MD[:attributes]|CSV[_UTF-8]][:col1,col2,...,coln]|CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
-[-v](#flag-v-1) {c0,c1,...,cn}
-[-w](#flag-w-1) {c0,c1,...,cn}
-[-W](#flag-w) {delimiter}
-[-y](#flag-y-1) {integer}
-[-X](#flag-x) {any|cn:[regex],...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]
-[-z](#flag-z-1)|Z {c0,c1,...,cn} [-i]
 ```
+
+[-?](#flag-?) ```-?{opr}:{c0,c1,...,cn}```     
+[-0](#flag-0) ```-0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]```     
+[-1](#flag-1) ```-1{c0,c1,...cn}```     
+[-2](#flag-2) ```-2{cn:[start,[end]]}```     
+[-3](#flag-3) ```-3{c0[:n],c1,...cn}```     
+[-4](#flag-4) ```-4{c0,c1,...cn}```     
+[-6](#flag-6) ```-6{cn:[char]}```     
+[-7](#flag-7) ```-7{positive-integer}```   
+[-a](#flag-a-1) ```-a{c0,c1,...cn}```   
+[-B](#flag-b)|[b](#flag-b-1) ```-B|b{c0,c1,...cn}```   
+[-c](#flag-c-1) ```-c{c0,c1,...cn}```   
+[-C](#flag-c) ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```   
+[-d](#flag-d-1) ```[-IRN]{c0,c1,...,cn} [-A|-J{cn}]```   
+[-e](#flag-e-1) ```-e{any|cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```      
+[-E](#flag-e) ```-E{cn:[r|?c.r[.e]],...}```   
+[-f](#flag-f-1) ```-f{cn:n.p[?p[.q]],...}```   
+[-F](#flag-f) ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```   
+[-g](#flag-g-1)|[G](#flag-g) ```{any|c0,c1,...,cn:[regex],...} [-5iI]```   
+[-h](#flag-h-1) ```-h{new_delimiter}```   
+[-H](#flag-h)  ```[-q{positive integer}]```   
+[-J](#flag-j) ```-J{cn}```      
+[-k](#flag-k-1) ```-k{cn:expr,(...)}```   
+[-l](#flag-l-1) ```-l{any|cn:exp,... }```   
+[-L](#flag-l) ```-L{[[+|-]?n-?m?|skip n]}```   
+[-m](#flag-m-1) ```-m{any|cn:*[_|#]*}```   
+[-n](#flag-n-1) ```-n{any|cn,...}```   
+[-O](#flag-o) ```-O{any|cn,...}```   
+[-o](#flag-o-1) ```-o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}```   
+[-p](#flag-p-1) ```-p{cn:N.char,... }```   
+[-q](#flag-q-1) ```-q{integer}```   
+[-Q](#flag-q) ```-Q{integer}```   
+[-r](#flag-r-1) ```-r{percent}```   
+[-s](#flag-s-1) ```-s{c0,c1,...,cn} [-IRN]```   
+[-S](#flag-s) ```-S{cn:range}```   
+[-t](#flag-t-1) ```-t{any|cn,...} [-y {integer}]```   
+[-T](#flag-t) ```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.   {literal}][,END={literal}]```
+[-u](#flag-u-1) ```-u{any|cn,...}```   
+[-v](#flag-v-1) ```-v{c0,c1,...cn}```   
+[-w](#flag-w-1) ```-w{c0,c1,...cn}```   
+[-W](#flag-w) ```-W{delimiter}```   
+[-X](#flag-x) ```-X{any|cn:regex,...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]```   
+[-y](#flag-y-1) ```-y{integer}```   
+[-Y](#flag-y) ```-Y{any|cn:regex,...}```   
+[-z](#flag-z-1)|[Z](#flag-z) ```-[Z|z]{c0,c1,...cn} [-i]```   
+   
