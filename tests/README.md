@@ -87,7 +87,7 @@ Other markdown syntax are ignored.
 * Named files allow multiple files to be used in tests. See [Input:](#input-data) for more details.
 
 ### API Reference
-This is a required section, may include other information or not, but if this section includes code make sure to add a white space character before any line that starts with triple-back ticks.
+This is a required section where all your ```Use case```s are defined.
 
 ### Flag:
 Indicates the flag to be tested. Each <pre># Flag: {SOME_FLAG}</pre> will be parsed into a separate test script file named ```test-{flag}.sh```. 
