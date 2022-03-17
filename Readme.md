@@ -3436,7 +3436,7 @@ c0|c1|c2|c3|c4
 [-s](#flag-s-1) ```-s{c0,c1,...,cn} [-IRN]```   
 [-S](#flag-s) ```-S{cn:range}```   
 [-t](#flag-t-1) ```-t{any|cn,...} [-y {integer}]```   
-[-T](#flag-t) ```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.   {literal}][,END={literal}]```
+[-T](#flag-t) ```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.   {literal}][,END={literal}]```   
 [-u](#flag-u-1) ```-u{any|cn,...}```   
 [-v](#flag-v-1) ```-v{c0,c1,...cn}```   
 [-w](#flag-w-1) ```-w{c0,c1,...cn}```   
