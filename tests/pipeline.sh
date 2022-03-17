@@ -1,5 +1,5 @@
 #!/bin/bash
-###
+#################################################################################
 #
 # Product: test-pipeline.sh
 # Purpose: Can do serveral jobs related to testing a command line scripts and 
@@ -11,7 +11,7 @@
 # Copyright (c) Andrew Nisbet 2022.
 # All code covered by the project's license.
 #
-###
+################################################################################
 
 ### Global variables
 TEST_API=
@@ -23,7 +23,7 @@ TEST_MARKDOWN=''
 GEN_SPEC=$WORKING_DIR/gen_spec.sh
 GEN_TEST=$WORKING_DIR/gen_test.sh
 MAKE_FILE=$WORKING_DIR/Makefile
-VERSION="1.0.00"
+VERSION="1.0.01"
 
 ### Functions
 # Prints out usage message.
