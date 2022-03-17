@@ -31,7 +31,7 @@ The pipeline for conversion of a Markdown Readme is as follows.
 Markdown => specifications => test scripts + Makefile
 
 ## Running pipeline
-In the ```tests\``` directory you will find ```pipeline.sh``` and its associated awk files. Once in that directory you can generate all tests from ```pipe.pl```'s Readme.md file with the following.
+In the ```tests/``` directory you will find ```pipeline.sh``` and its associated awk files. Once in that directory you can generate all tests from ```pipe.pl```'s Readme.md file with the following.
 ```./pipeline.sh --spec_markdown=../Readme.md --make --force --test```
 
 Once all the spec files are generated and converted to shell scripts you will be able to run any test manually with ```./test-{flag}.sh``` or use the ```./test-{flag}.sh --help``` for more options.
