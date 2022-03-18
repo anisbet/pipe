@@ -122,9 +122,9 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 
 Performs math operations over multiple columns. Supported operators are 'add', 'sub',
 'mul', and 'div'. The order of columns is important for subtraction and division 
-since '1|2' -?div:c0,c1 => '0.5|1|2' and '1|2' -?div:c1,c0 => '2|1|2'.
-The result always appears as the first column (c0), see -o to re-order. See -y to 
-change the precision of the result.
+since ```'1|2' -?div:c0,c1 => '0.5|1|2'``` and '1|2' ```-?div:c1,c0 => '2|1|2'```.
+The result always appears as the first column (c0), see [-o](#flag-o-1) to re-order.
+The precision of results can be changed with [-y](#flag-y-1).
 
 Errors like divide by zero will result in 'NaN'. If a column contains non-numeric
 data it is ignored during the calculation.
