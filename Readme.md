@@ -117,7 +117,7 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 
 
 
-#### Flag: ?
+## Flag: ?
 ```-?{opr}:{c0,c1,...,cn}``` 
 
 Performs math operations over multiple columns. Supported operators are 'add', 'sub',
@@ -130,56 +130,65 @@ Errors like divide by zero will result in 'NaN'. If a column contains non-numeri
 data it is ignored during the calculation.
 
 Use case: Subtraction operations over columns  
-Parameters: -? sub:c0,c1,c2,c3,c4  
+Parameters: -? sub:c0,c1,c2,c3,c4
+
 Input: 
 ```1|2|0|10|1 => -12|1|2|0|10|1```
 
 Use case: Addition over columns  
-Parameters: -? add:c0,c1,c2,c3,c4  
+Parameters: -? add:c0,c1,c2,c3,c4
+
 Input: 
 ```1|2|0|10|1 => 14|1|2|0|10|1```
 
 Use case: Multiplication over columns  
-Parameters: -? mul:c0,c1,c2,c3,c4  
+Parameters: -? mul:c0,c1,c2,c3,c4
+
 Input: 
 ```1|2|0|10|1 => 0|1|2|0|10|1```
 
 Use case: Divide column c0 by c1  
-Parameters: -? div:c0,c1  
+Parameters: -? div:c0,c1
+
 Input: 
 ```1|2|0|10|1 => 0.50|1|2|0|10|1```
 
 Use case: Divide by zero issues an error.  
-Parameters: -? div:c1,c2  
+Parameters: -? div:c1,c2
+
 Input: 
 ```1|2|0|10|1 => NaN|1|2|0|10|1```
 
 Use case: Sum column with none numeric value.  
-Parameters: -? add:c0,c1,c2  
+Parameters: -? add:c0,c1,c2
+
 Input:
 ```1|cat|2 => 3|1|cat|2```
 
-#### Flag: 1
+## Flag: 1
 ```-1{c0,c1,...cn}```
 
 Increment a numeric value stored in given column(s).
 
 Use case: Increment an integer in c0.  
-Parameters: -1c0  
+Parameters: -1c0
+
 Input: 
 ```1 => 2```
 
 Use case: Increment a string value from "aaa" to "aab".  
-Parameters: -1c0  
+Parameters: -1c0
+
 Input: 
 ```aaa => aab```
 
 Use case: Increment multiple columns.  
-Parameters: -1c0,c1,c2  
+Parameters: -1c0,c1,c2
+
 Input: 
 ```1|2|3 => 2|3|4```
 
-#### Flag: 2
+## Flag: 2
 ```-2{cn:[start,[end]]}``` 
 
 Adds a field to the data that auto increments starting at a given integer.
@@ -188,7 +197,8 @@ column index is specified is greater than, or equal to, the number of
 columns a given line. Column increments can be reset with an 'end' period.
 
 Use case: Add auto-increment column at c1 and start counting from 100.  
-Parameters: -2c1:100  
+Parameters: -2c1:100
+
 Input:
 ```
 a|b|c
@@ -203,7 +213,8 @@ a|102|b|c
 ```
 
 Use case: Increment and reset a value by a given period.  
-Parameters: -2 c1:0,1  
+Parameters: -2 c1:0,1
+
 Input:
 ```
 a|b|c
@@ -222,7 +233,8 @@ a|0|b|c
 ```
 
 Use case: Add auto increment column starting at a and ending at c, then repeat.   
-Parameters: -2 c0:a,c  
+Parameters: -2 c0:a,c
+
 Input:
 ```
 1
@@ -238,10 +250,11 @@ c|1
 a|1
 ```
 
-Use case: Add an auto-incremented column.   
-With '-2' you can add an auto-increment colu  mn with a default of '0' as an initial value.
+With '-2' you can add an auto-increment column with a default of '0' as an initial value.
 
-Parameters: -2c0
+Use case: Add an auto-incremented column.  
+Parameters: -2 c0
+
 Input:
 ```
 1|2|3
@@ -257,8 +270,8 @@ Output:
 3|1|2|3
 ```
 Use case: seed the initial value of new column with 999.  
-  
 Parameters: -2c100:999
+
 Input:
 ```
 1|2|3
@@ -274,8 +287,8 @@ Output:
 1|2|3|1002
 ```
 Use case: Seed column with initial value.  
-  
 Parameters: -2c100:a
+
 Input:
 ```
 1|2|3
@@ -292,8 +305,8 @@ Output:
 ```
 
 Use case: Reset the column count by adding an additional parameter separated by a comma ",".  
-  
 Parameters: -2c100:a,b
+
 Input:
 ```
 1|2|3
@@ -309,27 +322,30 @@ Output:
 1|2|3|b
 ```
 
-#### Flag: 3
+## Flag: 3
 ```-3{c0[:n],c1,...cn}```
 
 Increment the value stored in given column(s) by a given step.
 
 Use case: Increment a column integer value by 1.  
-Parameters: -3c0:1  
+Parameters: -3c0:1
+
 Input: 
 ```1 => 2```
 
 Use case: Increment a column by a step of 3.  
-Parameters: -3c0:3  
+Parameters: -3c0:3
+
 Input: 
 ```7 => 10```
 
 Use case: Decrement a column by using a step of -1.  
-Parameters: -3c0:-1  
+Parameters: -3c0:-1
+
 Input: 
 ```7 => 6```
 
-#### Flag: 4
+## Flag: 4
 ```-4{c0,c1,...cn}```
 
 Compute difference between value in previous column. If the values in the
@@ -337,7 +353,8 @@ line above are numerical the previous line is subtracted from the current line.
 If the -R switch is used the current line is subtracted from the previous line.
 
 Use case: Compute differences between one line and the next.  
-Parameters: -4c0  
+Parameters: -4c0
+
 Input:
 ```
 1|10
@@ -368,7 +385,8 @@ Output:
 ```
 
 Use case: Differences c1.  
-Parameters: -4c1  
+Parameters: -4c1
+
 Input:
 ```
 1|10
@@ -398,7 +416,7 @@ Output:
 23|0
 ```
 
-#### Flag: 5
+## Flag: 5
 ```-5```
 
 Modifier used with -[g|X|Y]'any:{regex}', outputs all the values that match the regular
@@ -407,7 +425,8 @@ expression to STDERR.
 Use case: output only the complete -g match.  
 When using '-g' and the keyword 'any' for any   column match adding -5 will output the match to STDERR. Consider the following data.
 
-Parameters: -5 -gany:CONSENT
+Parameters: -5 -gany:CONSE
+
 Input:
 ```
 21221023942342|EPL-ADU1FR|EPLMLW|ECONSENT|john.smith@mymail.org|20150717|
@@ -426,7 +445,7 @@ ENOCONSENT
 ```
 
 
-#### Flag: 6
+## Flag: 6
 ```-6{cn:[char]}```
 
 Displays histogram of columns' numeric value.
@@ -434,7 +453,8 @@ If the column doesn't contain a whole number pipe.pl will issue an
 error and exit.
 
 Use case: Test -6 makes histogram of specified column count.  
-Parameters: c1:*  
+Parameters: c1:*
+
 Input: 
 ```  
 2017-09-22|1
@@ -452,13 +472,14 @@ Output:
 2017-09-26|*****
 ```
 
-#### Flag: 7
+## Flag: 7
 ```-7{positive-integer}```
 
 Return after n-th line match of a search is output. See [-g](#flag-g-1), [-G](#flag-g), [-X](#flag-x), [-Y](#flag-y), [-C](#flag-c) and has precedence over [-i](#flag-i-1).
 
 Use case: Output the first 2 matches of '1' in column 0.  
-Parameters: -72 -gc0:1  
+Parameters: -72 -gc0:1
+
 Input:
 ```
 1|a
@@ -479,7 +500,8 @@ Output:
 ```
 
 Use case: Output the first 3 matches of '1' in column 0.  
-Parameters: -72 -gc0:1  
+Parameters: -72 -gc0:1
+
 Input:
 ```
 1|a
@@ -500,7 +522,8 @@ Output:
 ```
 
 Use case: Output the first three numbers greater than equal to 300.  
-Parameters: -7 3 -C c0:ge300  
+Parameters: -7 3 -C c0:ge300
+
 Input:
 ```
 700
@@ -517,7 +540,7 @@ Output:
 333
 ```
 
-#### Flag: A
+## Flag: A
 ```-A```
  
 Modifier that outputs line numbers from input, or if [-d (deduplicate)](#flag-d) is used, the number 
@@ -527,7 +550,8 @@ functions like [-g](#flag-g-1), [-G](#flag-g), [-X](#flag-x), or [-Y](#flag-y) t
 are reported.
 
 Use case: Sum all numeric values in the first column (c0).  
-Parameters: -A -dc0  
+Parameters: -A -dc0
+
 Input:
 ```
 5
@@ -543,7 +567,8 @@ Output:
 ```
 
 Use case: Separate deduplicate values and counts with default delimiter.  
-Parameters: -A -dc0 -P  
+Parameters: -A -dc0 -P
+
 Input:
 ```
 5
@@ -559,7 +584,8 @@ Output:
 ```
 
 Use case: Report the line number of each match in conjunction with -g.  
-Parameters: -A -gc0:5  
+Parameters: -A -gc0:5
+
 Input:
 ```
 5
@@ -577,7 +603,8 @@ Output:
 ```
 
 Use case: Report the line number of each match in conjunction with -g, but add a pipe character between the fields.  
-Parameters: -A -gc0:5 -P  
+Parameters: -A -gc0:5 -P
+
 Input:
 ```
 5
@@ -595,7 +622,8 @@ Output:
 ```
 
 Use case: Report the line number of each match in conjunction with -g, but change delimiter between the fields.  
-Parameters: -A -gc0:5 -P -h,  
+Parameters: -A -gc0:5 -P -h,
+
 Input:
 ```
 5
@@ -612,13 +640,14 @@ Output:
 5,5,
 ```
 
-#### Flag: a
+## Flag: a
 ```-a{c0,c1,...cn}```
  
 Sum the non-empty values in given column(s).
 
 Use case: Sum all numeric values in the first column (c0).  
-Parameters: -ac0  
+Parameters: -ac0
+
 Input:
 ```
 5
@@ -643,13 +672,14 @@ Error:
  c0:      26
 ```
 
-#### Flag: B
+## Flag: B
 ```-B{c0,c1,...cn}```
 
 Compare fields and output if columns differ.
 
 Use case: Output lines where two columns differ.  
-Parameters: -Bc0,c2  
+Parameters: -Bc0,c2
+
 Input:
 ```
 7069|Feb|7069
@@ -665,13 +695,14 @@ Output:
 7866|Feb|7869
 ```
 
-#### Flag: b
+## Flag: b
 ```-b{c0,c1,...cn}```
 
 Compare fields and output if each is equal to one-another.
 
 Use case: Output lines where two columns are the same.  
-Parameters: -bc0,c2  
+Parameters: -bc0,c2
+
 Input:
 ```
 7069|Feb|70169
@@ -687,7 +718,7 @@ Output:
 7866|Feb|7866
 ```
 
-#### Flag: C
+## Flag: C
 ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```
 
 Compare column values and output line if value in column is greater than (gt),
@@ -723,7 +754,8 @@ Also outputs lines that match a range of expected columns. For example
 "2|1" => ```-Cnum_cols:'width2-10'``` prints output, because the number of columns falls between 2 and 10. 'num_cols' has precedence over other comparisons.
 
 Use case: Output rows that contain values greater than 300 in the third (c2).  
-Parameters: -C c2:ge300  
+Parameters: -C c2:ge300
+
 Input:
 ```
 1
@@ -739,7 +771,8 @@ Output:
 1|301|399|4|57
 ```
 Use case: Output rows where any column contains values greater than 300.  
-Parameters: -C any:ge300  
+Parameters: -C any:ge300
+
 Input:
 ```
 1
@@ -756,7 +789,8 @@ Output:
 ```
 
 Use case: Output a row if column 2 (c1) is greater than or equal to column 4 (c3).  
-Parameters: -Cc1:ccgec3  
+Parameters: -Cc1:ccgec3
+
 Input:
 ```
 1|2|3|4|5
@@ -770,7 +804,8 @@ Output:
 ```
 
 Use case: Limit output of rows where column is between 2 and 3 characters wide.  
-Parameters: -Cc3:width2-3  
+Parameters: -Cc3:width2-3
+
 Input:
 ```
 73|19|11|1|11
@@ -785,7 +820,8 @@ Output:
 ```
 
 Use case: Output rows that are between 2 and 4 columns wide.  
-Parameters: -C num_cols:width2-4  
+Parameters: -C num_cols:width2-4
+
 Input:
 ```
 1
@@ -802,7 +838,8 @@ Output:
 ```
 
 Use case: Output rows that are between -2.1 and 4.5 columns wide.  
-Parameters: -C num_cols:width-2.1-4.5  
+Parameters: -C num_cols:width-2.1-4.5
+
 Input:
 ```
 1
@@ -820,7 +857,8 @@ Output:
 ```
 
 Use case: Output rows that are dated between 2020 and 2021.  
-Parameters: -C c0:rg2020-2021  
+Parameters: -C c0:rg2020-2021
+
 Input:
 ```
 2019|$85548.89
@@ -865,7 +903,8 @@ Output:
 ```
 
 Use case: Output rows if column 2 (c1) has a value between -20 and +40.  
-Parameters: -C c1:rg-20-40  
+Parameters: -C c1:rg-20-40
+
 Input:
 ```
 49|-68|9|57
@@ -882,7 +921,8 @@ Output:
 ```
 
 Use case: Output a value is between -10 and -40.  
-Parameters: -C c0:rg-10--40  
+Parameters: -C c0:rg-10--40
+
 Input:
 ```
 15
@@ -900,7 +940,8 @@ Output:
 ```
 
 Use case: Output a value is between 10 and -10.  
-Parameters: -C c0:rg10--10  
+Parameters: -C c0:rg10--10
+
 Input:
 ```
 15
@@ -921,7 +962,8 @@ Output:
 ```
 
 Use case: Output a value is between 1.9 and 2.1.  
-Parameters: -C c0:rg1.9-2.1  
+Parameters: -C c0:rg1.9-2.1
+
 Input:
 ```
 1.7
@@ -938,14 +980,15 @@ Output:
 2.1
 ```
 
-#### Flag: c
+## Flag: c
 ```-c{c0,c1,...cn}```
 
 Count the non-empty values in given column(s), that is if a value for a specified column is empty or doesn't exist,
 don't count otherwise add 1 to the column tally.
 
 Use case: Count the number of non-empty entries in the second column (c1).  
-Parameters: -cc1  
+Parameters: -cc1
+
 Input:
 ```
 7069|Feb|70169
@@ -971,13 +1014,14 @@ Error:
 ==     count
  c1:       6
 ```
-#### Flag: D
+## Flag: D
 ```-D```
 
 Displays debugging information.
 
 Use case: Output debugging information about any transformation.  
-Parameters: -D  
+Parameters: -D
+
 Input:
 ```
 12345
@@ -991,14 +1035,15 @@ Error:
 original: 0, modified: 0 fields at line number 1.
 ```
 
-#### Flag: d
+## Flag: d
 ```-d{c0,c1,...cn}```
 
 De-duplicates column(s) of data. The order of the columns informs pipe.pl 
 the priority of column de-duplication. The last duplicate found is output to STDOUT.
 
 Use case: De-duplicate data in the first column (c0).  
-Parameters: -d c0  
+Parameters: -d c0
+
 Input:
 ```
 1
@@ -1016,7 +1061,8 @@ Output:
 ```
 
 Use case: De-duplicate data prioritizing column two, then column one.  
-Parameters: -d c1,c0  
+Parameters: -d c1,c0
+
 Input:
 ```
 1|cat
@@ -1038,7 +1084,8 @@ Output:
 The count of count of duplicates can be output with [-A](#flag-a). See also [-P](#flag-p) to add a delimiter between the count and the duplicate data.
 
 Use case: De-duplicate data prioritizing column one, then column two, and precede each output with the number of duplicates.  
-Parameters: -d c0,c1 -A  
+Parameters: -d c0,c1 -A
+
 Input:
 ```
 1|cat
@@ -1058,7 +1105,8 @@ Output:
 ```
 
 Use case: De-duplicate data prioritizing column one, then column two, and precede each output with the number of duplicates, separated by a pipe character.  
-Parameters: -d c0,c1 -A -P  
+Parameters: -d c0,c1 -A -P
+
 Input:
 ```
 1|cat
@@ -1078,7 +1126,8 @@ Output:
 ```
 
 Use case: De-duplicate data prioritizing column one, then column two, and precede each output with the number of duplicates, and change delimiter.  
-Parameters: -d c0,c1 -A -P -h,  
+Parameters: -d c0,c1 -A -P -h,
+
 Input:
 ```
 1|cat
@@ -1097,7 +1146,7 @@ Output:
 1,3,cat,
 ```
 
-#### Flag: E
+## Flag: E
 ```-E{cn:[r|?c.r[.e]],...}```
 
 Replace an entire field conditionally. Similar
@@ -1110,12 +1159,14 @@ e=replacement if the condition failed.
 '111|222|333' '-E'c1:?aaa.444.bbb' => '111|bbb|333'
 
 Use case: Replace column two (c1) with 'nnn'.  
-Parameters: -E c1:nnn  
+Parameters: -E c1:nnn
+
 Input:
 ```111|222|333 => 111|nnn|333```
 
 Use case: Replace column two (c1) with '444' if the value of the column is '222'.  
-Parameters: -E c1:?222.444  
+Parameters: -E c1:?222.444
+
 Input:
 ```
 111|222|333
@@ -1128,7 +1179,8 @@ Output:
 ```
 
 Use case: Replace column two (c1) with '444' if the value of the column is 'aaa' and 'bbb' otherwise.  
-Parameters: -E c1:?aaa.444.bbb  
+Parameters: -E c1:?aaa.444.bbb
+
 Input:
 ```
 111|aaa|333
@@ -1141,7 +1193,7 @@ Output:
 ```
 
 
-#### Flag: e
+## Flag: e
 ```-e{any|cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```
 
 Change the case, normalize, or order field data 
@@ -1167,7 +1219,8 @@ is output as is. The input variable declaration must match the output
 in length and is case sensitive.
 
 Use case: Change c0 to upper case.  
-Parameters: -e c0:uc  
+Parameters: -e c0:uc
+
 Input:
 ```
 A
@@ -1182,55 +1235,64 @@ C
 ```
 
 Use case: Change all columns to lower case.  
-Parameters: -e any:lc  
+Parameters: -e any:lc
+
 Input:
 ```ANT|BAT|CAT => ant|bat|cat```
 
 Use case: Change all columns to capital case.  
-Parameters: -e any:mc  
+Parameters: -e any:mc
+
 Input:
 ```ANT|BAT the bat|CAT => Ant|Bat The Bat|Cat```
 
 Use case: Change spaces to underscores in all columns.  
-Parameters: -e any:us  
+Parameters: -e any:us
+
 Input:
 ```Bat The Bat|Cat in the hat => Bat_The_Bat|Cat_in_the_hat```
 
 Use case: Change multiple spaces to a single in all columns.  
-Parameters: -e any:spc  
+Parameters: -e any:spc
+
 Input:
 ```Bat   The         Bat|Cat    in the   hat => Bat The Bat|Cat in the hat```
 
 Use case: Normalize by removing all non-word characters and digits.  
-Parameters: -e c0:normal_d|W  
+Parameters: -e c0:normal_d|W
+
 Input:
 ```23)  Line with     lots of  #'s! => Linewithlotsofs```
 
 Use case: NORMAL_q removes single quotes.  
-Parameters: -e c0:normal_q  
+Parameters: -e c0:normal_q
+
 Input:
 ```this means 'this', not "that" => this means this, not "that"```
 
 Use case: NORMAL_Q removes double quotes in field.  
-Parameters: -e c0:normal_Q  
+Parameters: -e c0:normal_Q
+
 Input:
 ```this means 'this', not "that" => this means 'this', not that```
 
 '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'
 
 Use case: Order 123 in reverse (321).  
-Parameters: -e c0:order_xyz-zyx  
+Parameters: -e c0:order_xyz-zyx
+
 Input:
 ```123 => 321```
 
 This can be useful when you need to reorder months, days and years in different date types.
 
 Use case: Order the digits in a date string of YYYYMMDD to MMDDYYYY.  
-Parameters: -e c0:order_yyyymmdd-mmddyyyy   
+Parameters: -e c0:order_yyyymmdd-mmddyyyy 
+
 Input:
 ```20180927 => 09272018```
 
-#### Flag: F
+## Flag: F
 ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```
 
 Outputs the field in character (c), binary (b), decimal (d)
@@ -1240,21 +1302,24 @@ pipe.pl to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
 the input as binary, and outputs hexadecimal.
 
 Use case: Output the binary string "1111" as hexadecimal.  
-Parameters: -F c0:b.h  
+Parameters: -F c0:b.h
+
 Input:
 ```1111 => f```
 
 Use case: Output the decimal "700" as a string of binary digits.  
-Parameters: -F c0:d.b  
+Parameters: -F c0:d.b
+
 Input:
 ```700 => 1010111100```
 
 Use case: Output the hexadecimal value of the character "M" and "m".  
-Parameters: -F c0:c.h,c1:c.h  
+Parameters: -F c0:c.h,c1:c.h
+
 Input:
 ```M|m => 4d|6d```
 
-#### Flag: f
+## Flag: f
 ```-f{cn:n.p[?p[.q]],...}```
 
 Flips an arbitrary but specific character conditionally,
@@ -1264,36 +1329,42 @@ Use '?' to test the character's value before changing it
 and optionally use a different character if the test fails.
 
 Use case: Flip the third character (index 2) to a '9' in column 1 (c0).  
-Parameters: -f c0:2.9  
+Parameters: -f c0:2.9
+
 Input:
 ```0000 => 0090```
 
 Use case: If the second character is '1' flip it to 'A', and no change otherwise.  
-Parameters: -f c0:1.1?A  
+Parameters: -f c0:1.1?A
+
 Input:
 ```0100 => 0A00```
 
 Use case: Fail to change the character if character 1 is a '1' test fails.  
-Parameters: -f c0:1.1?A  
+Parameters: -f c0:1.1?A
+
 Input:
 ```0200 => 0200```
 
 Use case: If the second character is '1' flip it to 'A', and 'B' otherwise.  
-Parameters: -f c0:1.1?A.B  
+Parameters: -f c0:1.1?A.B
+
 Input:
 ```0100 => 0A00```
 
 Use case: If the second character is '1' flip it to 'A', and 'B' otherwise.  
-Parameters: -f c0:1.1?A.B  
+Parameters: -f c0:1.1?A.B
+
 Input:
 ```0200 => 0B00```
 
 Use case: If the forth character is a '0', flip character to 'T', and 't' otherwise.  
-Parameters: -f c0:3.0?T.t  
+Parameters: -f c0:3.0?T.t
+
 Input:
 ```0000000 => 000T000```
 
-#### Flag: G
+## Flag: G
 ```-G{any|cn:regex,...}```
 
 Inverse of [-g](#flag-g-1), and can be used together to perform AND operation as
@@ -1302,7 +1373,8 @@ return true if match on column 1, and column 2 not match. If the keyword
 expressions are permitted, see [-g](#flag-g-1).
 
 Use case: Find the line where the regular expression does not match any specified column.  
-Parameters: -G c0:[7-9][7-9],c4:  
+Parameters: -G c0:[7-9][7-9],c4:
+
 Input:
 ```
 73|19|11|1|11
@@ -1318,7 +1390,8 @@ Output:
 ```
 
 Use case: Find the line that does not have letter characters in the second column (c1).  
-Parameters: -G c1:[a-z]  
+Parameters: -G c1:[a-z]
+
 Input:
 ```
 73|qi|11|1|11
@@ -1332,7 +1405,8 @@ Output:
 ```
 
 Use case: Find the line that does not have letter characters all fields.  
-Parameters: -G any:[a-z]  
+Parameters: -G any:[a-z]
+
 Input:
 ```
 73|qi|11|1|11
@@ -1345,7 +1419,7 @@ Output:
 86|99|12|6|12
 ```
 
-#### Flag: g
+## Flag: g
 ```-g{any|cn:regex,...}```
 
 Searches the specified field using Perl regular expressions.
@@ -1369,12 +1443,14 @@ bounded by [-X](#flag-x) and [-Y](#flag-y), but if -g matches, only the matching
 to STDERR, while only the -g that matches within the frame is output to STDOUT.
 
 Use case: Match string that contains '812'.  
-Parameters: -g c0:812  
+Parameters: -g c0:812
+
 Input:
 ```1481241 => 1481241```
 
 Use case: Output any line where the third column (c2) is '13'.  
-Parameters: -g c2:13  
+Parameters: -g c2:13
+
 Input:
 ```
 13|13|11|13|13
@@ -1388,7 +1464,8 @@ Output:
 ```
 
 Use case: Output any line that contains a '13' in it.  
-Parameters: -g any:13  
+Parameters: -g any:13
+
 Input:
 ```
 73|19|11|1|11
@@ -1402,7 +1479,8 @@ Output:
 ```
 
 Use case: Multi-match using one regular expression.  
-Parameters: -g c0:[7-9][7-9],c4:  
+Parameters: -g c0:[7-9][7-9],c4:
+
 Input:
 ```
 73|19|11|1|11
@@ -1415,7 +1493,7 @@ Output:
 79|40|13|68|88
 ```
 
-#### Flag: H
+## Flag: H
 ```-H```
 
 Suppress new line on output. Some switches can modify this behaviour. [-i](#flag-i-1) will
@@ -1424,24 +1502,9 @@ with any [-X](#flag-x) match until a [-Y](#flag-y) match is found.
 
 See [-q](#flag-q-1) for setting periodic new lines.
 
-  Use case: Suppress new lines.  
-  Parameters: -H  
-  Input:
-  ```
-  1|
-  2|
-  3|
-  4|
-  ```
-  Output: Ignore last newline
-  ```
-  1|2|3|4|
-  ```
-  
-The new line can be suppressed on a line match with virtual matching.
+Use case: Suppress new lines.  
+Parameters: -H
 
-Use case: Suppress new line on a line match with virtual matching.  
-Parameters: -H -g c0:2 -i  
 Input:
 ```
 1|
@@ -1449,7 +1512,24 @@ Input:
 3|
 4|
 ```
-Output:
+Output: Ignore last newline
+```
+1|2|3|4|
+```
+  
+The new line can be suppressed on a line match with virtual matching.
+
+Use case: Suppress new line on a line match with virtual matching.  
+Parameters: -H -g c0:2 -i
+
+Input:
+```
+1|
+2|
+3|
+4|
+```
+Output: Ignore white space
 ```
 1|
 2|3|
@@ -1457,7 +1537,8 @@ Output:
 ```
 
 Use case: Suppress new line [-X](#flag-x) and [-Y](#flag-y) matching.  
-Parameters: -H -X c0:2 -Y c0:4  
+Parameters: -H -X c0:2 -Y c0:4
+
 Input:
 ```
 1|
@@ -1471,13 +1552,14 @@ Output: Ignore last newline
 2|3|4|
 ```
 
-#### Flag: h
+## Flag: h
 ```-h{new_delimiter}```
 
 Change output delimiter delimiter. See [-P](#flag-p) and [-K](#flag-k).
 
 Use case: Change the delimiter to a comma ','.  
-Parameters: -h ,  
+Parameters: -h,
+
 Input: 
 ```
 1|A
@@ -1489,7 +1571,7 @@ Output:
 2,B
 ```
 
-#### Flag: I
+## Flag: I
 ```-I```
 
 Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c-1), [-d](#flag-d-1), [-E](#flag-e), [-f](#flag-f-1), [-g](#flag-g-1), [-G](#flag-g), [-l](#flag-l-1), [-n](#flag-n-1) and [-s](#flag-s-1).
@@ -1497,7 +1579,8 @@ Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c-1), [-d](
 By default sorts are case-sensitive, -I sorts ascending order or decending if -R is used.
 
 Use case: Compare two columns with [-b](#flag-b-1) ignoring differences in case.  
-Parameters: -I -b c0,c1  
+Parameters: -I -b c0,c1
+
 Input:
 ```
 a|A
@@ -1511,7 +1594,8 @@ B|b
 ```
 
 Use case: Output lines where two columns differ ignoring differences in case.  
-Parameters: -I -B c0,c1  
+Parameters: -I -B c0,c1
+
 Input:
 ```
 a|A
@@ -1524,7 +1608,8 @@ A|c
 ```
 
 Use case: De-duplicate data but ignore case.  
-Parameters: -I -d c0  
+Parameters: -I -d c0
+
 Input:
 ```
 Cat
@@ -1542,7 +1627,8 @@ CAT
 ```
 
 Use case: Grep for a string case insensitively.  
-Parameters: -I -g c0:cat  
+Parameters: -I -g c0:cat
+
 Input:
 ```
 Cat
@@ -1562,7 +1648,8 @@ CAT
 ```
 
 Use case: Find all items that are not 'cat', ignoring case.  
-Parameters: -I -G c0:cat  
+Parameters: -I -G c0:cat
+
 Input:
 ```
 Cat
@@ -1581,7 +1668,8 @@ baT
 ```
 
 Use case: Compare values in columns with -C, ignoring case.  
-Parameters: -I -C c0:eqCAT  
+Parameters: -I -C c0:eqCAT
+
 Input:
 ```
 Cat
@@ -1601,7 +1689,8 @@ CAT
 ```
 
 Use case: Replace column two (c1) with 'bbb' if the value of the column is just 'A's , regardless of case.  
-Parameters: -I -E c1:?aaa.BBB  
+Parameters: -I -E c1:?aaa.BBB
+
 Input:
 ```
 111|AaA|333
@@ -1614,17 +1703,20 @@ Output:
 ```
 
 Use case: Flip the third character (index 2) to a 'z' if the current character is either 'c' or 'C'.  
-Parameters: -I -f c0:2.c?z  
+Parameters: -I -f c0:2.c?z
+
 Input:
 ```ABCD => ABzD```
 
 Use case: Change any "a" or "A" character to a "*".  
-Parameters: -I -l c0:a.*  
+Parameters: -I -l c0:a.*
+
 Input:
 ```AbracAdabrA => *br*c*d*br*```
 
 Use case: Remove all spaces and non-alphanumeric characters but preserve case.  
-Parameters: -I -nc0  
+Parameters: -I -nc0
+
 Input:
 ```
 cats And Dogs
@@ -1643,7 +1735,8 @@ catsAndDogs
 ```
 
 Use case: Sort in ascending order.  
-Parameters: -I -sc0  
+Parameters: -I -sc0
+
 Input:
 ```
 c
@@ -1668,7 +1761,8 @@ d
 ```
 
 Use case: Sort in descending order.  
-Parameters: -I -sc0 -R  
+Parameters: -I -sc0 -R
+
 Input:
 ```
 c
@@ -1692,7 +1786,7 @@ A
 a
 ```
 
-#### Flag: i
+## Flag: i
 ```-i```
 
 Turns on virtual matching for [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G](#flag-g), [-H](#flag-h), [-z](#flag-z-1) and [-Z](#flag-z). Normally fields are 
@@ -1701,7 +1795,8 @@ allows further modifications on lines that match these conditions, while allowin
 all other lines to pass through, in order, unmodified.
 
 Use case: Output all data and allow matches only to be manipulated.  
-Parameters: -i -gc0:\d{3}19 -fc1:0.changed  
+Parameters: -i -gc0:\d{3}19 -fc1:0.changed
+
 Sometimes you want to modify a column but only if some value in another column matches a given expression. For example, given the following file. By default -g and -G only output match, or no match respectively. With -i all data is output and only matches are operated on by other flags.
 
 In this example we want to change a value in c1 to 'changed' if the value in column 0 matches the regular expression.
@@ -1724,7 +1819,7 @@ Output:
 86022|1|
 ```
 
-#### Flag: J
+## Flag: J
 ```-J{cn}```
 
 Sums de-duplicated values for an arbitrary but specific column, providing a sum over group-like functionality.
@@ -1733,7 +1828,8 @@ See [-d](#flag-d-1), [-*](#flag-a), [-J](#flag-j), and [-P](#flag-p).
 Flag [-A](#flag-a) and [-J](#flag-j) are mutually exclusive.
 
 Use case: De-duplicate data prioritizing column one, then column two, and sum the values in c0.  
-Parameters: -J c0 -d c0,c1  
+Parameters: -J c0 -d c0,c1
+
 Input:
 ```
 1|cat
@@ -1752,13 +1848,14 @@ Output:
    3 3|cat
 ```
 
-#### Flag: j
+## Flag: j
 ```-j```
 
 Removes the last delimiter from the last line of output when using [-P](#flag-p), [-K](#flag-k), or [-h](#flag-h-1).
 
 Use case: Append a delimiter to the end of each line of data except the last.  
-Parameters: -j -P  
+Parameters: -j -P
+
 Input:
 ```
 Lewis|Hamilton|1
@@ -1774,13 +1871,14 @@ Sergio|Perez|3|
 Charles|Leclerc|4
 ```
 
-#### Flag: K
+## Flag: K
 ```-K```
 
 Use line breaks as column delimiters.
 
 Use case: Change delimiter to line break.  
-Parameters: -K  
+Parameters: -K
+
 Input:
 ```
 1|2|3|4|5
@@ -1794,7 +1892,7 @@ Output:
 5
 ```
 
-#### Flag: k
+## Flag: k
 ```-k{cn:expr,(...)}```
 
 Use Perl scripting to manipulate a field. Syntax: -kcn:'(script)'
@@ -1803,7 +1901,8 @@ The existing value of the column is stored in an internal variable called '\$val
 If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
 
 Use case: Increment the second column (c1).  
-Parameters: -k c1:\$value++;  
+Parameters: -k c1:\$value++;
+
 Input:
 ```
 1|2
@@ -1815,7 +1914,7 @@ Output:
 2|100
 ```
 
-#### Flag: L
+## Flag: L
 ```-L{[[+|-]?n-?m?|skip n]}```
 
 Output line number [+n] head, [n] exact, [-n] tail [n-m] range.
@@ -1827,7 +1926,8 @@ The 'skip' keyword will output alternate lines. 'skip2' will output every other 
 over other line output selections.
 
 Use case: Output first three lines of output.  
-Parameters: -L +3  
+Parameters: -L +3
+
 Input:
 ```
 1
@@ -1844,7 +1944,8 @@ Output:
 ```
 
 Use case: Output last three lines of output.  
-Parameters: -L -3  
+Parameters: -L -3
+
 Input:
 ```
 1
@@ -1861,7 +1962,8 @@ Output:
 ```
 
 Use case: Output line four.  
-Parameters: -L 4  
+Parameters: -L 4
+
 Input:
 ```
 one
@@ -1876,7 +1978,8 @@ four
 ```
 
 Use case: Output from line 2 to the end of the input.  
-Parameters: -L 2-  
+Parameters: -L 2-
+
 Input:
 ```
 one
@@ -1894,7 +1997,8 @@ five
 ```
 
 Use case: Skip every other line on output.  
-Parameters: -L skip2  
+Parameters: -L skip2
+
 Input:
 ```
 one
@@ -1913,7 +2017,8 @@ six
 ```
 
 Use case: Output from lines 4-6.  
-Parameters: -L 4-6  
+Parameters: -L 4-6
+
 Input:
 ```
 one
@@ -1932,7 +2037,8 @@ six
 ```
 
 Use case: Output a combo of lines.  
-Parameters: -L 4-6,2,7  
+Parameters: -L 4-6,2,7
+
 Input:
 ```
 one
@@ -1953,7 +2059,7 @@ seven
 ```
 
 
-#### Flag: l
+## Flag: l
 ```-l{any|cn:exp,... }```
 
 Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
@@ -1962,21 +2068,24 @@ and '\\n'. "Hello" -lc0:"e.\\t" => 'H       llo'
 Can be made case insensitive with [-I](#flag-i).
 
 Use case: Change any "d" to a "P" in a string.  
-Parameters: -l c0:d.P  
+Parameters: -l c0:d.P
+
 Input:
 ```abcdefd => abcPefP```
 
 Use case: Change any "e" character to a space.  
-Parameters: -l c0:e.\s  
+Parameters: -l c0:e.\s
+
 Input:
 ```Hello => H llo```
 
 Use case: Change any "a" or "A" character to a "*".  
-Parameters: -l c0:a.* -I  
+Parameters: -l c0:a.* -I
+
 Input:
 ```A is for Alphabet => * is for *lph*bet```
 
-#### Flag: M
+## Flag: M
 ```-M{cn:cm?cp[+cq...][.{literal}]```
 
 Compares columns from two files and either outputs the specified column(s) 
@@ -1993,7 +2102,8 @@ Both files must use the same column delimiter, and any use of [-W](#flag-w) will
 apply to both. 
 
 Use case: Compare column from file1 and file2 if the same append data from file2.  
-Parameters: -M c0:c0?c1.na -0file2  
+Parameters: -M c0:c0?c1.na -0file2
+
 Input: file2
 ```
 1000048|The Berenstain Bears
@@ -2013,7 +2123,8 @@ Output:
 ```
 
 Use case: Comparison without normalization.  
-Parameters: -Mc1:c0?c0.na -0file3  
+Parameters: -Mc1:c0?c0.na -0file3
+
 Input: file3
 
 ```
@@ -2038,7 +2149,8 @@ Output:
 ```
 
 Use case: Normalize before comparison.  
-Parameters: -M c1:c0?c0.na -0file4 -N  
+Parameters: -M c1:c0?c0.na -0file4 -N
+
 Input: file4
 ```
 one|1
@@ -2060,7 +2172,7 @@ Output:
 3|ThReE|threE
 ```
 
-#### Flag: m
+## Flag: m
 ```-m{any|cn:*[_|#]*}```
 
 Mask specified column with the mask defined after a ':', and where '_'
@@ -2076,7 +2188,8 @@ Using -y instructs -m to insert a '.' into the string at -y places from the
 end of the string (See [-y](#flag-y-1)). This works on both numeric or alphanumeric strings.
 
 Use case: Format ragged ANSI dates into YYYY-MM-DD date format.  
-Parameters: -m c1:####-##-##_  
+Parameters: -m c1:####-##-##_
+
 Input:
 ```
 OVERDUE|20120506=Date
@@ -2095,7 +2208,8 @@ OVERDUE|2012-05-06
 ```
 
 Use case: Remove the first two character codes from all columns.  
-Parameters: -m any:__#  
+Parameters: -m any:__#
+
 Input:
 ```
 NQ31221106815538|FEEPLCPL|UO21221019966206|Uf3250
@@ -2114,21 +2228,24 @@ EPLRIV|21221014186727|8451|31221106815504
 ```
 
 Use case: Format Symphony timestamp into date and time separated by literal underscore.  
-Parameters: -m c0:_####-##-##\_##:##:##_  
+Parameters: -m c0:_####-##-##\_##:##:##_
+
 Input:
 ```E201501051855331663R => 2015-01-05_18:55:33```
 
 Use case: Add information to a column.  
-Parameters: -m c0:Date\:_####-##-##_  
+Parameters: -m c0:Date\:_####-##-##_
+
 Input:
 ```E201501051855331663R => Date:2015-01-05```
 
 Use case: Insert a '.' between the forth and third last characters.  
-Parameters: -m c0:# -y 3  
+Parameters: -m c0:# -y 3
+
 Input:
 ```Readmetxt => Readme.txt```
 
-#### Flag: N
+## Flag: N
 ```-N```
 
 Normalize keys before comparison when using ([-d](#flag-d-1), [-C](#flag-c), and [-s](#flag-s-1)) de-duplicate, compare, and sort.
@@ -2138,7 +2255,8 @@ Outputs absolute value of [-a](#flag-a-1), [-v](#flag-v-1), [-1](#flag-l-1), [-3
 Causes summaries to be output with delimiter to STDERR on last line.
 
 Use case: Normalize keys before de-duplicating data. Note the last duplicate is output.  
-Parameters: -N -d c0  
+Parameters: -N -d c0
+
 Input:
 ```
 Cat
@@ -2152,7 +2270,8 @@ cAt
 ```
 
 Use case: Normalize keys before finding all numbers greater than 123.  
-Parameters: -N -C c0:ge123  
+Parameters: -N -C c0:ge123
+
 Input:
 ```
 11_a
@@ -2169,7 +2288,8 @@ Output:
 ```
 
 Use case: Output column number and sum, pipe-delimited to error when adding values.  
-Parameters: -N -a c0,c1  
+Parameters: -N -a c0,c1
+
 Input:
 ```
 1|1
@@ -2192,7 +2312,7 @@ c0|15
 c1|15
 ```
 
-#### Flag: n
+## Flag: n
 ```-n{any|cn,...}```
 
 Normalize the selected columns, that is, removes all non-word characters
@@ -2201,7 +2321,8 @@ to upper case. Using the -I switch will preserve case. See [-N](#flag-n),
 [-I](#flag-i) switches for more information.
 
 Use case: Remove all spaces and non-alphanumeric characters and standardize characters to uppercase.  
-Parameters: -nc0   
+Parameters: -nc0 
+
 Input:
 ```
 cats and dogs
@@ -2220,7 +2341,8 @@ CATSANDDOGS
 ```
 
 Use case: Remove all spaces and non-alphanumeric characters but preserve case with [-I](#flag-i).  
-Parameters: -nc0 -I  
+Parameters: -nc0 -I
+
 Input:
 ```
 cats And Dogs
@@ -2239,7 +2361,8 @@ catsAndDogs
 ```
 
 Use case: Remove irrelevant characters from data.  
-Parameters: -nc0   
+Parameters: -nc0 
+
 Input:
 ```
 21221 01234 56789
@@ -2253,7 +2376,7 @@ Output:
 7805551212
 ```
 
-#### Flag: O
+## Flag: O
 ```-O{any|cn,...}```
 
 Merge columns. The first column is the anchor column, any others are appended to it
@@ -2261,22 +2384,25 @@ ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use [-o](#flag-o-1) to remo
 Using the 'any' keyword causes all columns to be merged in the data in first column (c0).
 
 Use case: Merge column 1 onto the end of column 0.  
-Parameters: -Oc0,c1  
+Parameters: -Oc0,c1
+
 Input:
 ```aaa|bbb|ccc => aaabbb|bbb|ccc```
 
 Use case: Merge column 0 onto the end of column 1.  
-Parameters: -Oc1,c0  
+Parameters: -Oc1,c0
+
 Input:
 ```aaa|bbb|ccc => aaa|bbbaaa|ccc```
 
 Use case: Merge all columns into column 0.  
-Parameters: -Oany  
+Parameters: -Oany
+
 Input:
 ```aaa|bbb|ccc => aaabbbccc|bbb|ccc```
 
 
-#### Flag: o
+## Flag: o
 ```-o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}```
 
 Re-orders and control which columns are output.
@@ -2289,37 +2415,43 @@ column to the last column in the line. 'last' will output the last column in a r
 in order. Once a keyword is encountered (except 'exclude'), any additional columns are omitted. 
 
 Use case: Output column 3, column 2, then column 1.  
-Parameters: -oc3,c2,c1  
+Parameters: -oc3,c2,c1
+
 Input:
 ```1|2|3|4 => 4|3|2```
 
 Use case: Output column 1 and remaining columns.  
-Parameters: -oc2,remaining  
+Parameters: -oc2,remaining
+
 Input:
 ```1|2|3|4 => 3|1|2|4```
 
 Use case: Output column 2 and continue output of columns in order.  
-Parameters: -oc1,continue  
+Parameters: -oc1,continue
+
 Input:
 ```1|2|3|4 => 2|3|4```
 
 Use case: Reverse column order.  
-Parameters: -o reverse  
+Parameters: -o reverse
+
 Input:
 ```1|2|3|4 => 4|3|2|1```
 
 Use case: Output the last column.  
-Parameters: -o last  
+Parameters: -o last
+
 Input:
 ```1|2|3|4 => 4```
 
 Use case: Output all but the third column (c2).  
-Parameters: -oc2,exclude  
+Parameters: -oc2,exclude
+
 Input:
 ```1|2|3|4 => 1|2|4```
 
 
-#### Flag: P
+## Flag: P
 ```-P```
 
 Terminates each row with the defined delimiter. By default '|' but can be changed. See '-h' for more information.
@@ -2327,7 +2459,8 @@ Terminates each row with the defined delimiter. By default '|' but can be change
 When used in conjunction with [-d de-duplicate](#flag-d-1), [-J and de-duplicate](#flag-J), and [-A and de-duplicate](#flag-A), a pipe character is inserted between the count and output data.
 
 Use case: Terminate a row with the default pipe ("|").  
-Parameters: -P  
+Parameters: -P
+
 Input: 
 ```
 1|A
@@ -2340,7 +2473,8 @@ Output:
 ```
 
 Use case: Terminate a row with the delimiter specified with "-h".  
-Parameters: -P -h:  
+Parameters: -P -h:
+
 Input: 
 ```
 1|A
@@ -2353,7 +2487,8 @@ Output:
 ```
 
 Use case: Separate count of duplicates from columns with a pipe character.  
-Parameters: -P -d c0,c1 -A  
+Parameters: -P -d c0,c1 -A
+
 Input:
 ```
 1|cat
@@ -2372,7 +2507,7 @@ Output:
 1|3|cat|
 ```
 
-#### Flag: p
+## Flag: p
 ```-p{cn:N.char,... }```
 
 Pad fields left or right with arbitrary 'N' characters. The expression is separated by a
@@ -2381,27 +2516,31 @@ digit(s) can be used as padding. '123' -pc0:"-5.0" => '12300'. Spaces are qualif
 with either '\s', '\t', '\n', or '_DOT_' for a literal period.
 
 Use case: Pad a column with leading zeros.  
-Parameters: -pc0:6.0  
+Parameters: -pc0:6.0
+
 Input:
 ```1|2 => 000001|2```
 
 Use case: Pad column 2 (c1) with x characters until the column is 5 characters wide.  
-Parameters: -pc1:-5.x  
+Parameters: -pc1:-5.x
+
 Input:
 ```1|2 => 1|2xxxx```
 
 Use case: Pad column 2 (c1) with leading dots (.) until the width of the column is 10 characters wide.  
-Parameters: -pc1:10._DOT_  
+Parameters: -pc1:10._DOT_
+
 Input:
 ```1|2 => 1|.........2```
 
 Use case: If the column is wider than the padding, do nothing.  
-Parameters: -pc1:10._DOT_  
+Parameters: -pc1:10._DOT_
+
 Input:
 ```1|0123456789 => 1|0123456789```
 
 
-#### Flag: Q
+## Flag: Q
 ```-Q{integer}```
 
 Output 'n' lines before and line after a -g, or -G match to STDERR. Used to
@@ -2412,7 +2551,8 @@ the preceding match is '<=BOF', beginning of file, and if the match occurs on
 the last line the trailing match is '=>EOF'. The arrows can be suppressed with -N.
 
 Use case: Show two lines proceeding and after a match.  
-Parameters: -Q2 -gc0:5  
+Parameters: -Q2 -gc0:5
+
 Input:
 ```
 1
@@ -2447,7 +2587,8 @@ Error:
  ```
 
 Use case: Show 3 lines before and end of file if there are not 3 lines in the file after matching.  
-Parameters: -Q3 -gc0:8  
+Parameters: -Q3 -gc0:8
+
 Input:
 ```
 1
@@ -2483,7 +2624,8 @@ Error:
  ```
 
 Use case: Show BOF if there are not 3 lines before a match.  
-Parameters: -Q3 -gc0:2  
+Parameters: -Q3 -gc0:2
+
 Input:
 ```
 1
@@ -2519,14 +2661,15 @@ Error:
 =>5
  ```
 
-#### Flag: q
+## Flag: q
 ```-q{lines}```
 
 Modifies [-H](#flag-h) behaviour to allow new lines for every n-th line of output.
 This has the effect of joining n-number of lines into one line.
 
 Use case: Add a line break after every three lines of output.  
-Parameters: -q3 -H  
+Parameters: -q3 -H
+
 Input:
 ```
 1|
@@ -2542,13 +2685,14 @@ Output:
 4|5|6|
 ```
 
-#### Flag: R
+## Flag: R
 ```-R```
 
 Reverse sort when using [-d](#flag-d-1), [-4](#flag-4) or [-s](#flag-s-1).
 
 Use case: Reverse sort first column (c0).  
-Parameters: -R -sc0   
+Parameters: -R -sc0 
+
 Input:
 ```
 cat
@@ -2565,7 +2709,8 @@ ant
 ```
 
 Use case: Reverse sort first column (c0) alpha-numerically.  
-Parameters: -R -sc0  
+Parameters: -R -sc0
+
 Input:
 ```
 5
@@ -2586,7 +2731,8 @@ Output:
 ```
 
 Use case: Use the -U to sort first column (c0) numerically.  
-Parameters: -R -sc0 -U  
+Parameters: -R -sc0 -U
+
 Input:
 ```
 5
@@ -2606,14 +2752,15 @@ Output:
 1
 ```
 
-#### Flag: r
+## Flag: r
 ```-r{percent}```
 
 Output a random percentage of records, ie: -r100 output all lines in random order. 
 -r15 outputs 15% of the input in random order. -r0 produces all output in order.
 
 Use case: Output all values in random order.  
-Parameters: -r100  
+Parameters: -r100
+
  Input:
  ```
 1
@@ -2630,7 +2777,8 @@ Parameters: -r100
  ```
 
 Use case: Output all values in order.  
-Parameters: -r0  
+Parameters: -r0
+
 Input:
 ```
 1
@@ -2646,7 +2794,7 @@ Output:
 4
 ```
 
-#### Flag: S
+## Flag: S
 ```-S{cn:range}```
 
 Sub-string of a columns' contents.
@@ -2661,24 +2809,28 @@ that stands for the column length and 'm' the number of characters
 to be trimmed from the end of the string, ie '12345' => -S'c0:0-(n -1)' = '1234'.
 
 Use case: Output the first, third, and fifth character in the string "12345".  
-Parameters: -S c0:0.2.4  
+Parameters: -S c0:0.2.4
+
 Input:
 ```12345 => 135```
 
 Use case: Output the first up to, but not including, the forth, and the fifth characters from "12345".  
-Parameters: -S c0:0-3.4  
+Parameters: -S c0:0-3.4
+
 Input:
 ```12345 => 1235```
 
 Use case: Output the third character to the end of the string "12345".  
-Parameters: -S c0:2-  
+Parameters: -S c0:2-
+
 Input:
 ```12345 => 345```
 
 You can reverse a string by inverting the range.
 
 Use case: Output the string "12345" in reverse.  
-Parameters: -S c0:4-0  
+Parameters: -S c0:4-0
+
 Input:
 ```12345 => 54321```
 
@@ -2687,22 +2839,25 @@ and represents the length of the data, and 'm' represents the number of characte
 to be trimmed from the end of the line, as illustrated in the next use case.
 
 Use case: Trim the last character off of the string "12345".  
-Parameters: -S c0:0-(n-1)  
+Parameters: -S c0:0-(n-1)
+
 Input:
 ```12345 => 1234```
 
 Use case: Output from the forth character to the second from the last character in the string "123456".  
-Parameters: -S c0:3-(n-2)  
+Parameters: -S c0:3-(n-2)
+
 Input:
 ```123456 => 4```
 
-#### Flag: s
+## Flag: s
  ```-s{c0,c1,...cn}```
 
 Sort lines based on data in specific column(s).
 
 Use case: Sort first column (c0).  
-Parameters: -sc0  
+Parameters: -sc0
+
 Input:
 ```
 cat
@@ -2719,7 +2874,8 @@ hat
 ```
 
 Use case: Sort first column (c0) alpha-numerically.  
-Parameters: -sc0  
+Parameters: -sc0
+
 Input:
 ```
 5
@@ -2740,7 +2896,8 @@ Output:
 ```
 
 Use case: Use the -U to sort first column (c0) numerically.  
-Parameters: -sc0 -U  
+Parameters: -sc0 -U
+
 Input:
 ```
 5
@@ -2761,7 +2918,8 @@ Output:
 ```
 
 Use case: Sort in ascending order.  
-Parameters: -sc0 -I  
+Parameters: -sc0 -I
+
 Input:
 ```
 c
@@ -2786,7 +2944,8 @@ d
 ```
 
 Use case: Sort in descending order.  
-Parameters: -sc0 -R -I  
+Parameters: -sc0 -R -I
+
 Input:
 ```
 c
@@ -2810,7 +2969,7 @@ A
 a
 ```
 
-#### Flag: T
+## Flag: T
 ```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]```
 
 Output as a Media/Wiki table, Markdown, CSV, CSV_UTF-8 or an HTML table, with attributes.
@@ -2825,7 +2984,8 @@ Each corresponds to the insertion location of the literal string that follows th
 SKIP will place the literal string every 'n' lines.
 
 Use case: Output data in CSV, double-quoting all non-numeric values.  
-Parameters: -TCSV:FName,LName  
+Parameters: -TCSV:FName,LName
+
 Input:
 ```
 Lewis|Hamilton
@@ -2845,7 +3005,8 @@ Output:
 ```
 
 Use case: Output data in CSV UTF-8 format.  
-Parameters: -TCSV_UTF-8:FName,LName  
+Parameters: -TCSV_UTF-8:FName,LName
+
 Input:
 ```
 Lewis|Hamilton
@@ -2866,7 +3027,7 @@ Fake,Driver Name
 
 The next example is outputting chunked data. This is useful if you are generating sql statements and need to commit periodically.
 Use case: Output a commit statement after every seventh line.  
-Parameters: -TCHUNKED:BEGIN=BEGIN_TRANSACTION;,SKIP=7.COMMIT;,E  ND=END_TRANSACTION;
+Parameters: -TCHUNKED:BEGIN=BEGIN_TRANSACTION;,SKIP=7.COMMIT;,END=END_TRANSACTION;
 Input:
 ```
 INSERT INTO TableName (count) VALUES (1);
@@ -2909,7 +3070,8 @@ END_TRANSACTION;
 ```
 
 Use case: Output table data as HTML.  
-Parameters: -THTML:id="example"  
+Parameters: -THTML:id="example"
+
 Input:
 ```
 1|2|3|4
@@ -2925,7 +3087,8 @@ Output:
 ```
 
 Use case: Output table data in MediaWiki format.  
-Parameters: -TWIKI  
+Parameters: -TWIKI
+
 Input:
 ```
 lynx|127.0.0.1
@@ -2945,7 +3108,8 @@ Output:
 ```
 
 Use case: Output table data in Wiki format with headers.  
-Parameters: -TWIKI:A,B  
+Parameters: -TWIKI:A,B
+
 Input:
 ```
 lynx|127.0.0.1
@@ -2968,7 +3132,8 @@ Output:
 ```
 
 Use case: Output table data in MediaWiki format.  
-Parameters: -T MEDIA_WIKI  
+Parameters: -T MEDIA_WIKI
+
 Input:
 ```
 lynx|127.0.0.1
@@ -2991,7 +3156,8 @@ Output:
 ```
 
 Use case: Output table data in MediaWiki format with headers.  
-Parameters: -T MEDIA_WIKI:A,B  
+Parameters: -T MEDIA_WIKI:A,B
+
 Input:
 ```
 lynx|127.0.0.1
@@ -3017,7 +3183,8 @@ Output:
 ```
 
 Use case: Output table data in Markdown format.  
-Parameters: -TMD  
+Parameters: -TMD
+
 Input:
 ```
 lynx|127.0.0.1
@@ -3032,7 +3199,8 @@ Output:
 ```
 
 Use case: Output table data in Markdown format with headers.  
-Parameters: -TMD:A,B  
+Parameters: -TMD:A,B
+
 Input:
 ```
 lynx|127.0.0.1
@@ -3049,7 +3217,8 @@ Output:
 ```
 
 Use case: Attempt to use an undefined table type.  
-Parameters: -TFOO_BAR  
+Parameters: -TFOO_BAR
+
 Input:
 ```
 lynx|127.0.0.1
@@ -3064,23 +3233,25 @@ Error:
 ** error, unsupported table type 'FOO_BAR'
 ```
 
-#### Flag: t
+## Flag: t
 ```-t{any|cn,...}```
 
 Trim leading and trailing white space from column data. If [-y](#flag-y-1) is
 used, the string is trimmed of white space then truncated to the length specified by [-y](#flag-y-1).
 
 Use case: Trim leading and trailing white space on all columns.  
-Parameters: -tany  
+Parameters: -tany
+
 Input: 
 ```  1 |  2  |  3 => 1|2|3```
 
 Use case: Trim leading and trailing white space on a column.  
-Parameters: -tc0,c2  
+Parameters: -tc0,c2
+
 Input: 
 ```  1 |  2  |  3 => 1|  2  |3```
 
-#### Flag: U
+## Flag: U
 ```-U```
 
 Forces sorts and reverse sorts to be done based on numeric values
@@ -3090,7 +3261,8 @@ numeric, matches fail.
 See also [-C deduplicate](#flag-c-1), [-d deduplicate](#flag-d), [-R reverse a sort](#flag-R), and [-s sort](#flag-s).
 
 Use case: Demonstrate -U coerces numeric string '5' -C'c0:ge5'.  
-Parameters: -U -C c0:ge5  
+Parameters: -U -C c0:ge5
+
 Input:
 ```
 4
@@ -3104,7 +3276,8 @@ Output:
 ```
 
 Use case: Demonstrate -U fails if non-numeric string is encountered.  
-Parameters: -U -C c0:ge5  
+Parameters: -U -C c0:ge5
+
 Input:
 ```
 4
@@ -3118,29 +3291,31 @@ Output:
 6
 ```
 
-#### Flag: u
+## Flag: u
 ```-u{any|cn,...}```
 
 Encodes strings in specified columns into URL safe versions.
 Use case: Encode 'This+that = the other'  
-Parameters: -u c0  
+Parameters: -u c0
+
 Input:
 ```This+that = the other => This%2Bthat%20%3D%20the%20other```
 
 
-#### Flag: V
+## Flag: V
 ```-V```
 
 Deprecated. Validate that the output has the same number of columns as the input.
 
 
-#### Flag: v
+## Flag: v
 ```-v{c0,c1,...cn}```
 
 Average over non-empty values in specified columns.
 
 Use case: Compute the average of the first column of data.  
-Parameters: -v c0  
+Parameters: -v c0
+
 Input:
 ```
 2.0
@@ -3169,24 +3344,26 @@ Error:
  c0:    4.96
 ```
 
-#### Flag: W
+## Flag: W
 ```-W{delimiter}```
 
 Change the input delimiter.
 
 Use case: change input delimited to ":".  
-Parameters: -W:  
+Parameters: -W:
+
 Input: 
 ```a:b => a|b```
 
-#### Flag: w
+## Flag: w
 ```-w{c0,c1,...cn}```
 
 Report min and max number of characters in specified columns, and reports
 the minimum and maximum number of columns by line.
 
 Use case: Report the max, min number of characters in an arbitrary but specific column, and the max and min number of columns in the input data to STDERR.   
-Parameters: -w c0  
+Parameters: -w c0
+
 Input:
 ```
 Lewis|Hamilton|1
@@ -3212,7 +3389,7 @@ Error:
  number of columns:  min: 1 at line: 6, max: 3 at line: 5, variance: 1
 ```
 
-#### Flag: X
+## Flag: X
 ```-X{any|cn:regex,...}```
 
 Like the [-g](#flag-g), but once a line matches all subsequent lines are also
@@ -3221,7 +3398,8 @@ output until a [-Y](#flag-y-1) match succeeds.
 If the keyword 'any' is used the first column to match will return true.
 
 Use case: Output all from test 'Q' and after.  
-Parameters: -Xc0:Q  
+Parameters: -Xc0:Q
+
 Input:
 ```
 test-v
@@ -3262,12 +3440,12 @@ test-T
 test-S
 ```
 
-#### Flag: x
+## Flag: x
 ```-x```
 
 Outputs usage message and exits.
 
-#### Flag: Y
+## Flag: Y
 ```-Y{any|cn:regex,...}```
 
 Stops [-X](#flag-x) output if -Y matches. See [-X](#flag-x) and [-g](#flag-g-1).
@@ -3275,7 +3453,8 @@ Stops [-X](#flag-x) output if -Y matches. See [-X](#flag-x) and [-g](#flag-g-1).
 In this way it can be used to output lines between two milestones.
 
 Use case: Output all data between test 'Q' and test 'o'.  
-Parameters: -Yc0:o -Xc0:Q  
+Parameters: -Yc0:o -Xc0:Q
+
 Input:
 ```
 test-v
@@ -3308,7 +3487,8 @@ test-o
 ```
 
 Use case: Output lines starting 2022-01-05 until the next time c1 = 2.  
-Parameters: -Y c1:2 -X c0:2022-01-05  
+Parameters: -Y c1:2 -X c0:2022-01-05
+
 Input:
 ```
 2022-01-01|2
@@ -3329,13 +3509,14 @@ Output:
 2022-01-07|2
 ```
 
-#### Flag: y
+## Flag: y
 ```-y{integer}```
 
 Controls precision of computed floating point number output. When used with -t, selected columns are truncated to 'n' characters wide.
 
 Use case: Output 5 decimal places of a accuracy instead of the default two.  
-Parameters: -y 5 -v c0  
+Parameters: -y 5 -v c0
+
 Input:
 ```
 2.0
@@ -3365,19 +3546,20 @@ Error:
 ```
 
 Use case: Truncate 6 characters off the end of the string in the first column.  
-Parameters: -y 6 -t c0  
+Parameters: -y 6 -t c0
+
 Input:
 ```one.......|two => one...|two```
 
 
-#### Flag: Z
-
+## Flag: Z
 ```-Z{c0,c1,...cn}```
 
-Express line if the specified column(s) are empty, or don't exist. Works with the virtualization flag ([-i](#flag-i-1)).
+Show line if the specified column(s) are empty, or don't exist. See ([-i](#flag-i-1)).
 
 Use case: Express line if the second column (c1) is empty.  
-Parameters: -Zc1  
+Parameters: -Zc1
+
 Input:
 ```
 c0|c1|c2|c3|c4
@@ -3385,19 +3567,21 @@ c0|c1|c2|c3|c4
 76|95|2|86|2
 58||3||3
 ```
+
 Output:
 ```
 60||1|63|1
 58||3||3
 ```
 
-#### Flag: z
- ```-z{c0,c1,...cn}```
+## Flag: z
+```-z{c0,c1,...cn}```
 
 Suppress line if the specified column(s) are empty, or don't exist. Works with the virtualization flag [-i](#flag-i-1).
 
-Use case: Suppress line if the second column (c1) is empty.  
-Parameters: -zc1  
+Use case: Suppress line if the second column (c1) is empty.   
+Parameters: -z c1
+
 Input:
 ```
 c0|c1|c2|c3|c4
@@ -3405,7 +3589,6 @@ c0|c1|c2|c3|c4
 76|95|2|86|2
 58||3||3
 ```
-
 Output:
 ```
 c0|c1|c2|c3|c4
@@ -3413,9 +3596,9 @@ c0|c1|c2|c3|c4
 ```
 
 ## API Cheat Sheet
-```console
-[cat file|echo value] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}] [options]
-```
+  ```console
+  [cat file|echo value] | pipe.pl [-5ADiIjKLNUVx] [-0{file} -M{options}] [options]
+  ```
 
 [-?](#flag-?) ```-?{opr}:{c0,c1,...,cn}```     
 [-0](#flag-0) ```-0{file_name}[-Mcn:cm?cp[+cq...][.{literal}]```     
