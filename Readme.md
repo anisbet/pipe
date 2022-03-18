@@ -3048,6 +3048,22 @@ Output:
 | lister | localhost | 
 ```
 
+Use case: Attempt to use an undefined table type.
+Parameters: -TFOO_BAR
+Input:
+```
+lynx|127.0.0.1
+piper|127.0.0.1
+lister|localhost
+```
+Output:
+``` 
+```
+Error:
+```
+** error, unsupported table type 'FOO_BAR'
+```
+
 #### Flag: t
 ```-t{any|cn,...}```
 

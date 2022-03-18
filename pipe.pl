@@ -4,7 +4,7 @@
 # Perl source file for project pipe.
 #
 # Pipe performs handy operations on pipe delimited files.
-#    Copyright (C) 2015 - 2021  Andrew Nisbet
+#    Copyright (C) 2015 - 2022  Andrew Nisbet
 # The Edmonton Public Library respectfully acknowledges that we sit on
 # Treaty 6 territory, traditional lands of First Nations and Metis people.
 #
@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.03 - March 16, 2022 Fix ascending/descending order sort bug.
+# 1.07.04 - March 18, 2022 Table-generating code cleanup.
 #
 ####################################################################################
 
@@ -1152,7 +1152,7 @@ sub prepare_table_data( $ )
 {
     my $line = shift;
     my @newLine = ();
-    if ( $TABLE_OUTPUT =~ m/HTML/ )
+    if ( $TABLE_OUTPUT =~ m/HTML/i )
     {
         push @newLine, "  <tr><td>";
         foreach my $value ( @{ $line } )
@@ -1164,7 +1164,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "</td></tr>";
     }
-    elsif ( $TABLE_OUTPUT =~ m/MEDIA_WIKI/ )
+    elsif ( $TABLE_OUTPUT =~ m/MEDIA_WIKI/i )
     {
         push @newLine, "|-\n";
         foreach my $value ( @{ $line } )
@@ -1174,7 +1174,7 @@ sub prepare_table_data( $ )
             push @newLine, "\n";
         }
     }
-    elsif ( $TABLE_OUTPUT =~ m/WIKI/ )
+    elsif ( $TABLE_OUTPUT =~ m/WIKI/i )
     {
         push @newLine, "\n|-\n| ";
         foreach my $value ( @{ $line } )
@@ -1186,7 +1186,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         # push @newLine, "\n|-";
     }
-    elsif ( $TABLE_OUTPUT =~ m/MD/ )
+    elsif ( $TABLE_OUTPUT =~ m/MD/i )
     {
         # Markdown tables start with a '|'
         push @newLine, '| ';
@@ -1197,7 +1197,7 @@ sub prepare_table_data( $ )
         }
         push @newLine, "\n";
     }
-    elsif ( $TABLE_OUTPUT =~ m/CSV/ )
+    elsif ( $TABLE_OUTPUT =~ m/CSV/i )
     {
         foreach my $value ( @{ $line } )
         {
@@ -1242,7 +1242,7 @@ sub prepare_table_data( $ )
         pop @newLine;
         push @newLine, "\n";
     }
-    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/ )
+    elsif ( $TABLE_OUTPUT =~ m/CHUNKED/i )
     {
         foreach my $value ( @{ $line } )
         {
@@ -1261,6 +1261,11 @@ sub prepare_table_data( $ )
                   push @newLine, "\n";
             }
         }
+    }
+    else # Huh, unknown table type.
+    {
+        printf STDERR "** error, unsupported table type '%s'\n", $TABLE_OUTPUT;
+        exit( 1 );
     }
     @{ $line } = ();
     foreach my $v ( @newLine )
@@ -3856,45 +3861,9 @@ sub init
     if ( $opt{'T'} )
     {
         my @attrs     = split ':', $opt{'T'};
-        shift @attrs;
+        $TABLE_OUTPUT = shift @attrs;
         # Shift of 'HTML' or 'WIKI' and re-join the rest of the string to account for ':' separators in both CSS AND Wiki attributes.
         $TABLE_ATTR   = ' ' . join ':', @attrs if ( scalar( @attrs ) > 0 );
-        if ( $opt{'T'} =~ m/HTML/i )
-        {
-            $TABLE_OUTPUT = "HTML";
-        }
-        elsif ( $opt{'T'} =~ m/MEDIA_WIKI/i )
-        {
-            $TABLE_OUTPUT = "MEDIA_WIKI";
-        }
-        elsif ( $opt{'T'} =~ m/WIKI/i )
-        {
-            $TABLE_OUTPUT = "WIKI";
-        }
-        elsif ( $opt{'T'} =~ m/MD/i )
-        {
-            $TABLE_OUTPUT = "MD";
-        }
-        elsif ( $opt{'T'} =~ m/CSV/i )
-        {
-            if ( $opt{'T'} =~ m/UTF-8/i )
-            {
-                $TABLE_OUTPUT = "CSV_UTF-8";
-            }
-            else
-            {
-                $TABLE_OUTPUT = "CSV";
-            }
-        }
-        elsif ( $opt{'T'} =~ m/CHUNKED/i )
-        {
-            $TABLE_OUTPUT = "CHUNKED";
-        }
-        else
-        {
-            printf STDERR "** error, unsupported table type '%s'\n", $opt{'T'};
-            exit( 0 );
-        }
     }
 }
 
