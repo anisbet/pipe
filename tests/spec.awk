@@ -5,7 +5,7 @@ BEGIN {
     isError = 0;
     # number of lines to read from the template. 
     # One less than the line '## ------ Template ends here -----'.
-    templateHeadLength = 186;
+    templateHeadLength = 187;
     totalLines = 0;
     # Optional named file input
     namedFile = "";
@@ -35,6 +35,8 @@ BEGIN {
     print "## input, \"test name\", \"pipe.pl parameters\", expected output (file name), expected error (file name)";
     print "test $INPUT_FILE \"$USE_CASE\" \"$PARAMETERS\" $EXPECTED_OUT $EXPECTED_ERR ";
     print "((TEST_NUMBER++))";
+    print "## Reset diff flags in case they were set in spec file.";
+    print "DIFF_FLAGS=''";
     print "### Use case ends";
     print "";
 }
@@ -93,6 +95,9 @@ BEGIN {
     isOutput = 1;
     print "EXPECTED_OUT=${EXPECTED_STDOUT}.$TEST_NUMBER.txt";
     print "# Expected: results issued.";
+    if (specialInstruction == "IGNORE_WHITE_SPACE") {
+        print "DIFF_FLAGS='-Z'";
+    }
     if (specialInstruction == "IGNORE_LAST_NEWLINE") {
         print "perl -pe 'chomp if eof' > $EXPECTED_OUT <<EXP_OUT!";
     } else {

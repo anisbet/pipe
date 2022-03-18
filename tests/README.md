@@ -105,7 +105,7 @@ Input data is always written to file during testing. By default pipeline will cr
 named files (```Input: file1```), but they must be defined before any standard ```Input:``` directive. The file may be a relative or absolute path.
 
 ### Output:
-The expected output produced by using the 'flag' and its parameters. The output data is expected to start on the next that starts with triple-back ticks (code markdown). Since output files are ```heredoc```s, and all ```heredoc```s end with a newline, if that is not your intension use the phrase ```Ignore last newline``` and the last new line will be removed from the expected-output file. For example:
+The expected output produced by using the 'flag' and its parameters. The output data is expected to start on the next that starts with triple-back ticks (code markdown). Since output files are ```heredoc```s, and all ```heredoc```s end with a newline, if that is not your intension use the phrase ```Output: Ignore last newline``` and the last new line will be removed from the expected-output file. For example:
 <pre>
 Output: Ignore last newline
 ```
@@ -113,6 +113,13 @@ data
 ```
 </pre>
 
+Sometimes, because bash is used for automating testing, white space is inadvertently added to the expected output files. Since ```diff``` is used to compare the expected and actual output, and by default any difference is reported, if white space is irrelevant in test results, it can be ignored with the ```Output: Ignore white space``` command. For example:
+<pre>
+Output: Ignore white space
+```
+data
+```
+</pre>
 
 ### Error:
 Optional, includes the text output during an error condition. May be omitted for readability, and if so, a ERROR section is added to the specification file automatically. If included, the error data is expected to start on the next that starts with triple-back ticks (code markdown).

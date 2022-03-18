@@ -25,7 +25,8 @@ EXPECTED_STDERR="$TMP_DIR/error-expected-${FLAG_TESTED}"
 # This is only used by spec-*.test files that have named files.
 declare -a SCRATCH_FILES
 TEST_NUMBER=0
-VERSION="1.1.03"
+DIFF_FLAGS=''
+VERSION="1.1.04"
 
 ### Functions
 # Prints out usage message.
@@ -152,7 +153,7 @@ test()
     # result is a failed condition.
     if [ -s "$err_file" ]; then
         if [ ! -z "$expected_stderr" ] && [ -f "$expected_stderr" ]; then
-            if diff "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
+            if diff $DIFF_FLAGS "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
                 logit "PASS: test $TEST_NUMBER STDERR $test_name"
             else
                 logit "**FAIL: test $TEST_NUMBER STDERR $test_name"
@@ -167,7 +168,7 @@ test()
         rm $err_file
     fi
     ## Test the stdout produced by running the command.
-    if diff "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
+    if diff $DIFF_FLAGS "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
         logit "PASS: test $TEST_NUMBER STDOUT $test_name"
     else
         logit "**FAIL: test $TEST_NUMBER STDOUT $test_name"
