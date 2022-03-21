@@ -78,8 +78,9 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 [-H](#flag-h) - Suppress new line on output.  
 [-h](#flag-h-1) - Replace default delimiter.  
 [-I](#flag-i) - Ignore case on operations [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-d](#flag-d-1), [-E](#flag-e), [-f](#flag-f-1), [-g](#flag-g-1), [-G](#flag-g), [-l](#flag-l-1), [-n](#flag-n-1) and [-s](#flag-s-1).  
-[-i](#flag-i-1) - Output all lines, but process only if [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G](#flag-g), [-z](#flag-z-1) or [-Z](#flag-z) match.  
-[-J](#flag-j) - Displays sum over group if '[-d](#flag-d-1)' is selected.  
+[-i](#flag-i-1) - Output all lines, but process only if [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G](#flag-g), [-z](#flag-z-1) or [-Z](#flag-z) match.   
+
+[-J](#flag-j) - Displays sum over group if '[-d](#flag-j-1)' is selected.  
 [-j](#flag-j-1) - Remove last delimiter on the last line of data output.  
 [-K](#flag-k) - Output everything as a single column.  
 [-k](#flag-k-1) - Run perl script on column data.  
