@@ -85,7 +85,7 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 [-k](#flag-k-1) - Run perl script on column data.  
 [-L](#flag-l) - Output only specified lines, or range of lines.  
 [-l](#flag-l-1) - Translate character sequence.  
-[-m](#flag-m) - Merge and compare columns across two files. See [-0](#flag-0).  
+[-M](#flag-m) - Merge and compare columns across two files. See [-0](#flag-0).  
 [-m](#flag-m-1) - Mask specified column values.  
 [-N](#flag-n) - Normalize summaries, keys before comparisons, abs(result). Strips formatting.  
 [-n](#flag-n-1) - Remove non-word characters in specified columns.  
@@ -2173,16 +2173,17 @@ Output:
 ```
 
 ## Flag: m
-```-m{any|cn:*[_|#]*}```
+```-m{any|cn:*[_|#]|[<&>]*}```
 
 Mask specified column with the mask defined after a ':', and where '_'
 means suppress, '#' means output character, any other character at that
 position will be inserted.
 
-If the last character is either '_' or '#', then it will be repeated until
-the input line is exhausted.
+If the last character in a mask is either rule ('_' or '#'), that rule it  is repeated for all remaining characters. If the last character in a mask are not rule characters, they are output as literals.
 
 Characters '_', '#' and ',' can be output by escaping them with a back slash.
+
+The special symbol '<@>' outputs the field contents without any change. This is useful when you want to append content to a field but not change the field.
 
 Using -y instructs -m to insert a '.' into the string at -y places from the 
 end of the string (See [-y](#flag-y-1)). This works on both numeric or alphanumeric strings.
@@ -2244,6 +2245,12 @@ Parameters: -m c0:# -y 3
 
 Input:
 ```Readmetxt => Readme.txt```
+
+Use case: Add content to a field without changing the field.  
+Parameters: -m c0:The<&>BrownFox
+
+Input:
+```Quick => TheQuickBrownFox```
 
 ## Flag: N
 ```-N```
@@ -3624,7 +3631,7 @@ c0|c1|c2|c3|c4
 [-k](#flag-k-1) ```-k{cn:expr,(...)}```   
 [-l](#flag-l-1) ```-l{any|cn:exp,... }```   
 [-L](#flag-l) ```-L{[[+|-]?n-?m?|skip n]}```   
-[-m](#flag-m-1) ```-m{any|cn:*[_|#]*}```   
+[-m](#flag-m-1) ```-m{any|cn:*[_|#]|[<&>]*}```   
 [-n](#flag-n-1) ```-n{any|cn,...}```   
 [-O](#flag-o) ```-O{any|cn,...}```   
 [-o](#flag-o-1) ```-o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}```   

@@ -311,12 +311,14 @@ flag to operate on all columns on the current line.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections.
- -m{any|cn:*[_|#|<&>]*} : Mask specified column with the mask defined after a ':', and where '_'
+ -m{any|cn:*[_|#]|[<&>]*} : Mask specified column with the mask defined after a ':', and where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
                   If the last character is either '_' or '#', then it will be repeated until
                   the input line is exhausted.
                   Characters '_', '#' and ',' can be output by escaping them with a back slash.
+                  The special symbol '<@>' outputs the field contents without any change.
+                  This is useful when you want to append content to a field but not change the field.
                   Using -y instructs -m to insert a '.' into the string at -y places from the 
                   end of the string (See -y). This works on both numeric or alphanumeric strings.
  -M{cn:cm?cp[+cq...][.{literal}]: Compares columns from two files and either outputs the specified
