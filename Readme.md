@@ -2086,7 +2086,7 @@ Input:
 ```A is for Alphabet => * is for *lph*bet```
 
 ## Flag: M
-```-M{cn:cm?cp[+cq...][.{literal}]```
+```-M{cn:cm?cp[+cq...][.{literal}[+{literal}...]]```
 
 Compares columns from two files and either outputs the specified column(s) 
 from file two, or an optional literal string value.
@@ -2170,6 +2170,63 @@ Output:
 1|one|one
 2|TWO|two
 3|ThReE|threE
+```
+
+Use case: Merge record if exists and ignore otherwise.  
+Parameters: -M c0:c0?c1 -0 file5 
+
+Input: file5
+```
+one|three
+```
+Input:
+```
+one|two
+two|one
+```
+
+Output:
+``` 
+one|two|three
+two|one
+```
+
+Use case: Merge record if exists and add '0' otherwise.  
+Parameters: -M c0:c0?c1.0 -0 file6 
+
+Input: file6
+```
+one|three
+```
+Input:
+```
+one|two
+two|one
+```
+
+Output:
+``` 
+one|two|three
+two|one|0
+```
+
+Use case: Merge record if exists and add a literal '0' column and a '1' column if not.  
+Parameters: -M c0:c0?c1.0+1 -0 file7 
+
+Input: file7
+```
+one|three
+```
+Input:
+```
+one|two
+two|one
+```
+
+Output:
+``` 
+one|two|three
+two|one|0|1
 ```
 
 ## Flag: m
@@ -3632,6 +3689,7 @@ c0|c1|c2|c3|c4
 [-l](#flag-l-1) ```-l{any|cn:exp,... }```   
 [-L](#flag-l) ```-L{[[+|-]?n-?m?|skip n]}```   
 [-m](#flag-m-1) ```-m{any|cn:*[_|#]|[<&>]*}```   
+[-M](#flag-m) ```{cn:cm?cp[+cq...][.{literal}[+{literal}...]]```    
 [-n](#flag-n-1) ```-n{any|cn,...}```   
 [-O](#flag-o) ```-O{any|cn,...}```   
 [-o](#flag-o-1) ```-o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}```   

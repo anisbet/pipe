@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.04 - March 18, 2022 Table-generating code cleanup.
+# 1.07.05 - April 1, 2022 Fix bug in -M when outputting literals.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.07.04};
+my $VERSION           = qq{1.07.05};
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -321,7 +321,7 @@ flag to operate on all columns on the current line.
                   This is useful when you want to append content to a field but not change the field.
                   Using -y instructs -m to insert a '.' into the string at -y places from the 
                   end of the string (See -y). This works on both numeric or alphanumeric strings.
- -M{cn:cm?cp[+cq...][.{literal}]: Compares columns from two files and either outputs the specified
+ -M{cn:cm?cp[+cq...][.{literal}[+{literal}...]]: Compares columns from two files and either outputs the specified
                   column(s) from file two, or an optional literal string value.
                   File one (f1) is STDIN to pipe.pl, file two (f2) is specified with '-0' (zero).
                   if a specific column from f1 matches f2 columns from f2 are appended to the 
@@ -3889,6 +3889,7 @@ sub get_col_num_or_literal_command( $$$ )
     if ( $is_literal_string )
     {
         @tmp = split( /\+/, $line_string ) if ( $line_string );
+        push(@tmp, $line_string) if ( ! @tmp );
     }
     else
     {
