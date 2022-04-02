@@ -1194,7 +1194,7 @@ Output:
 
 
 ## Flag: e
-```-e{any|cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```
+```-e{[any|cn]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```
 
 Change the case, normalize, or order field data 
 in a column to upper case (uc), lower case (lc), mixed case (mc), or
@@ -1365,7 +1365,7 @@ Input:
 ```0000000 => 000T000```
 
 ## Flag: G
-```-G{any|cn:regex,...}```
+```-G{[any|cn]:regex,...}```
 
 Inverse of [-g](#flag-g-1), and can be used together to perform AND operation as
 return true if match on column 1, and column 2 not match. If the keyword
@@ -1420,7 +1420,7 @@ Output:
 ```
 
 ## Flag: g
-```-g{any|cn:regex,...}```
+```-g{[any|cn]:regex,...}```
 
 Searches the specified field using Perl regular expressions.
 
@@ -2157,7 +2157,7 @@ seven
 
 
 ## Flag: l
-```-l{any|cn:exp,... }```
+```-l{[any|cn]:exp,... }```
 
 Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
 produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
@@ -2327,17 +2327,17 @@ two|one|0|1
 ```
 
 ## Flag: m
-```-m{any|cn:*[_|#]|[<&>]*}```
+```-m{[any|cn]:*[_|#]|[@]*}```
 
 Mask specified column with the mask defined after a ':', and where '_'
 means suppress, '#' means output character, any other character at that
 position will be inserted.
 
-If the last character in a mask is either rule ('_' or '#'), that rule it  is repeated for all remaining characters. If the last character in a mask are not rule characters, they are output as literals.
+If the last character in a mask is either '_' or '#' that rule is repeated for all remaining characters in the field. Any non-rule characters are output as literals.
 
-Characters '_', '#' and ',' can be output by escaping them with a back slash.
+Characters '_', '#', '@' and ',' can be output by escaping them with a back slash (\\).
 
-The special symbol '<@>' outputs the field contents without any change. This is useful when you want to append content to a field but not change the field.
+The symbol '@' outputs the field contents without any change. This is useful when you want to append content to a field but not change it.
 
 Using -y instructs -m to insert a '.' into the string at -y places from the 
 end of the string (See [-y](#flag-y-1)). This works on both numeric or alphanumeric strings.
@@ -2401,7 +2401,7 @@ Input:
 ```Readmetxt => Readme.txt```
 
 Use case: Add content to a field without changing the field.  
-Parameters: -m c0:The<&>BrownFox
+Parameters: -m c0:The@BrownFox
 
 Input:
 ```Quick => TheQuickBrownFox```
@@ -2474,7 +2474,7 @@ c1|15
 ```
 
 ## Flag: n
-```-n{any|cn,...}```
+```-n{[any|cn],...}```
 
 Normalize the selected columns, that is, removes all non-word characters
 (non-alphanumeric and '_' characters), and changing the remaining characters 
@@ -2538,7 +2538,7 @@ Output:
 ```
 
 ## Flag: O
-```-O{any|cn,...}```
+```-O{[any|cn],...}```
 
 Merge columns. The first column is the anchor column, any others are appended to it
 ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use [-o](#flag-o-1) to remove extraneous columns.
@@ -3395,7 +3395,7 @@ Error:
 ```
 
 ## Flag: t
-```-t{any|cn,...}```
+```-t{[any|cn],...}```
 
 Trim leading and trailing white space from column data. If [-y](#flag-y-1) is
 used, the string is trimmed of white space then truncated to the length specified by [-y](#flag-y-1).
@@ -3453,7 +3453,7 @@ Output:
 ```
 
 ## Flag: u
-```-u{any|cn,...}```
+```-u{[any|cn],...}```
 
 Encodes strings in specified columns into URL safe versions.
 Use case: Encode 'This+that = the other'  
@@ -3551,7 +3551,7 @@ Error:
 ```
 
 ## Flag: X
-```-X{any|cn:regex,...}```
+```-X{[any|cn]:regex,...}```
 
 Like the [-g](#flag-g), but once a line matches all subsequent lines are also
 output until a [-Y](#flag-y-1) match succeeds.
@@ -3607,7 +3607,7 @@ test-S
 Outputs usage message and exits.
 
 ## Flag: Y
-```-Y{any|cn:regex,...}```
+```-Y{[any|cn]:regex,...}```
 
 Stops [-X](#flag-x) output if -Y matches. See [-X](#flag-x) and [-g](#flag-g-1).
 
@@ -3774,7 +3774,7 @@ c0|c1|c2|c3|c4
 [-c](#flag-c-1) ```-c{c0,c1,...cn}```   
 [-C](#flag-c) ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```   
 [-d](#flag-d-1) ```[-IRN]{c0,c1,...,cn} [-A|-J{cn}]```   
-[-e](#flag-e-1) ```-e{any|cn:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```      
+[-e](#flag-e-1) ```-e{[any|cn]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```      
 [-E](#flag-e) ```-E{cn:[r|?c.r[.e]],...}```   
 [-f](#flag-f-1) ```-f{cn:n.p[?p[.q]],...}```   
 [-F](#flag-f) ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```   
@@ -3783,12 +3783,12 @@ c0|c1|c2|c3|c4
 [-H](#flag-h)  ```[-q{positive integer}]```   
 [-J](#flag-j) ```-J{cn}```      
 [-k](#flag-k-1) ```-k{cn:expr,(...)}```   
-[-l](#flag-l-1) ```-l{any|cn:exp,... }```   
+[-l](#flag-l-1) ```-l{[any|cn]:exp,... }```   
 [-L](#flag-l) ```-L{[[+|-]?n-?m?|skip n]}```   
-[-m](#flag-m-1) ```-m{any|cn:*[_|#]|[<&>]*}```   
+[-m](#flag-m-1) ```-m{[any|cn]:*[_|#]|[@]*}```   
 [-M](#flag-m) ```{cn:cm?cp[+cq...][.{literal}[+{literal}...]]```    
-[-n](#flag-n-1) ```-n{any|cn,...}```   
-[-O](#flag-o) ```-O{any|cn,...}```   
+[-n](#flag-n-1) ```-n{[any|cn],...}```   
+[-O](#flag-o) ```-O{[any|cn],...}```   
 [-o](#flag-o-1) ```-o{c0,c1,...,cn[,continue][,last][,remaining][,reverse][,exclude]}```   
 [-p](#flag-p-1) ```-p{cn:N.char,... }```   
 [-q](#flag-q-1) ```-q{integer}```   
@@ -3796,14 +3796,14 @@ c0|c1|c2|c3|c4
 [-r](#flag-r-1) ```-r{percent}```   
 [-s](#flag-s-1) ```-s{c0,c1,...,cn} [-IRN]```   
 [-S](#flag-s) ```-S{cn:range}```   
-[-t](#flag-t-1) ```-t{any|cn,...} [-y {integer}]```   
+[-t](#flag-t-1) ```-t{[any|cn],...} [-y {integer}]```   
 [-T](#flag-t) ```-T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}|CHUNKED:[BEGIN={literal}][,SKIP={integer}.   {literal}][,END={literal}]```   
-[-u](#flag-u-1) ```-u{any|cn,...}```   
+[-u](#flag-u-1) ```-u{[any|cn],...}```   
 [-v](#flag-v-1) ```-v{c0,c1,...cn}```   
 [-w](#flag-w-1) ```-w{c0,c1,...cn}```   
 [-W](#flag-w) ```-W{delimiter}```   
-[-X](#flag-x) ```-X{any|cn:regex,...} [-Y{any|cn:regex,...} [-g{any|cn:regex,...}]]```   
+[-X](#flag-x) ```-X{[any|cn]:regex,...} [-Y{[any|cn]:regex,...} [-g{[any|cn]:regex,...}]]```   
 [-y](#flag-y-1) ```-y{integer}```   
-[-Y](#flag-y) ```-Y{any|cn:regex,...}```   
+[-Y](#flag-y) ```-Y{[any|cn]:regex,...}```   
 [-z](#flag-z-1)|[Z](#flag-z) ```-[Z|z]{c0,c1,...cn} [-i]```   
    

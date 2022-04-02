@@ -27,8 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.08.00 - April 2, 2022 Added min, max, count, sum, and avg math functions to -J. 
-#           Default behaviour of -J preserved.
+# 2.00.00 - April 2, 2022 Changed <@> to just '@' in -m.
 #
 ####################################################################################
 
@@ -43,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.08.00};
+my $VERSION           = qq{2.00.00};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -226,7 +225,7 @@ flag to operate on all columns on the current line.
  -d{c0,c1,...cn}: De-duplicates column(s) of data. The order of the columns informs pipe.pl 
                   the priority of column de-duplication. The last duplicate found is output to STDOUT.
  -D             : Debug switch.
- -e{any|cn:[uc|lc|mc|us|spc|csv|pipe|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
+ -e{[any|cn]:[uc|lc|mc|us|spc|csv|pipe|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
                   Change the case, normalize, or order field data 
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands include (spc) to replace multiple white spaces with a
@@ -264,7 +263,7 @@ flag to operate on all columns on the current line.
                   decimal input. A second radix (delimited from the first with a '.') instructs
                   pipe.pl to convert from radix 'a' to radix 'b'. Example -Fc0:b.h specifies
                   the input as binary, and outputs hexadecimal: '1111' -Fc0:b.h => 'f'
- -g{any|cn:regex,...}: Searches the specified field using Perl regular expressions.
+ -g{[any|cn]:regex,...}: Searches the specified field using Perl regular expressions.
                   Escape any commas in a regular expression because comma
                   is the column definition delimiter. Selecting multiple fields acts
                   like an AND function, all fields must match their corresponding regex
@@ -282,7 +281,7 @@ flag to operate on all columns on the current line.
                   if used in combination with [-X](#flag-x) and [-Y](#flag-y). The -g outputs just the frame that is 
                   bounded by [-X](#flag-x) and [-Y](#flag-y), but if -g matches, only the matching frame is output 
                   to STDERR, while only the -g that matches within the frame is output to STDOUT. 
- -G{any|cn:regex,...}: Inverse of -g, and can be used together to perform AND operation as
+ -G{[any|cn]:regex,...}: Inverse of -g, and can be used together to perform AND operation as
                   return true if match on column 1, and column 2 not match. If the keyword
                   'any' is used, all columns must fail the match to return true. Empty regular
                   expressions are permitted. See -g for more information.
@@ -305,7 +304,7 @@ flag to operate on all columns on the current line.
                   The existing value of the column is stored in an internal variable called '\$value'.
                   If ALLOW_SCRIPTING is set to FALSE, pipe.pl will issue an error and exit.
  -K             : Use line breaks as column delimiters.
- -l{any|cn:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
+ -l{[any|cn]:exp,... }: Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
                   produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
                   and '\\n'. "Hello" -lc0:"e.\\t" => 'H       llo'
                   Can be made case insensitive with -I.
@@ -316,13 +315,13 @@ flag to operate on all columns on the current line.
                   The 'skip' keyword will output alternate lines. 'skip2' will output every other line.
                   'skip 3' every third line and so on. The skip keyword takes precedence over
                   over other line output selections.
- -m{any|cn:*[_|#]|[<&>]*} : Mask specified column with the mask defined after a ':', and where '_'
+ -m{[any|cn]:*[_|#]|[@]*} : Mask specified column with the mask defined after a ':', where '_'
                   means suppress, '#' means output character, any other character at that
                   position will be inserted.
-                  If the last character is either '_' or '#', then it will be repeated until
-                  the input line is exhausted.
-                  Characters '_', '#' and ',' can be output by escaping them with a back slash.
-                  The special symbol '<@>' outputs the field contents without any change.
+                  If the last character in a mask is either '_' or '#' that rule is repeated for 
+                  all remaining characters in the field. Any non-rule characters are output as literals.
+                  Characters '_', '#' and ',' can be output by escaping them with a back slash (\\).
+                  The symbol '\@' outputs the field contents without any change.
                   This is useful when you want to append content to a field but not change the field.
                   Using -y instructs -m to insert a '.' into the string at -y places from the 
                   end of the string (See -y). This works on both numeric or alphanumeric strings.
@@ -337,7 +336,7 @@ flag to operate on all columns on the current line.
                   Matching behaviour can also be modified with -I and -N.
                   Both files must use the same column delimiter, and any use of -W will
                   apply to both.
- -n{any|cn,...}: Normalize the selected columns, that is, removes all non-word characters
+ -n{[any|cn],...}: Normalize the selected columns, that is, removes all non-word characters
                   (non-alphanumeric and '_' characters), and changing the remaining characters 
                   to upper case. Using the -I switch will preserve case. See -N and -I.
  -N             : Normalize keys before comparison when using (-d, -C, and -s) dedup and sort.
@@ -352,7 +351,7 @@ flag to operate on all columns on the current line.
                   column to the last column in the line. 'last' will output the last column in a row.
                   'reverse' reverses the column order. The 'exclude' keyword all but the listed columns
                   in order. Once a keyword is encountered (except 'exclude'), any additional columns are omitted.
- -O{any|cn,...}: Merge columns. The first column is the anchor column, any others are appended to it
+ -O{[any|cn],...}: Merge columns. The first column is the anchor column, any others are appended to it
                   ie: 'aaa|bbb|ccc' -Oc2,c0,c1 => 'aaa|bbb|cccaaabbb'. Use -o to remove extraneous columns.
                   Using the 'any' keyword causes all columns to be merged in the data in the first column (c0).
  -p{cn:N.char,... }: Pad fields left or right with arbitrary 'N' characters. The expression is separated by a
@@ -381,7 +380,7 @@ flag to operate on all columns on the current line.
                   from the end of columns with the syntax (n - m), where 'n' is a literal
                   that stands for the column length and 'm' the number of characters
                   to be trimmed from the end of the string, ie '12345' => -S'c0:0-(n -1)' = '1234'.
- -t{any|cn,...}: Trim leading and trailing white space from column data. If -y is
+ -t{[any|cn],...}: Trim leading and trailing white space from column data. If -y is
                   used, the string is trimmed of white space then truncated to the length specified by -y.
  -T{HTML[:attributes]|MEDIA_WIKI[:h1,h2,...]|WIKI[:h1,h2,...]|MD[:h1,h2,...]|CSV[_UTF-8][:h1,h2,...]}
                   |CHUNKED:[BEGIN={literal}][,SKIP={integer}.{literal}][,END={literal}]
@@ -394,7 +393,7 @@ flag to operate on all columns on the current line.
                   can take one, or more, of the optional keywords 'BEGIN', 'SKIP', and 'END'. Each
                   corresponds to the insertion location of the literal string that follows the keyword.
                   SKIP will place the literal string every 'n' lines.
- -u{any|cn,...}: Encodes strings in specified columns into URL safe versions.
+ -u{[any|cn],...}: Encodes strings in specified columns into URL safe versions.
  -U             : Forces sorts and reverse sorts to be done based on numeric values
                   rather than alpha-numeric. If the data in a specified column is not 
                   numeric, matches fail. Example:
@@ -405,12 +404,12 @@ flag to operate on all columns on the current line.
                   the minimum and maximum number of columns by line.
  -W{delimiter}  : Change the input delimiter.
  -x             : Outputs this usage message and exits.
- -X{any|cn:regex,...}: Like the -g, but once a line matches all subsequent lines are also
+ -X{[any|cn]:regex,...}: Like the -g, but once a line matches all subsequent lines are also
                   output until a -Y match succeeds. See -Y and -g.
                   If the keyword 'any' is used the first column to match will return true.
  -y{integer}    : Controls precision of computed floating point number output. 
                   When used with -t, selected columns are truncated to 'n' characters wide.
- -Y{any|cn:regex,...}: Stops -X output if -Y matches. See -X and -g.
+ -Y{[any|cn]:regex,...}: Stops -X output if -Y matches. See -X and -g.
  -z{c0,c1,...cn}: Suppress line if the specified column(s) are empty, or don't exist. 
                    Works with the virtualization flag '-i'.
  -Z{c0,c1,...cn}: Show line if the specified column(s) are empty, or don't exist. See -i.
@@ -1291,10 +1290,10 @@ sub apply_mask( $$ )
     return '' if ( ! $column_string ); # return if there is no string to mask on.
     my $column_mask   = shift;
     # Test if user wants the data inserted into the above string as-is.
-    if ( $column_mask =~ m/<&>/ )
+    if ( $column_mask =~ m/@/ )
     {
-        my $amp_index = index( $column_mask, '<&>' );
-        return substr( $column_mask, 0, $amp_index ) . $column_string . substr( $column_mask, ($amp_index + 3) );
+        my $amp_index = index( $column_mask, '@' );
+        return substr( $column_mask, 0, $amp_index ) . $column_string . substr( $column_mask, ($amp_index + 1) );
     }
     my ( @chars, @mask ) = ();
     @chars = split '', $column_string;
