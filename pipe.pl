@@ -27,7 +27,8 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 1.07.05 - April 1, 2022 Fix bug in -M when outputting literals.
+# 1.08.00 - April 2, 2022 Added min, max, count, sum, and avg math functions to -J. 
+#           Default behaviour of -J preserved.
 #
 ####################################################################################
 
@@ -42,7 +43,10 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{1.07.05};
+my $VERSION           = qq{1.08.00};
+my $FALSE             = 1;
+my $TRUE              = 0;
+my $ALLOW_SCRIPTING   = $TRUE;
 my $KEYWORD_ANY       = qw{any};
 my $KEYWORD_REMAINING = qw{remaining};
 my $KEYWORD_CONTINUE  = qw{continue};
@@ -69,6 +73,11 @@ my $SUB_DELIMITER     = qq{___PIPE___};
 my $QUOTED_DELIMITER  = qq{___QUOTED_DELIMITER___};
 my @SCRIPT_COLUMNS    = (); my $script_ref    = {};
 #####
+my $LINE_NUMBER       = 0;
+my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
+my $SKIP_LINE         = 0; # Used for -L for alternate line output.
+my @PREVIOUS_LINES    = (); my $BUFF_SIZE = 0; # Display the 'n' lines before the match.
+push @PREVIOUS_LINES, "BOF";
 my @INCR_COLUMNS      = ();                          # Columns to increment.
 # Column and seed value to insert auto-increment columns into.
 my $AUTO_INCR_COLUMN  = (); my $AUTO_INCR_SEED= {};  my $AUTO_INCR_RESET = {};
@@ -110,21 +119,13 @@ my @EMPTY_COLUMNS     = (); # empty column number checks.
 my @SHOW_EMPTY_COLUMNS= (); # Show empty column number checks.
 my @COMPARE_COLUMNS   = (); # Compare all collected columns and report if equal.
 my @NO_COMPARE_COLUMNS= (); # ! Compare all collected columns and report if equal.
-my $LINE_NUMBER       = 0;
 my $START_OUTPUT      = 0;
 my $END_OUTPUT        = 0;
 my $TAIL_OUTPUT       = 0; # Is this a request for the tail of the file.
 my $TABLE_OUTPUT      = 0;  my $TABLE_ATTR = '';     my $TOTAL_CSV_COLS = 0; # Does the user want to output to a table.
 my $BEGIN_VALUE       = ''; my $SKIP_LINE_TABLE = 0; my $SKIP_VALUE = ''; my $END_VALUE = ''; # Used in CHUNKED tables
 my $WIDTHS_COLUMNS    = {};
-my $LAST_LINE         = 0; # Used for -j to trim last delimiter.
-my $SKIP_LINE         = 0; # Used for -L for alternate line output.
-my @PREVIOUS_LINES    = (); my $BUFF_SIZE = 0; # Display the 'n' lines before the match.
-push @PREVIOUS_LINES, "BOF";
 my $IS_A_POST_MATCH   = 0;  # For '-Q' region search display.
-my $FALSE             = 1;
-my $TRUE              = 0;
-my $ALLOW_SCRIPTING   = $TRUE;
 my $JOIN_COUNT        = 0; # lines to continue to join if -H used.
 my $PRECISION         = 2; # Default precision of computed floating point number output.
 my $MATCH_LIMIT       = 1; my $MATCH_COUNT = 0; # Number of search matches output before exiting.
@@ -135,6 +136,9 @@ my $REF_FILE_DATA_HREF    = {};
 my @REF_COLUMN_INDEX_TRUE = ();
 my @REF_LITERALS_FALSE    = ();
 my @MATH_COLUMNS          = (); my $math_ref = {}; # Math operations stored. math_ref contains the operator.
+my $J_CMD             = "";
+my $J_COUNT           = 0;
+my $J_BUCKET_COUNTS   = {};
 
 # Explains the usage of pipe.pl when -x is used or if there was an error with input.
 # Message about this program and how to use it.
@@ -293,8 +297,9 @@ flag to operate on all columns on the current line.
  -I             : Ignore case on operations -b, -B, -C, -d, -E, -f, -g, -G, -l, -n and -s.
                   By default sorts are case-sensitive, -I sorts ascending order or decending if -R is used.
  -j             : Removes the last delimiter from the last line of output when using -P, -K, or -h.
- -J{cn}         : Sums de-duplicated values for an arbitrary but specific column, providing a sum over group-like functionality.
-                  See -d, -A, -J, -j, and -P).
+ -J[min|max|avg|sum|count]{cn}: Math operations on buckets created by de-duplicates '-d',
+                  providing a sum over group-like functionality.
+                  Functions include min, max, avg, sum, and count. See -d, -A, and -P.
                   Flag -A and -J are mutually exclusive.
  -k{cn:expr,(...)}: Use Perl scripting to manipulate a field. Syntax: -kcn:'(script)'
                   The existing value of the column is stored in an internal variable called '\$value'.
@@ -2923,6 +2928,65 @@ sub get_number_format
     return $summary;
 }
 
+# Does an extended math operation on a group.
+# param: The operation string (min,max,avg,sum).
+# param: The variable where the computed value is placed.
+# param: The value from the selected field.
+# return: none
+sub do_op( $$$ )
+{
+    my $key = shift;
+    my $cur = shift;
+    my $val = shift;
+    if ( $val !~ /^[+|-]?\d{1,}(\.\d{1,})?$/ )
+    {
+        printf STDERR "skipping non-numeric value on $LINE_NUMBER\n" if ( $opt{'D'} );
+        return $cur;
+    }
+    $J_COUNT++;
+    $J_BUCKET_COUNTS->{ $key }++;
+    return $val if ( $cur eq "init" );
+    if ( $J_CMD =~ m/min/ )
+    {
+        if ( $val < $cur ) 
+        {
+            return $val;
+        }
+        else
+        {
+            return $cur;
+        }
+    }
+    elsif ( $J_CMD =~ m/max/ )
+    {
+        if ( $val > $cur ) 
+        {
+            return $val;
+        }
+        else
+        {
+            return $cur;
+        }
+    }
+    elsif ( $J_CMD =~ m/avg/ )
+    {
+        return ( $cur += $val );
+    }
+    elsif ( $J_CMD =~ m/sum/ )
+    {
+        # Same as default action.
+        return ( $cur += $val );
+    }
+    elsif ( $J_CMD =~ m/count/ )
+    {
+        return $J_COUNT;
+    }
+    else
+    {
+        return ( $cur += $val );
+    }
+}
+
 # Dedups the ALL_LINES array using (O)1 space.
 # param:  list of columns to sort on.
 # return: <none> - removes duplicate values from the ALL_LINES list.
@@ -2943,10 +3007,21 @@ sub dedup_list( $ )
             $count->{ $key } = 0 if ( ! exists $count->{ $key } );
             $count->{ $key }++;
         }
-        elsif ( $opt{ 'J' } )
+        elsif ( $opt{'J'} )
         {
-            $count->{ $key } = 0 if ( ! exists $count->{ $key } );
-            $count->{ $key } += get_column_value( $opt{ 'J' }, $line );
+            if ( ! exists $count->{ $key } )
+            {
+                $count->{ $key } = "init";
+                $J_COUNT = 0;
+                $J_BUCKET_COUNTS->{ $key } = 0;
+            }
+            if ($opt{'J'} =~ m/^(min|max|avg|sum|count)/i )
+            {
+                $J_CMD = lc($&);
+                $opt{'J'} = $';
+            }
+            my $val = get_column_value( $opt{'J'}, $line );
+            $count->{ $key } = do_op( $key, $count->{ $key }, $val );
         }
         print STDERR "\$key=$key, \$value=$line\n" if ( $opt{'D'} );
     }
@@ -2990,9 +3065,13 @@ sub dedup_list( $ )
             }
             push @ALL_LINES, $summary . $ddup_ref->{ $key };
         }
-        elsif ( $opt{ 'J' } )
+        elsif ( $opt{'J'} )
         {
             my $summary = '';
+            if ( $J_CMD eq "avg" && $J_COUNT != 0 )
+            {
+                $count->{ $key } = ( $count->{ $key } / $J_BUCKET_COUNTS->{ $key } );
+            }
             if ( $opt{'P'} )
             {
                 $summary = sprintf "%s%s", get_number_format( $count->{ $key }, 0, $PRECISION ), $DELIMITER;

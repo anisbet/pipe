@@ -1820,9 +1820,11 @@ Output:
 ```
 
 ## Flag: J
-```-J{cn}```
+```-J[min|max|avg|sum|count]{cn}```
 
-Sums de-duplicated values for an arbitrary but specific column, providing a sum over group-like functionality.
+Math operations on buckets created by de-duplicates '-d'.
+
+Functions include `min`, `max`, `avg`, `sum`, and `count`.
 See [-d](#flag-d-1), [-*](#flag-a), [-J](#flag-j), and [-P](#flag-p). 
 
 Flag [-A](#flag-a) and [-J](#flag-j) are mutually exclusive.
@@ -1846,6 +1848,101 @@ Output:
    4 2|cat
    9 3|bat
    3 3|cat
+```
+
+Use case: Find the minimum value in the first column when de-duplicating the second column.  
+Parameters: -J minc0 -d c1
+
+Input:
+```
+1|cat
+2|cat
+2|cat
+3|cat
+3|bat
+3|bat
+3|bat
+```
+Output:
+```
+   3 3|bat
+   1 3|cat
+```
+
+Use case: Find the maximum value in the first column when de-duplicating the second column.  
+Parameters: -J maxc0 -d c1
+
+Input:
+```
+1|cat
+2|cat
+3|cat
+4|cat
+300|bat
+399|bat
+302|bat
+```
+Output:
+```
+ 399 302|bat
+   4 4|cat
+```
+
+Use case: Find the average of the values in the first column, group by second column.   
+Parameters: -J avgc0 -d c1
+
+Input:
+```
+1|cat
+2|cat
+3|cat
+4|cat
+300|bat
+399|bat
+302|bat
+```
+Output:
+```
+ 333.67 302|bat
+ 2.50 4|cat
+```
+
+Use case: Find the count of the values in the first column, group by second column. Equivalent to [-A](#flag-a).   
+Parameters: -J countc0 -d c1
+
+Input:
+```
+1|cat
+2|cat
+3|cat
+4|cat
+300|bat
+399|bat
+302|bat
+```
+Output:
+```
+   3 302|bat
+   4 4|cat
+```
+
+Use case: Find the sum of the values in the first column, group by second column. Equivalent to -J c0.   
+Parameters: -J sumc0 -d c1
+
+Input:
+```
+1|cat
+2|cat
+3|cat
+4|cat
+300|bat
+399|bat
+302|bat
+```
+Output:
+```
+ 1001 302|bat
+  10 4|cat
 ```
 
 ## Flag: j
