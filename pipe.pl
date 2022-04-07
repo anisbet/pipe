@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.02.00 - April 6, 2022 Added -e csv, and normal_csv.
+# 2.02.01 - April 7, 2022 Fixed -e normal_P bug.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.02.00};
+my $VERSION           = qq{2.02.01};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -225,7 +225,7 @@ flag to operate on all columns on the current line.
  -d{c0,c1,...cn}: De-duplicates column(s) of data. The order of the columns informs pipe.pl 
                   the priority of column de-duplication. The last duplicate found is output to STDOUT.
  -D             : Debug switch.
- -e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}: 
+ -e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]]}: 
                   Change the case, normalize, or order field data 
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands include (spc) to replace multiple white spaces with a
@@ -2167,7 +2167,7 @@ sub apply_casing( $$ )
                 $exps = '\'';
             }
             # Remove all punctuation leaving only upper/lower case chars, digits, and spaces.
-            elsif ( $normal =~ m/p/ )
+            elsif ( $normal =~ m/P/ )
             {
                 $exps = '[^a-zA-Z0-9 ]';
             }

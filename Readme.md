@@ -1194,7 +1194,7 @@ Output:
 
 
 ## Flag: e
-```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}:```
+```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]]}:```
 
 Change the case, normalize, or order field data 
 in a column to upper case (uc), lower case (lc), mixed case (mc), or
@@ -1207,8 +1207,9 @@ and S,s whitespace.
 
 Multiple qualifiers can be separated with a '|' character. For example normalize removing digits and non-word characters.
 
-NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
-NORMAL_p removes all characters that are not upper/lower case characters, digits or spaces.
+NORMAL_q removes single quotes.
+NORMAL_Q removes double quotes in field.
+NORMAL_P removes all characters that are not upper/lower case characters, digits or spaces.
 normal_csv converts input CSV data into pipe-delimited data, preserving commas in quotes, but removing quote characters.
 
 'pipe' removes pipe.pl sensitive characters (:,|).
@@ -1262,6 +1263,18 @@ Parameters: -e any:spc
 
 Input:
 ```Bat   The         Bat|Cat    in the   hat => Bat The Bat|Cat in the hat```
+
+Use case: Remove non-digit characters.  
+Parameters: -e c0:normal_D
+
+Input:
+```123hello => 123```
+
+Use case: Remove all digit characters.  
+Parameters: -e c0:normal_d
+
+Input:
+```123hello => hello```
 
 Use case: Normalize by removing all non-word characters and digits.  
 Parameters: -e c0:normal_d|W
@@ -1328,7 +1341,7 @@ id,Animal,CS
 ```
 
 Use case: Remove all punctuation leaving only upper/lower case characters, digits, and spaces.  
-Parameters: -e c0:normal_p
+Parameters: -e c0:normal_P
 
 Input:
 ```'Parenthetical citation': (Grady et al., 2019) => Parenthetical citation Grady et al 2019```
@@ -3847,7 +3860,7 @@ c0|c1|c2|c3|c4
 [-c](#flag-c-1) ```-c{c0,c1,...cn}```   
 [-C](#flag-c) ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```   
 [-d](#flag-d-1) ```[-IRN]{c0,c1,...,cn} [-A|-J{cn}]```   
-[-e](#flag-e-1) ```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}:```      
+[-e](#flag-e-1) ```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]]}:```      
 [-E](#flag-e) ```-E{cn:[r|?c.r[.e]],...}```   
 [-f](#flag-f-1) ```-f{cn:n.p[?p[.q]],...}```   
 [-F](#flag-f) ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```   

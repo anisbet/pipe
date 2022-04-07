@@ -105,7 +105,7 @@ BEGIN {
     backTicksImportant = 1;
     outputFileType = input;
     # Output the name of the input file if mentioned.
-    if ($2 != "") {
+    if ($2 != "" && $2 !~ /^[ \t]+$/) {
         printf "NAMED_FILE:%s\n",$2;
     }
 }
