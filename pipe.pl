@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.00.00 - April 2, 2022 Changed <@> to just '@' in -m.
+# 2.02.00 - April 6, 2022 Added -e csv, and normal_csv.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.00.00};
+my $VERSION           = qq{2.02.00};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -225,7 +225,7 @@ flag to operate on all columns on the current line.
  -d{c0,c1,...cn}: De-duplicates column(s) of data. The order of the columns informs pipe.pl 
                   the priority of column de-duplication. The last duplicate found is output to STDOUT.
  -D             : Debug switch.
- -e{[any|cn]:[uc|lc|mc|us|spc|csv|pipe|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}: 
+ -e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}: 
                   Change the case, normalize, or order field data 
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands include (spc) to replace multiple white spaces with a
@@ -237,6 +237,11 @@ flag to operate on all columns on the current line.
                   Multiple qualifiers can be separated with a '|' character. For example normalize 
                   removing digits and non-word characters.
                   NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
+                  NORMAL_p removes all characters that are not upper/lower case characters, digits or spaces.
+                  normal_csv converts input CSV data into pipe-delimited data, preserving commas in quotes, 
+                  but removing quote characters.
+                  'pipe' removes pipe.pl sensitive characters (:,|).
+                  'csv' removes commas from within quoted strings.
                   The order key word allows character sequences to be ordered within a field
                   like using -o can order fields, but order names each character within a  
                   field and allows those named characters to be mapped to new positions 
@@ -2133,13 +2138,13 @@ sub apply_casing( $$ )
     {
         $field =~ s/\s+/\x20/g;
     }
-    # Replace multiple space characters with a single space.
+    # Replace ,:\| - or pipe.pl sensitive caracters.
     if ( $instruction =~ m/pipe/i )
     {
         # Add additional characters if required.
         $field =~ s/([,:\|])//g;
     }
-    if ( $instruction =~ m/csv/i )
+    if ( $instruction =~ m/^csv$/i )
     {
         # remove commas from quoted strings.
         my @segments = split /"/, $field;  # fix SO syntax highlighting: "
@@ -2161,7 +2166,22 @@ sub apply_casing( $$ )
             {
                 $exps = '\'';
             }
-            $field =~ s/($exps)//g;
+            # Remove all punctuation leaving only upper/lower case chars, digits, and spaces.
+            elsif ( $normal =~ m/p/ )
+            {
+                $exps = '[^a-zA-Z0-9 ]';
+            }
+            # Convert CSV data into (pipe by default) delimited-data.
+            if ( $normal =~ m/csv/i )
+            {
+                $exps = ',\s*(?=([^"]*"[^"]*")*[^"]*$)';
+                $field =~ s/($exps)/$DELIMITER/g;
+                $field =~ s/['"]//g;
+            }
+            else # Substitute character sequences with empty spaces.
+            {
+                $field =~ s/($exps)//g;
+            }
         }
     }
     if ( $instruction =~ m/^order_/i )
@@ -2254,7 +2274,7 @@ sub modify_case_line( $ )
             $exp =~ m/^(uc|lc|mc|us|spc|csv|pipe|normal_|order_)/i;
             if ( ! $& )
             {
-                printf STDERR "*** error case specifier. Expected (uc|lc|mc|us|spc|csv|pipe|normal_(W|w,S|s,D|d,q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
+                printf STDERR "*** error case specifier. Expected (csv|lc|mc|uc|us|spc|csv|pipe|normal_(W|w,S|s,D|d,p|q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
                 exit;
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );

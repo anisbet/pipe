@@ -1194,7 +1194,7 @@ Output:
 
 
 ## Flag: e
-```-e{[any|cn]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```
+```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}:```
 
 Change the case, normalize, or order field data 
 in a column to upper case (uc), lower case (lc), mixed case (mc), or
@@ -1208,6 +1208,11 @@ and S,s whitespace.
 Multiple qualifiers can be separated with a '|' character. For example normalize removing digits and non-word characters.
 
 NORMAL_q removes single quotes, NORMAL_Q removes double quotes in field.
+NORMAL_p removes all characters that are not upper/lower case characters, digits or spaces.
+normal_csv converts input CSV data into pipe-delimited data, preserving commas in quotes, but removing quote characters.
+
+'pipe' removes pipe.pl sensitive characters (:,|).
+'csv' removes commas from within quoted strings.
 
 The order key word allows character sequences to be ordered within a field
 like using -o can order fields, but order names each character within a  
@@ -1287,10 +1292,78 @@ Input:
 This can be useful when you need to reorder months, days and years in different date types.
 
 Use case: Order the digits in a date string of YYYYMMDD to MMDDYYYY.  
-Parameters: -e c0:order_yyyymmdd-mmddyyyy 
+Parameters: -e c0:order_yyyymmdd-mmddyyyy
 
 Input:
 ```20180927 => 09272018```
+
+Use case: Remove comma from quoted strings.  
+Parameters: -e c0:csv
+
+Input:
+```
+id,Animal,CS
+1,"Snake, eastern indigo",4-400 - Stone
+2,Silver-backed fox,11-600 - Laboratory Equipment
+3,Weeper capuchin,13-120 - Pre-Engineered Structures
+4,"Lemur, sportive",13-175 - Ice Rinks
+5,"Egret, snowy",2 - Site Construction
+6,Tree porcupine,7-100 - Damproofing and Waterproofing
+7,"Sheep, red",14-900 - Transportation
+8,Bengal vulture,10-400 - Identification Devices
+9,Egyptian goose,12-900 - Furnishings Restoration and Repair
+```
+Output:   
+```
+id,Animal,CS
+1,"Snake  eastern indigo",4-400 - Stone
+2,Silver-backed fox,11-600 - Laboratory Equipment
+3,Weeper capuchin,13-120 - Pre-Engineered Structures
+4,"Lemur  sportive",13-175 - Ice Rinks
+5,"Egret  snowy",2 - Site Construction
+6,Tree porcupine,7-100 - Damproofing and Waterproofing
+7,"Sheep  red",14-900 - Transportation
+8,Bengal vulture,10-400 - Identification Devices
+9,Egyptian goose,12-900 - Furnishings Restoration and Repair
+```
+
+Use case: Remove all punctuation leaving only upper/lower case characters, digits, and spaces.  
+Parameters: -e c0:normal_p
+
+Input:
+```'Parenthetical citation': (Grady et al., 2019) => Parenthetical citation Grady et al 2019```
+
+Use case: Normalize CSV into pipe-delimited data.
+Parameters: -e c0:normal_csv
+
+Input:
+```
+id,Animal,CS
+1,"Snake, eastern indigo",4-400 - Stone
+2,Silver-backed fox,11-600 - Laboratory Equipment
+3,Weeper capuchin,13-120 - Pre-Engineered Structures
+4,"Lemur, sportive",13-175 - Ice Rinks
+5,"Egret, snowy",2 - Site Construction
+6,Tree porcupine,7-100 - Damproofing and Waterproofing
+7,"Sheep, red",14-900 - Transportation
+8,Bengal vulture,10-400 - Identification Devices
+9,Egyptian goose,12-900 - Furnishings Restoration and Repair
+```
+
+Output:   
+```
+id|Animal|CS
+1|Snake, eastern indigo|4-400 - Stone
+2|Silver-backed fox|11-600 - Laboratory Equipment
+3|Weeper capuchin|13-120 - Pre-Engineered Structures
+4|Lemur, sportive|13-175 - Ice Rinks
+5|Egret, snowy|2 - Site Construction
+6|Tree porcupine|7-100 - Damproofing and Waterproofing
+7|Sheep, red|14-900 - Transportation
+8|Bengal vulture|10-400 - Identification Devices
+9|Egyptian goose|12-900 - Furnishings Restoration and Repair
+```
+
 
 ## Flag: F
 ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```
@@ -3774,7 +3847,7 @@ c0|c1|c2|c3|c4
 [-c](#flag-c-1) ```-c{c0,c1,...cn}```   
 [-C](#flag-c) ```-C{any|num_cols{n-m}|cn:(gt|ge|eq|le|lt|ne|rg{n-m}|width{n-m})|cc(gt|ge|eq|le|lt|ne)cm,...}```   
 [-d](#flag-d-1) ```[-IRN]{c0,c1,...,cn} [-A|-J{cn}]```   
-[-e](#flag-e-1) ```-e{[any|cn]:[uc|lc|mc|us|spc|normal_[W|w,S|s,D|d,q|Q]|order_{from}-{to}][,...]]}```      
+[-e](#flag-e-1) ```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,p|q|Q]|order_{from}-{to}][,...]]}:```      
 [-E](#flag-e) ```-E{cn:[r|?c.r[.e]],...}```   
 [-f](#flag-f-1) ```-f{cn:n.p[?p[.q]],...}```   
 [-F](#flag-f) ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```   
