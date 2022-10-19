@@ -187,4 +187,5 @@ cd $WORKING_DIR
 [[ -z "$TEST_MARKDOWN" ]] || genSpecs
 [[ "$GENERATE_TESTS" == true ]] && genTests
 [[ "$GENERATE_MAKEFILE" == true ]] && genMakefile $TEST_MARKDOWN
+exit 0
 # EOF

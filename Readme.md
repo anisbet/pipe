@@ -2248,7 +2248,7 @@ seven
 Translate a character sequence if present. Example: 'abcdefd' -l"c0:d.P".
 produces 'abcPefP'. 3 white space characters are supported '\\s', '\\t',
 and '\\n'. "Hello" -lc0:"e.\\t" => 'H       llo'
-Can be made case insensitive with [-I](#flag-i).
+Can be made case insensitive with [-I](#flag-i). This flag also supports regular expressions so to change the first letter on every line to an underscore ('_'), use `-lcn:'^[A-Za-z]._'`
 
 Use case: Change any "d" to a "P" in a string.  
 Parameters: -l c0:d.P
