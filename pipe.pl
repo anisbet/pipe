@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.02.01 - April 7, 2022 Fixed -e normal_P bug.
+# 2.02.02 - November 16, 2022 Added 'collapse' to the -e flag.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.02.01};
+my $VERSION           = qq{2.02.02};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -54,6 +54,7 @@ my $KEYWORD_REVERSE   = qw{reverse};
 my $KEYWORD_EXCLUDE   = qw{exclude};
 my $KEYWORD_NUM_COLS  = qw{num_cols};
 my $RELAX_o_EXCLUDE   = 0; # If exclude selected don't validate the line is the same length as the inverted number fields.
+my $COLLAPSE_OPTION   = 0;
 # Flag means that the entire file must be read for an operation like sort to work.
 my $LINE_RANGES       = {};
 my $MAX_LINE          = 100000000;
@@ -225,7 +226,7 @@ flag to operate on all columns on the current line.
  -d{c0,c1,...cn}: De-duplicates column(s) of data. The order of the columns informs pipe.pl 
                   the priority of column de-duplication. The last duplicate found is output to STDOUT.
  -D             : Debug switch.
- -e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]]}: 
+ -e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]|collapse]}: 
                   Change the case, normalize, or order field data 
                   in a column to upper case (uc), lower case (lc), mixed case (mc), or
                   underscore (us). An extended set of commands include (spc) to replace multiple white spaces with a
@@ -249,7 +250,8 @@ flag to operate on all columns on the current line.
                   '20180911' -ec0:order_yyyymmdd-ddmmyyyy => '11092018'. If the length of
                   the input is longer than the variable string, the remainder of the string
                   is output as is. The input variable declaration must match the output 
-                  in length and is case sensitive.
+                  in length and is case sensitive. If 'collapse' is used empty and undefined values
+                  will be removed from the line.
  -E{cn:[r|?c.r[.e]],...}: Replace an entire field conditionally. Similar
                   to the '-f' flag but replaces the entire field instead of a specific
                   character position. r=replacement string, c=conditional string, the
@@ -2264,21 +2266,27 @@ sub modify_case_line( $ )
             $case_ref->{ $i } = $case_ref->{$KEYWORD_ANY} if ( not exists $case_ref->{ $i } );
         }
     }
+    my $exp;
     for ( $i = 0; $i < scalar( @{ $line } ); $i++ )
     {
         if ( exists $case_ref->{ $i } )
         {
             printf STDERR "case specifier: '%s' \n", $case_ref->{ $i } if ( $opt{'D'} );
-            my $exp = $case_ref->{ $i };
+            $exp = $case_ref->{ $i };
             # The first 2 characters determine the type of casing.
-            $exp =~ m/^(uc|lc|mc|us|spc|csv|pipe|normal_|order_)/i;
+            $exp =~ m/^(uc|lc|mc|us|spc|csv|pipe|normal_|order_|collapse)/i;
             if ( ! $& )
             {
-                printf STDERR "*** error case specifier. Expected (csv|lc|mc|uc|us|spc|csv|pipe|normal_(W|w,S|s,D|d,p|q|Q)|order_{xyz}-{zyx}) but got '%s'.\n", $case_ref->{ $i };
+                printf STDERR "*** error case specifier. Expected (csv|lc|mc|uc|us|spc|csv|pipe|normal_(W|w,S|s,D|d,p|q|Q)|order_{xyz}-{zyx}|collapse) but got '%s'.\n", $case_ref->{ $i };
                 exit;
             }
             @{ $line }[ $i ] = apply_casing( @{ $line }[ $i ], $exp );
         }
+    }
+    if ( $exp eq 'collapse' ) 
+    {
+        $COLLAPSE_OPTION = 1;
+        @{ $line } = grep( $_, @{ $line } );
     }
 }
 
@@ -2521,7 +2529,9 @@ sub validate( $$$ )
             $count = scalar @ORDER_COLUMNS -1 if ( $count > scalar @ORDER_COLUMNS -1 );
         }
     }
-    if ( $final_count < $count )
+    # Normally this ensures the total number of columns in == out, but collapse
+    # can be set in the '-e' flag (modify_case_line() function).
+    if ( $final_count < $count && $COLLAPSE_OPTION == 0 )
     {
         my $iterations = $count - $final_count;
         my $i = 0;

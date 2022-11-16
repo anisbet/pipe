@@ -1194,7 +1194,7 @@ Output:
 
 
 ## Flag: e
-```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}][,...]]}:```
+```-e{[any|cn]:[csv|lc|mc|pipe|uc|us|spc|normal_[W|w,S|s,D|d,P|q|Q]|order_{from}-{to}|collapse][,...]]}:```
 
 Change the case, normalize, or order field data 
 in a column to upper case (uc), lower case (lc), mixed case (mc), or
@@ -1223,6 +1223,8 @@ on output. For example: '123' -ec0:order_xyz-zyx => '321' or
 the input is longer than the variable string, the remainder of the string
 is output as is. The input variable declaration must match the output 
 in length and is case sensitive.
+
+Using the keyword 'collapse' will remove empty or undefined columns values from the line.
 
 Use case: Change c0 to upper case.  
 Parameters: -e c0:uc
@@ -1376,6 +1378,19 @@ id|Animal|CS
 8|Bengal vulture|10-400 - Identification Devices
 9|Egyptian goose|12-900 - Furnishings Restoration and Repair
 ```
+This can be useful when you need to reorder months, days and years in different date types.
+
+Use case: Collapse all the empty fields.  
+Parameters: -e any:collapse
+
+Input:
+```1||2|||3| => 1|2|3```
+
+Use case: Collapse all the empty fields even if only one selected.  
+Parameters: -e c0:collapse
+
+Input:
+```1||2|||3| => 1|2|3```
 
 
 ## Flag: F
