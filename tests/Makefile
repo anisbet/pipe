@@ -66,7 +66,7 @@ test: clean
 	-./test-W.sh
 
 check:
-	-grep -i failed *.log
+	-grep -i fail *.log
 
 clean:
 	-rm ./*.log

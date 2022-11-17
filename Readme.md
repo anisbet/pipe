@@ -1392,6 +1392,12 @@ Parameters: -e c0:collapse
 Input:
 ```1||2|||3| => 1|2|3```
 
+Use case: Collapse all the empty fields even if only one selected even if it contains '0'.  
+Parameters: -e any:collapse
+
+Input:
+```0||0|||0| => 0|0|0```
+
 
 ## Flag: F
 ```-F[cn:[b|c|d|h][.[b|c|d|h]],...}```

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.02.02 - November 16, 2022 Added 'collapse' to the -e flag.
+# 2.02.03 - November 17, 2022 Bug fix 'collapse' when column contains '0'.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.02.02};
+my $VERSION           = qq{2.02.03};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -2285,8 +2285,15 @@ sub modify_case_line( $ )
     }
     if ( $exp eq 'collapse' ) 
     {
+        # Later pipe will enforce width of columns.
         $COLLAPSE_OPTION = 1;
-        @{ $line } = grep( $_, @{ $line } );
+        my @clean = ();
+        foreach my $v ( @{ $line } )
+        {
+            # Preserve '0' values.
+            push( @clean, $v ) if ( defined $v && length $v );
+        }
+        @{ $line } = @clean;
     }
 }
 
