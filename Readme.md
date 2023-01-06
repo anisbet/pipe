@@ -61,6 +61,7 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 [-5](#flag-5) - Output all [-g](#flag-g-1) 'any' keyword matches to STDERR.  
 [-6](#flag-6) - Histogram values in column(s).  
 [-7](#flag-7) - Stop search after n-th match.  
+[-8](#flag-8) - Change the record separator. Default is new line.  
 [-A](#flag-a) - Displays line numbers or summary of duplicates if '[-d](#flag-d-1)' is selected.  
 [-a](#flag-a-1) - Sum of numeric values in specific columns.  
 [-B](#flag-b) - Only show lines where columns are different.  
@@ -164,6 +165,48 @@ Parameters: -? add:c0,c1,c2
 
 Input:
 ```1|cat|2 => 3|1|cat|2```
+
+## Flag: 0
+```-0 {foo/bar.txt}```
+
+Takes input from a named file, or if used with [-M](#flag-m) defines the file to be read as data to be merged with data coming in on STDIN. 
+
+Use case: Read data from file1.  
+Parameters: -0file1
+
+Input: file1
+```
+1000048|The Berenstain Bears
+```
+
+Input:
+```
+```
+Output:
+```
+1000048|The Berenstain Bears
+```
+
+Use case: Compare column from file1 and file2 if the same append data from file2.  
+Parameters: -0file2 -M c0:c0?c1.na
+
+Input: file2
+```
+1000048|The Berenstain Bears
+```
+
+Input:
+```
+1000048|6|15|
+1000049|10|2|
+1000048|10|4|
+```
+Output:
+```
+1000048|6|15|The Berenstain Bears
+1000049|10|2|na
+1000048|10|4|The Berenstain Bears
+```
 
 ## Flag: 1
 ```-1{c0,c1,...cn}```
@@ -538,6 +581,44 @@ Output:
 700
 850
 333
+```
+
+## Flag: 8
+```-8{record_separator|regex}```
+
+Change the input record separator. Works with multiple files using [-0](#flag-0) and [-M](#flag-m). See also [-W change delimiter](#flag-w).
+
+Use case: change input record separator to ":".
+Parameters: -8:
+
+Input:
+```
+1:2:3
+```
+Output:
+```
+1
+2
+3
+```
+
+Use case: Compare column from file1 and file2 if the same append data from file2, but use '%' as a record separator.  
+Parameters: -8% -M c0:c0?c1.na -0file2
+
+Input: file2
+```
+1000048|The Berenstain Bears%1000050|Not The Berenstain Bears
+```
+
+Input:
+```
+1000048|6|15|%1000049|10|2|%1000048|10|4|
+```
+Output:
+```
+1000048|6|15|The Berenstain Bears
+1000049|10|2|na
+1000048|10|4|The Berenstain Bears
 ```
 
 ## Flag: A

@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.02.03 - November 17, 2022 Bug fix 'collapse' when column contains '0'.
+# 2.03.00 - Jan 5, 2023 Add '-8' record separator.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.02.03};
+my $VERSION           = qq{2.03.00};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -139,6 +139,7 @@ my @MATH_COLUMNS          = (); my $math_ref = {}; # Math operations stored. mat
 my $J_CMD             = "";
 my $J_COUNT           = 0;
 my $J_BUCKET_COUNTS   = {};
+my @ALT_LINES         = ();
 
 # Explains the usage of pipe.pl when -x is used or if there was an error with input.
 # Message about this program and how to use it.
@@ -182,6 +183,7 @@ flag to operate on all columns on the current line.
  -6{cn:[char]}  : Displays histogram of columns' numeric value. '5' '-6c0:*' => '*****'.
                   If the column doesn't contain a whole number pipe.pl will issue an error and exit.
  -7{integer}    : Return after n-th line match of a search is output. See -g, -G, -X, -Y, -C.
+ -8{record sep|regex} : Change the input record separator. Works with multiple files using -0 and -M.
  -a{c0,c1,...cn}: Sum the non-empty values in given column(s).
  -A             : Modifier that outputs line numbers from input, or if -d is used, the number 
                   of records that match the column key selection that were de-duplicated.
@@ -409,7 +411,7 @@ flag to operate on all columns on the current line.
  -V             : Deprecated. Validate that the output has the same number of columns as the input.
  -w{c0,c1,...cn}: Report min and max number of characters in specified columns, and reports
                   the minimum and maximum number of columns by line.
- -W{delimiter}  : Change the input delimiter.
+ -W{delimiter|regex}  : Change the input delimiter.
  -x             : Outputs this usage message and exits.
  -X{[any|cn]:regex,...}: Like the -g, but once a line matches all subsequent lines are also
                   output until a -Y match succeeds. See -Y and -g.
@@ -3879,7 +3881,7 @@ sub process_line( $ )
 # return:
 sub init
 {
-    my $opt_string = '?:0:1:2:3:4:56:7:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
+    my $opt_string = '?:0:1:2:3:4:56:7:8:a:Ab:B:c:C:d:De:E:f:F:g:G:h:HiIjJ:k:Kl:L:m:M:Nn:o:O:p:Pq:Q:r:Rs:S:t:T:Uu:v:Vw:W:xX:y:Y:z:Z:';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
     if ( $opt{'M'} && $opt{'0'} )
@@ -4109,32 +4111,45 @@ if ( defined $opt{'0'} && defined $opt{'M'} )
     while (<$ifh>)
     {
         my $line = trim( $_ );
-        if ( $opt{'W'} )
+        if ( $opt{'8'} )
         {
-            my @segments = split /"/, $line;  # fix SO syntax highlighting: "
-            push @segments, '' if ( scalar( @segments ) % 2 == 0 );
-            s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
-            $line = join '"', @segments;
-            # Replace delimiter selection with '|' pipe.
-            $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
-            # Now replace the user selected delimiter with a pipe.
-            $line =~ s/($opt{'W'})/\|/g;
-            my $spc_delim = $opt{'W'};
-            $spc_delim =~ s/\\s[+]?/ /g;
-            $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
+            @ALT_LINES = split( /($opt{'8'})/, $line );
         }
-        my @columns = split '\|', $line;
-        if ( $opt{'W'} )
+        else
         {
-            foreach my $col ( @columns )
+            unshift( @ALT_LINES, $line );
+        }
+        while ( @ALT_LINES )
+        {
+            $line = shift( @ALT_LINES );
+            next if ( $opt{'8'} && $line =~ /($opt{'8'})/ );
+            if ( $opt{'W'} )
             {
-                # Replace the sub delimiter to preserve the default pipe delimiter when using -W.
-                $col =~ s/($SUB_DELIMITER)/\|/g;
+                my @segments = split /"/, $line;  # fix SO syntax highlighting: "
+                push @segments, '' if ( scalar( @segments ) % 2 == 0 );
+                s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
+                $line = join '"', @segments;
+                # Replace delimiter selection with '|' pipe.
+                $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
+                # Now replace the user selected delimiter with a pipe.
+                $line =~ s/($opt{'W'})/\|/g;
+                my $spc_delim = $opt{'W'};
+                $spc_delim =~ s/\\s[+]?/ /g;
+                $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
             }
+            my @columns = split '\|', $line;
+            if ( $opt{'W'} )
+            {
+                foreach my $col ( @columns )
+                {
+                    # Replace the sub delimiter to preserve the default pipe delimiter when using -W.
+                    $col =~ s/($SUB_DELIMITER)/\|/g;
+                }
+            }
+            # Save all the true and false column values.
+            push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, \@columns, $MERGE_REF_COLUMNS[0] );
+            # The false values are literals taken from the command line.
         }
-        # Save all the true and false column values.
-        push_merge_ref_columns( \@REF_COLUMN_INDEX_TRUE, \@columns, $MERGE_REF_COLUMNS[0] );
-        # The false values are literals taken from the command line.
     }
     close $ifh;
     
@@ -4158,29 +4173,42 @@ else
 while (<$ifh>)
 {
     my $line = $_;
-    $LINE_NUMBER++;
-    if ( is_printable_range( $LINE_NUMBER, $line ) )
+    if ( $opt{'8'} )
     {
-        # remove leading trailing white space to avoid initial empty pipe fields.
-        # Also gracefully handles Windows' EOL handling.
-        $line = trim( $line );
-        if ( $opt{'W'} )
-        {
-            my @segments = split /"/, $line;  # fix SO syntax highlighting: "
-            push @segments, '' if ( scalar( @segments ) % 2 == 0 );
-            s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
-            $line = join '"', @segments;
-            # Replace delimiter selection with '|' pipe.
-            $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
-            # Now replace the user selected delimiter with a pipe.
-            $line =~ s/($opt{'W'})/\|/g;
-            my $spc_delim = $opt{'W'};
-            $spc_delim =~ s/\\s[+]?/ /g;
-            $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
-        }
-        push @ALL_LINES, $line;
+        @ALT_LINES = split( /($opt{'8'})/, $line );
     }
-    last if ( $FAST_FORWARD );
+    else
+    {
+        unshift( @ALT_LINES, $line );
+    }
+    while ( @ALT_LINES )
+    {
+        $line = shift( @ALT_LINES );
+        next if ( $opt{'8'} && $line =~ /($opt{'8'})/ );
+        $LINE_NUMBER++;
+        if ( is_printable_range( $LINE_NUMBER, $line ) )
+        {
+            # remove leading trailing white space to avoid initial empty pipe fields.
+            # Also gracefully handles Windows' EOL handling.
+            $line = trim( $line );
+            if ( $opt{'W'} )
+            {
+                my @segments = split /"/, $line;  # fix SO syntax highlighting: "
+                push @segments, '' if ( scalar( @segments ) % 2 == 0 );
+                s/($opt{'W'})/$QUOTED_DELIMITER/g for @segments[ grep $_ % 2, 0 .. $#segments ];
+                $line = join '"', @segments;
+                # Replace delimiter selection with '|' pipe.
+                $line =~ s/\|/$SUB_DELIMITER/g; # _PIPE_
+                # Now replace the user selected delimiter with a pipe.
+                $line =~ s/($opt{'W'})/\|/g;
+                my $spc_delim = $opt{'W'};
+                $spc_delim =~ s/\\s[+]?/ /g;
+                $line =~ s/($QUOTED_DELIMITER)/$spc_delim/g;
+            }
+            push @ALL_LINES, $line;
+        }
+        last if ( $FAST_FORWARD );
+    }
 }
 close $ifh;
 push @ALL_LINES, @LINE_BUFF;

@@ -15,6 +15,7 @@ test: clean
 	-./test-G.sh
 	-./test-n.sh
 	-./test-7.sh
+	-./test-8.sh
 	-./test-b.sh
 	-./test-T.sh
 	-./test-D.sh
@@ -64,6 +65,7 @@ test: clean
 	-./test-M.sh
 	-./test-q.sh
 	-./test-W.sh
+	-./test-0.sh
 
 check:
 	-grep FAIL *.log
