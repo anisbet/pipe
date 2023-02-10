@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.03.00 - Jan 5, 2023 Add '-8' record separator.
+# 2.03.01 - Feb 09, 2023 Fixed bug in -o with key words.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.03.00};
+my $VERSION           = qq{2.03.01};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -962,7 +962,7 @@ sub order_line( $ )
         {
             foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
             {
-                next if ( grep /($colIndex)/, @order_columns );
+                next if ( grep { $colIndex eq $_ } @order_columns );
                 push @order_columns, $colIndex;
             }
             last;
@@ -999,7 +999,7 @@ sub order_line( $ )
             {
                 foreach my $colIndex ( 0 .. scalar( @{ $line } ) -1 )
                 {
-                    push @order_columns, $colIndex if ( ! grep /($colIndex)/, @ORDER_COLUMNS );
+                    push @order_columns, $colIndex if ( ! grep { $colIndex eq $_ } @ORDER_COLUMNS );
                 }
                 last;
             }
