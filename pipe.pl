@@ -27,7 +27,7 @@
 # Created: Mon May 25 15:12:15 MDT 2015
 #
 # Rev:
-# 2.03.01 - Feb 09, 2023 Fixed bug in -o with key words.
+# 2.03.02 - Mar 22, 2023 Fixed -6 bug that fails on columns with 0 or text values.
 #
 ####################################################################################
 
@@ -42,7 +42,7 @@ binmode STDERR;
 binmode STDIN;
 
 ### Globals
-my $VERSION           = qq{2.03.01};
+my $VERSION           = qq{2.03.02};
 my $FALSE             = 1;
 my $TRUE              = 0;
 my $ALLOW_SCRIPTING   = $TRUE;
@@ -3499,6 +3499,7 @@ sub read_whole_number( $ )
     my $input = shift;
     my $value = get_number_format( $input, 1 );
     printf STDERR "argument to read_whole_number()='%s' \n", $value if ( $opt{'D'} );
+    return 0 if ( $value eq '' );
     return $value if ( $value );
     printf STDERR "*** error: invalid argument, expected a whole number, but got '%s' \n", $input;
     exit( -1 );

@@ -515,6 +515,26 @@ Output:
 2017-09-26|*****
 ```
 
+Use case: Test -6 makes histogram even if 0 or text is used in a column.  
+Parameters: c1:*
+
+Input: 
+```  
+2017-09-22|1
+2017-09-23|2
+2017-09-24|0
+2017-09-25|hello
+2017-09-26|5
+```
+Output:
+```
+2017-09-22|*
+2017-09-23|**
+2017-09-24|
+2017-09-25|
+2017-09-26|*****
+```
+
 ## Flag: 7
 ```-7{positive-integer}```
 
