@@ -39,9 +39,10 @@ chmod +x pipe.pl
 To run tests, run the following commands. The CLONE_DIR is where you cloned 
 the pipe git repo.
 
+To do everything in one step.
 ```bash
-cd $CLONE_DIR
-make test
+cd $CLONE_DIR/tests
+make all
 ```
 
 ## Acknowledgements

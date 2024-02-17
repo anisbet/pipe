@@ -4,7 +4,7 @@
 # Product: pipe.pl
 # Purpose: test -FLAG_NAME_HERE functionality.
 #
-# Copyright (c) Andrew Nisbet 2022.
+# Copyright (c) Andrew Nisbet 2022 - 2024.
 # All code covered by the project's license.
 #
 ###
@@ -26,7 +26,7 @@ EXPECTED_STDERR="$TMP_DIR/error-expected-${FLAG_TESTED}"
 declare -a SCRATCH_FILES
 TEST_NUMBER=0
 DIFF_FLAGS=''
-VERSION="1.1.04"
+VERSION="1.1.05"
 
 ### Functions
 # Prints out usage message.
@@ -57,9 +57,10 @@ EOFU!
 logit()
 {
     local message="$1"
-    local time=$(date +"%Y-%m-%d %H:%M:%S")
-    echo -e "[$time] $message"
-    echo -e "[$time] $message" >>$LOG_FILE
+    local current_time=''
+    current_time=$(date +"%Y-%m-%d %H:%M:%S")
+    echo -e "[$current_time] $message"
+    echo -e "[$current_time] $message" >>"$LOG_FILE"
 }
 
 # Start up. Creates a temp directory for any input and output files.
@@ -69,7 +70,7 @@ init()
         logit "* warning, $TMP_DIR already exits and will be removed."
         rm -rf $TMP_DIR
     fi
-    $(mkdir $TMP_DIR) || { echo "Failed to create $TMP_DIR"; exit 1; }
+    mkdir $TMP_DIR || { echo "Failed to create $TMP_DIR"; exit 1; }
 }
 
 # Cleanup code to remove scratch files.
@@ -148,17 +149,17 @@ test()
     local err_file=${ACTUAL_STDERR}.$TEST_NUMBER.txt
     local out_file=${ACTUAL_STDOUT}.$TEST_NUMBER.txt
     local diff_err=${ACTUAL_STDERR}.$TEST_NUMBER.diff
-    cat $input | $PIPE ${params} >$out_file 2>$err_file
+    $PIPE $params <"$input" >$out_file 2>$err_file
     # Some commands output to stderr by default, other tests pass if the expected 
     # result is a failed condition.
     if [ -s "$err_file" ]; then
         if [ ! -z "$expected_stderr" ] && [ -f "$expected_stderr" ]; then
-            if diff $DIFF_FLAGS "$err_file" "$expected_stderr" 2>&1 >$diff_err; then
+            if diff $DIFF_FLAGS "$err_file" "$expected_stderr" >$diff_err 2>&1; then
                 logit "PASS: test $TEST_NUMBER STDERR $test_name"
             else
                 logit "**FAIL: test $TEST_NUMBER STDERR $test_name"
                 logit "  < actual and > expected"
-                cat $diff_err | tee -a $LOG_FILE
+                cat $diff_err | tee -a "$LOG_FILE"
             fi
         else
             logit "*WARN: test $TEST_NUMBER STDERR $test_name output an unexpected error"
@@ -168,12 +169,12 @@ test()
         rm $err_file
     fi
     ## Test the stdout produced by running the command.
-    if diff $DIFF_FLAGS "$out_file" "$expected_stdout" 2>&1 >$diff_err; then
+    if diff $DIFF_FLAGS "$out_file" "$expected_stdout" >$diff_err 2>&1; then
         logit "PASS: test $TEST_NUMBER STDOUT $test_name"
     else
         logit "**FAIL: test $TEST_NUMBER STDOUT $test_name"
         logit "  < actual and > expected"
-        cat $diff_err | tee -a $LOG_FILE
+        cat $diff_err | tee -a "$LOG_FILE"
     fi
 }
 
@@ -213,12 +214,12 @@ test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT
 ########### (OPTIONAL) #############
 #### Test error expected 
 ## The error message we expect from the script. 
-# EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
-# cat > $EXPECTED_ERR <<EXP_ERR!
-# Expected stderr message here.
-# EXP_ERR!
-## input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
-# test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR
+EXPECTED_ERR=${EXPECTED_STDERR}.$TEST_NUMBER.txt
+cat > $EXPECTED_ERR <<EXP_ERR!
+Expected stderr message here.
+EXP_ERR!
+# input, "test name", "pipe.pl parameters", expected output (file name), expected error (file name)
+test $INPUT_FILE "$USE_CASE" "$PARAMETERS" $EXPECTED_OUT $EXPECTED_ERR
 
 
 # Clean up scratch files if $KEEP_TEMP_FILES is set true. See -p.
