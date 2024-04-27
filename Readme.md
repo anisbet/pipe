@@ -83,7 +83,7 @@ job and for letting me build this useful tool. See [here](https://github.com/Edm
 [-i](#flag-i-1) - Output all lines, but process only if [-b](#flag-b-1), [-B](#flag-b), [-C](#flag-c), [-g](#flag-g-1), [-G](#flag-g), [-z](#flag-z-1) or [-Z](#flag-z) match.                                         
 [-J](#flag-j) - Displays sum over group if '[-d](#flag-d-1)' is selected.  
 [-j](#flag-j-1) - Remove last delimiter on the last line of data output.  
-[-K](#flag-k) - Output everything as a single column.  
+[-K](#flag-k) - Change delimiter to new line.  
 [-k](#flag-k-1) - Run perl script on column data.  
 [-L](#flag-l) - Output only specified lines, or range of lines.  
 [-l](#flag-l-1) - Translate character sequence.  
